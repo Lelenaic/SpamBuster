@@ -24,13 +24,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <div className="flex h-screen">
           <Sidebar />
-          <main className="flex-1 ml-64 p-6 overflow-auto">
+          <main className="flex-1 ml-64 p-6 overflow-auto bg-secondary">
             {children}
           </main>
         </div>
