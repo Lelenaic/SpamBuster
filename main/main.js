@@ -1,5 +1,5 @@
 const { app, BrowserWindow } = require("electron");
-const serve = require("electron-serve");
+const serve = require("electron-serve").default;
 const path = require("path");
 
 const appServe = app.isPackaged ? serve({
@@ -16,9 +16,13 @@ const createWindow = () => {
   });
 
   if (app.isPackaged) {
-    appServe(win).then(() => {
-      win.loadURL("app://-");
-    });
+    if (appServe) {
+      appServe(win).then(() => {
+        console.log('Successfully loaded packaged app');
+      }).catch(err => {
+        console.error('Error loading packaged app:', err);
+      });
+    }
   } else {
     win.loadURL("http://localhost:3000");
     win.webContents.openDevTools();

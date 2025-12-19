@@ -5,16 +5,17 @@
   "main": "main/main.js",
   "scripts": {
     "dev": "concurrently -n \"NEXT,ELECTRON\" -c \"yellow,blue\" --kill-others \"next dev\" \"electron .\"",
-    "build": "next build && electron-builder",
+    "build": "next build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.4",
     "@tabler/icons-react": "^3.36.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron-serve": "^3.0.0",
-    "lucide-react": "^0.562.0",
+    "electron-store": "^11.0.2",
     "next": "16.1.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
