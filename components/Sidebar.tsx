@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { IconBrandGmail, IconMail, IconChevronDown, IconSettings, IconPlus } from "@tabler/icons-react";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className="fixed left-0 top-0 h-full w-64 bg-gray-900 text-white flex flex-col">
@@ -43,18 +46,36 @@ export default function Sidebar() {
       <div className="flex-1 flex flex-col justify-between p-4">
         {/* Top */}
         <div>
-          <Button variant="ghost" className="w-full justify-start !text-white hover:bg-gray-800 cursor-pointer">
-            <IconMail className="w-5 h-5 mr-2" />
-            Dashboard
-          </Button>
+          <Link href="/">
+            <Button 
+              variant="ghost" 
+              className={`w-full justify-start cursor-pointer transition-colors ${
+                pathname === "/" 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 hover:text-white' 
+                  : 'text-white hover:bg-gray-600 hover:text-white'
+              }`}
+            >
+              <IconMail className="w-5 h-5 mr-2" />
+              Dashboard
+            </Button>
+          </Link>
         </div>
 
         {/* Bottom */}
         <div>
-          <Button variant="ghost" className="w-full justify-start !text-white hover:bg-gray-800 cursor-pointer">
-            <IconSettings className="w-5 h-5 mr-2" />
-            Settings
-          </Button>
+          <Link href="/settings">
+            <Button 
+              variant="ghost" 
+              className={`w-full justify-start cursor-pointer transition-colors ${
+                pathname === "/settings" 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 hover:text-white' 
+                  : 'text-white hover:bg-gray-600 hover:text-white'
+              }`}
+            >
+              <IconSettings className="w-5 h-5 mr-2" />
+              Settings
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
