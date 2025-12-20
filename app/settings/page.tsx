@@ -22,15 +22,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { createAIService } from "@/lib/ai"
-
-declare global {
-  interface Window {
-    storeAPI: {
-      get: (key: string) => Promise<unknown>
-      set: (key: string, value: unknown) => Promise<void>
-    }
-  }
-}
+import "@/lib/types"
 
 export default function Settings() {
   const [aiSource, setAiSource] = useState<string>("ollama")
