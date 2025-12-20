@@ -4,6 +4,7 @@ This project aims to be a desktop software working on MacOS, Linux and Windows a
 # Project design
 You shall use Shadcn UI for every component and tailwind whenever you need some adjustments.
 You need to respect and use the Shadcn UI colors. The colors are globally defined in app/globals.css. Refer to this file whenever you need to use colors. If you need some colors not defined in this file, use tailwind css classes.
+If you need to use toasts, sonner is installed.
 
 # Project configuration
 The project is a NextJS project and aims to be desktop only with ElectronJS.
