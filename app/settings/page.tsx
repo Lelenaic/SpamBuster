@@ -52,8 +52,11 @@ export default function Settings() {
 
   const handleAiSourceChange = async (value: string) => {
     setAiSource(value)
+    setSelectedModel("")
+    setModels([])
     if (typeof window !== "undefined" && window.storeAPI) {
       await window.storeAPI.set("aiSource", value)
+      await window.storeAPI.set("selectedModel", "")
     }
     toast.success("AI provider updated successfully")
   }
