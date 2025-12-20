@@ -1,13 +1,5 @@
 /* eslint-disable import/no-commonjs */
 const { contextBridge, ipcRenderer } = require("electron");
-const Store = require("electron-store");
-
-const store = new Store();
-
-contextBridge.exposeInMainWorld("store", {
-  get: (key) => store.get(key),
-  set: (key, value) => store.set(key, value),
-});
 
 contextBridge.exposeInMainWorld("electronAPI", {
     on: (channel, callback) => {
@@ -16,4 +8,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     send: (channel, args) => {
         ipcRenderer.send(channel, args);
     }
+});
+
+contextBridge.exposeInMainWorld("storeAPI", {
+    get: (key) => ipcRenderer.invoke('store:get', key),
+    set: (key, value) => ipcRenderer.invoke('store:set', key, value),
 });

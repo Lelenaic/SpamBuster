@@ -1,6 +1,25 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const serve = require("electron-serve").default;
 const path = require("path");
+
+let store;
+
+async function initStore() {
+  const { default: Store } = await import('electron-store');
+  store = new Store();
+}
+
+initStore();
+
+ipcMain.handle('store:get', async (event, key) => {
+  if (!store) throw new Error('Store not initialized');
+  return store.get(key);
+});
+
+ipcMain.handle('store:set', async (event, key, value) => {
+  if (!store) throw new Error('Store not initialized');
+  return store.set(key, value);
+});
 
 const appServe = app.isPackaged ? serve({
   directory: path.join(__dirname, "../out")
