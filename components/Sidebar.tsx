@@ -8,14 +8,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Mail, ChevronDown, Settings, Plus } from "lucide-react";
 import { Account, AccountStatus } from "@/lib/mail";
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      send: (channel: string, ...args: unknown[]) => void;
-    };
-  }
-}
-
 const getStatusColor = (status: AccountStatus) => {
   switch (status) {
     case 'working':
