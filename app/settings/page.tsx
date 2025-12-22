@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -59,7 +59,7 @@ const getStatusColor = (status: AccountStatus) => {
   }
 }
 
-export default function Settings() {
+function SettingsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'ai')
@@ -609,5 +609,13 @@ export default function Settings() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function Settings() {
+  return (
+    <Suspense fallback={<div className="p-6 max-w-2xl mx-auto">Loading...</div>}>
+      <SettingsContent />
+    </Suspense>
   )
 }
