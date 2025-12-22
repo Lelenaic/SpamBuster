@@ -1,5 +1,8 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { app, BrowserWindow, ipcMain } = require("electron");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const serve = require("electron-serve").default;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require("path");
 
 let store;
@@ -108,7 +111,7 @@ const createWindow = () => {
   } else {
     mainWindow.loadURL("http://localhost:3000");
     mainWindow.webContents.openDevTools();
-    mainWindow.webContents.on("did-fail-load", (e, code, desc) => {
+    mainWindow.webContents.on("did-fail-load", () => {
       mainWindow.webContents.reloadIgnoringCache();
     });
   }
@@ -134,7 +137,7 @@ const createWizardWindow = () => {
   } else {
     win.loadURL("http://localhost:3000/wizard");
     win.webContents.openDevTools();
-    win.webContents.on("did-fail-load", (e, code, desc) => {
+    win.webContents.on("did-fail-load", () => {
       win.webContents.reloadIgnoringCache();
     });
   }

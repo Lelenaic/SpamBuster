@@ -168,7 +168,7 @@ export default function Settings() {
     if ((aiSource === 'ollama' && ollamaBaseUrl) || (aiSource === 'openrouter' && openRouterApiKey)) {
       fetchModels()
     }
-  }, [aiSource, ollamaBaseUrl, openRouterApiKey])
+  }, [aiSource, ollamaBaseUrl, openRouterApiKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (accountToModify) {
@@ -217,7 +217,7 @@ export default function Settings() {
       } else {
         toast.error(result.error || "Connection failed")
       }
-    } catch (error) {
+    } catch {
       toast.error("Connection failed")
     } finally {
       setTestingAccountId(null)
@@ -268,7 +268,7 @@ export default function Settings() {
         } else {
           toast.error(result.error || "Connection test failed. Please check your settings.")
         }
-      } catch (error) {
+      } catch {
         toast.error("Connection test failed. Please check your settings.")
       } finally {
         setTestingModify(false)
@@ -302,7 +302,7 @@ export default function Settings() {
       const service = createAIService(aiSource, config)
       const modelNames = await service.listModels()
       setModels(modelNames.sort((a: string, b: string) => a.localeCompare(b)))
-    } catch (error) {
+    } catch {
       setModels([])
       toast.error("Error connecting to AI service")
     } finally {
@@ -327,7 +327,7 @@ export default function Settings() {
       const service = createAIService(aiSource, config)
       await service.testConnection()
       toast.success("Connection successful")
-    } catch (error) {
+    } catch {
       toast.error("Connection failed")
     } finally {
       setTestingConnection(false)

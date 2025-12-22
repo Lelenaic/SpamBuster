@@ -6,7 +6,7 @@ export class ImapProvider implements MailProvider {
     if (typeof window !== 'undefined' && window.electronAPI) {
       try {
         const result = await window.electronAPI.invoke('test-imap-connection', config);
-        return result;
+        return result as TestConnectionResult;
       } catch (error) {
         console.error('IMAP connection test failed:', error);
         return { success: false, error: error instanceof Error ? error.message : 'Connection failed' };
