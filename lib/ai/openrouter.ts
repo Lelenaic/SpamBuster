@@ -31,4 +31,14 @@ export class OpenRouterService implements AIService {
     const data = await response.json()
     return data.choices[0].message.content
   }
+
+  async testConnection(): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/key`, {
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    if (!response.ok) throw new Error('Failed to connect to OpenRouter')
+  }
 }

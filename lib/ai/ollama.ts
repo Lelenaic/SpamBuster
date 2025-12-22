@@ -20,4 +20,9 @@ export class OllamaService implements AIService {
     const data = await response.json()
     return data.response
   }
+
+  async testConnection(): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/version`)
+    if (!response.ok) throw new Error('Failed to connect to Ollama')
+  }
 }

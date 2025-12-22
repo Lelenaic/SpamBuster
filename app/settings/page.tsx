@@ -37,6 +37,8 @@ export default function Settings() {
 
   const [modelComboboxOpen, setModelComboboxOpen] = useState(false)
 
+  const [testingConnection, setTestingConnection] = useState(false)
+
   useEffect(() => {
     const loadSettings = async () => {
       if (typeof window !== "undefined" && window.storeAPI) {
@@ -114,6 +116,22 @@ export default function Settings() {
       await window.storeAPI.set("selectedModel", value)
     }
     toast.success("Model updated")
+  }
+
+  const handleTestConnection = async () => {
+    setTestingConnection(true)
+    try {
+      const config = aiSource === 'ollama'
+        ? { baseUrl: ollamaBaseUrl, apiKey: ollamaApiKey }
+        : { apiKey: openRouterApiKey }
+      const service = createAIService(aiSource, config)
+      await service.testConnection()
+      toast.success("Connection successful")
+    } catch (error) {
+      toast.error("Connection failed")
+    } finally {
+      setTestingConnection(false)
+    }
   }
 
   return (
@@ -227,6 +245,17 @@ export default function Settings() {
                 <IconRefresh className="h-4 w-4" />
               </Button>
             </div>
+          </div>
+        )}
+        {(aiSource === 'ollama' || aiSource === 'openrouter') && (
+          <div className="space-y-2">
+            <Button
+              onClick={handleTestConnection}
+              disabled={testingConnection || (aiSource === 'ollama' && !ollamaBaseUrl) || (aiSource === 'openrouter' && !openRouterApiKey)}
+              variant="outline"
+            >
+              {testingConnection ? "Testing..." : "Test Connection"}
+            </Button>
           </div>
         )}
       </div>
