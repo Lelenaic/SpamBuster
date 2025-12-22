@@ -21,6 +21,58 @@ ipcMain.handle('store:set', async (event, key, value) => {
   return store.set(key, value);
 });
 
+let ImapFlow;
+async function getImapFlow() {
+  if (!ImapFlow) {
+    const imapflowModule = await import('imapflow');
+    ImapFlow = imapflowModule.ImapFlow;
+  }
+  return ImapFlow;
+}
+
+ipcMain.handle('test-imap-connection', async (event, config) => {
+  try {
+    const ImapFlowClass = await getImapFlow();
+    const clientOptions = {
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: {
+        user: config.username,
+        pass: config.password,
+      },
+    };
+
+    // Add TLS options if allowing unsigned certificates
+    if (config.allowUnsignedCertificate) {
+      clientOptions.tls = {
+        rejectUnauthorized: false,
+      };
+      clientOptions.ignoreTLS = true;
+    }
+
+    const client = new ImapFlowClass(clientOptions);
+
+    await client.connect();
+    await client.logout();
+    return { success: true };
+  } catch (error) {
+    console.error('IMAP connection test failed:', error);
+
+    // Extract meaningful error message from ImapFlow error
+    let errorMessage = 'Connection failed';
+    if (error.response) {
+      errorMessage = error.response;
+    } else if (error.message) {
+      errorMessage = error.message;
+    } else if (error.responseText) {
+      errorMessage = error.responseText;
+    }
+
+    return { success: false, error: errorMessage };
+  }
+});
+
 ipcMain.on('open-wizard-window', () => {
   createWizardWindow();
 });
