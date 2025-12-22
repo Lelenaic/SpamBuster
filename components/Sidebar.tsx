@@ -49,6 +49,14 @@ export default function Sidebar() {
           const updatedCurrentAccount = storedAccounts.find(acc => acc.id === currentAccount.id);
           if (updatedCurrentAccount) {
             setCurrentAccount(updatedCurrentAccount);
+          } else {
+            // Current account was deleted, select the first available account or null
+            const newCurrentAccount = storedAccounts.length > 0 ? storedAccounts[0] : null;
+            setCurrentAccount(newCurrentAccount);
+            // Close the dropdown if no accounts remain
+            if (!newCurrentAccount) {
+              setIsOpen(false);
+            }
           }
         }
       }
@@ -59,9 +67,14 @@ export default function Sidebar() {
     const handleAccountsUpdated = () => {
       loadAccounts();
     };
-    
+
     window.addEventListener('accounts-updated', handleAccountsUpdated);
-    
+
+    // Also listen for IPC from main process (for cross-window updates)
+    window.electronAPI?.on('accounts-updated', () => {
+      window.dispatchEvent(new CustomEvent('accounts-updated'));
+    });
+
     return () => {
       window.removeEventListener('accounts-updated', handleAccountsUpdated);
     };

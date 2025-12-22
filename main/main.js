@@ -3,6 +3,7 @@ const serve = require("electron-serve").default;
 const path = require("path");
 
 let store;
+let mainWindow;
 
 async function initStore() {
   const { default: Store } = await import('electron-store');
@@ -19,6 +20,12 @@ ipcMain.handle('store:get', async (event, key) => {
 ipcMain.handle('store:set', async (event, key, value) => {
   if (!store) throw new Error('Store not initialized');
   return store.set(key, value);
+});
+
+ipcMain.on('accounts-updated', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('accounts-updated');
+  }
 });
 
 let ImapFlow;
@@ -82,9 +89,9 @@ const appServe = app.isPackaged ? serve({
 }) : null;
 
 const createWindow = () => {
-  const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+  mainWindow = new BrowserWindow({
+    width: 1150,
+    height: 730,
     webPreferences: {
       preload: path.join(__dirname, "preload.js")
     }
@@ -92,25 +99,25 @@ const createWindow = () => {
 
   if (app.isPackaged) {
     if (appServe) {
-      appServe(win).then(() => {
+      appServe(mainWindow).then(() => {
         console.log('Successfully loaded packaged app');
       }).catch(err => {
         console.error('Error loading packaged app:', err);
       });
     }
   } else {
-    win.loadURL("http://localhost:3000");
-    win.webContents.openDevTools();
-    win.webContents.on("did-fail-load", (e, code, desc) => {
-      win.webContents.reloadIgnoringCache();
+    mainWindow.loadURL("http://localhost:3000");
+    mainWindow.webContents.openDevTools();
+    mainWindow.webContents.on("did-fail-load", (e, code, desc) => {
+      mainWindow.webContents.reloadIgnoringCache();
     });
   }
 }
 
 const createWizardWindow = () => {
   const win = new BrowserWindow({
-    width: 1000,
-    height: 600,
+    width: 1250,
+    height: 800,
     webPreferences: {
       preload: path.join(__dirname, "preload.js")
     }

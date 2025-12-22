@@ -69,6 +69,7 @@ export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
           };
           const updatedAccounts = [...existingAccounts, newAccount];
           await window.storeAPI.set("accounts", updatedAccounts);
+          window.electronAPI?.send('accounts-updated');
         }
         if (onNext) onNext();
       } else {

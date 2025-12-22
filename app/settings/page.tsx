@@ -98,12 +98,23 @@ export default function Settings() {
         setOllamaApiKey((await window.storeAPI.get("ollamaApiKey") as string) ?? "")
         setOpenRouterApiKey((await window.storeAPI.get("openRouterApiKey") as string) ?? "")
         setSelectedModel((await window.storeAPI.get("selectedModel") as string) ?? "")
-        
+
         const mailAccounts = (await window.storeAPI.get("accounts") as Account[]) || []
         setMailAccounts(mailAccounts)
       }
     }
     loadSettings()
+
+    // Listen for account updates
+    const handleAccountsUpdated = () => {
+      loadSettings()
+    }
+
+    window.addEventListener('accounts-updated', handleAccountsUpdated)
+
+    return () => {
+      window.removeEventListener('accounts-updated', handleAccountsUpdated)
+    }
   }, [])
 
   const handleAiSourceChange = async (value: string) => {

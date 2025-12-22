@@ -24,13 +24,13 @@ export function AccountSelectionStep({ onBack, onAccountSelect }: AccountSelecti
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button className="w-full" variant="outline">
+          <Button className="w-full" variant="outline" disabled>
             <IconBrandGoogle className="mr-2 h-4 w-4" />
-            Add Google Workspace/Gmail account
+            Add Google Workspace/Gmail account (COMING SOON)
           </Button>
-          <Button className="w-full" variant="outline">
+          <Button className="w-full" variant="outline" disabled>
             <IconBrandWindows className="mr-2 h-4 w-4" />
-            Add Microsoft 365/Outlook account
+            Add Microsoft 365/Outlook account (COMING SOON)
           </Button>
           <Button className="w-full" variant="outline" onClick={() => onAccountSelect?.('imap')}>
             <IconMail className="mr-2 h-4 w-4" />
