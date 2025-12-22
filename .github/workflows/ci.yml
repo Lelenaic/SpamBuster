@@ -27,71 +27,8 @@ jobs:
 
     - name: Build Next.js
       run: npm run build
-
-    - name: Build Electron app
-      run: npx electron-builder
-      env:
-        CSC_IDENTITY_AUTO_DISCOVERY: false
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.os }}-build
-        path: dist/*
-        retention-days: 1
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Build Next.js
-      run: npm run build
       env:
         CSC_IDENTITY_AUTO_DISCOVERY: false
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
-
-    - name: Prepare release assets
-      shell: bash
-      run: |
-        mkdir -p release-assets
-        # Copy Windows executables
-        find artifacts -name "*.exe" -type f -exec cp {} release-assets/ \; 2>/dev/null || true
-        # Copy macOS executables  
-        find artifacts -name "*.dmg" -type f -exec cp {} release-assets/ \; 2>/dev/null || true
-        # Copy Linux executables
-        find artifacts -name "*.AppImage" -type f -exec cp {} release-assets/ \; 2>/dev/null || true
-        # Also copy any .msi files (alternative Windows installer)
-        find artifacts -name "*.msi" -type f -exec cp {} release-assets/ \; 2>/dev/null || true
-        # List what we found
-        echo "Release assets prepared:"
-        ls -la release-assets/ || echo "No assets found"
-
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: release-assets/*
-        generate_release_notes: true
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
