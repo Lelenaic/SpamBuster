@@ -317,7 +317,7 @@ export default function Settings() {
       <div className="bg-card rounded-xl border shadow-sm p-8">
         <Tabs defaultValue="ai" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ai">AI Accounts</TabsTrigger>
+            <TabsTrigger value="ai">AI Account</TabsTrigger>
             <TabsTrigger value="mail">Mail Accounts</TabsTrigger>
           </TabsList>
           <TabsContent value="ai" className="space-y-8 mt-6">
