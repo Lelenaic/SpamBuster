@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -59,6 +60,10 @@ const getStatusColor = (status: AccountStatus) => {
 }
 
 export default function Settings() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'ai')
+
   const [aiSource, setAiSource] = useState<string>("ollama")
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState<string>("http://localhost:11434")
   const [ollamaApiKey, setOllamaApiKey] = useState<string>("")
@@ -116,6 +121,13 @@ export default function Settings() {
       window.removeEventListener('accounts-updated', handleAccountsUpdated)
     }
   }, [])
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', value)
+    router.replace(`/settings?${params.toString()}`, { scroll: false })
+  }
 
   const handleAiSourceChange = async (value: string) => {
     setAiSource(value)
@@ -326,7 +338,7 @@ export default function Settings() {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
       <div className="bg-card rounded-xl border shadow-sm p-8">
-        <Tabs defaultValue="ai" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="ai">AI Account</TabsTrigger>
             <TabsTrigger value="mail">Mail Accounts</TabsTrigger>
