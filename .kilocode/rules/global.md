@@ -12,6 +12,7 @@ The UI library is Shadcn UI with TailwindCSS and Tailwind Animate CSS. If needed
 As this is a desktop app, there are no backend server. All the data need to be stored locally using electron-store only.
 The project uses NPM as package manager.
 If you need icons, lucide-icons is installed.
+Never write tests, build or run npm run dev as npm run dev is always running. If an app restart is needed, just tell me.
 
 
 # Documentation

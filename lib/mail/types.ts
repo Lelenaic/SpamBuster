@@ -19,3 +19,13 @@ export interface MailProvider {
 }
 
 export type MailProviderType = 'imap' | 'gmail' | 'outlook';
+
+export type AccountStatus = 'working' | 'trouble' | 'disabled';
+
+export interface Account {
+  id: string;
+  type: MailProviderType;
+  config: MailConnectionConfig;
+  name?: string; // Optional display name
+  status: AccountStatus;
+}

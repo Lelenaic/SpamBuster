@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Mail, ChevronDown, Settings, Plus } from "lucide-react";
+import { Account, AccountStatus } from "@/lib/mail";
 
 declare global {
   interface Window {
@@ -14,9 +15,37 @@ declare global {
   }
 }
 
+const getStatusColor = (status: AccountStatus) => {
+  switch (status) {
+    case 'working':
+      return 'bg-green-500';
+    case 'trouble':
+      return 'bg-red-500';
+    case 'disabled':
+      return 'bg-gray-400';
+    default:
+      return 'bg-gray-400';
+  }
+};
+
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const loadAccounts = async () => {
+      if (typeof window !== "undefined" && window.storeAPI) {
+        const storedAccounts = (await window.storeAPI.get("accounts")) as Account[] || [];
+        setAccounts(storedAccounts);
+        if (storedAccounts.length > 0 && !currentAccount) {
+          setCurrentAccount(storedAccounts[0]);
+        }
+      }
+    };
+    loadAccounts();
+  }, []);
 
   if (pathname.startsWith('/wizard')) return null;
 
@@ -24,26 +53,46 @@ export default function Sidebar() {
     <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-sidebar-border text-card-foreground flex flex-col">
       {/* Account Selector */}
       <div className="p-4 border-b border-sidebar-border">
-        <div className="cursor-pointer hover:bg-sidebar-accent p-2 rounded mb-2" onClick={() => { setIsOpen(!isOpen); }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Mail className="w-6 h-6" />
-              <span className="text-sm text-sidebar-foreground">user@gmail.com</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              <ChevronDown className="w-4 h-4" />
+        {currentAccount ? (
+          <div className="cursor-pointer hover:bg-sidebar-accent p-2 rounded mb-2" onClick={() => { setIsOpen(!isOpen); }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Mail className="w-6 h-6" />
+                <span className="text-sm text-sidebar-foreground">{currentAccount.name || currentAccount.config.username}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`w-2 h-2 rounded-full ${getStatusColor(currentAccount.status)}`}></span>
+                <ChevronDown className="w-4 h-4" />
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="cursor-pointer hover:bg-sidebar-accent p-2 rounded mb-2" onClick={() => { if (typeof window !== 'undefined' && window.electronAPI) window.electronAPI.send('open-wizard-window'); }}>
+            <div className="flex items-center space-x-3">
+              <Plus className="w-6 h-6" />
+              <span className="text-sm text-sidebar-foreground">Add an account</span>
+            </div>
+          </div>
+        )}
         {/* Dropdown content */}
         {isOpen && (
         <div className="space-y-1 border border-sidebar-border rounded p-2">
-          <div className="flex items-center space-x-3 p-2 hover:bg-sidebar-accent rounded cursor-pointer">
-            <Mail className="w-5 h-5" />
-            <span className="text-sm text-sidebar-foreground">user@gmail.com</span>
-            <span className="w-2 h-2 bg-green-500 rounded-full ml-auto"></span>
-          </div>
+          {accounts.map((account) => (
+            <div
+              key={account.id}
+              className={`flex items-center space-x-3 p-2 hover:bg-sidebar-accent rounded cursor-pointer ${
+                currentAccount?.id === account.id ? 'bg-sidebar-primary/10 border border-sidebar-primary/20' : ''
+              }`}
+              onClick={() => {
+                setCurrentAccount(account);
+                setIsOpen(false);
+              }}
+            >
+              <Mail className="w-5 h-5" />
+              <span className="text-sm text-sidebar-foreground">{account.name || account.config.username}</span>
+              <span className={`w-2 h-2 rounded-full ml-auto ${getStatusColor(account.status)}`}></span>
+            </div>
+          ))}
           <div className="flex items-center space-x-3 p-2 hover:bg-sidebar-accent rounded cursor-pointer bg-sidebar-primary/10 border border-sidebar-primary/20" onClick={() => { if (typeof window !== 'undefined' && window.electronAPI) window.electronAPI.send('open-wizard-window'); }}>
             <Plus className="w-5 h-5" />
             <span className="text-sm text-sidebar-foreground">Add an account</span>

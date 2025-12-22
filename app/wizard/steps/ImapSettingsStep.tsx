@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Mail, AlertCircle } from "lucide-react";
-import { MailProviderFactory, MailConnectionConfig } from "@/lib/mail";
+import { MailProviderFactory, MailConnectionConfig, Account } from "@/lib/mail";
 import { toast } from "sonner";
 
 interface ImapSettingsStepProps {
@@ -57,9 +57,18 @@ export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
 
       if (result.success) {
         toast.success("Connection successful!");
-        // Store the connection data
+        // Store the account in the accounts array
         if (typeof window !== "undefined" && window.storeAPI) {
-          await window.storeAPI.set("imapConfig", config);
+          const existingAccounts = (await window.storeAPI.get("accounts")) as Account[] || [];
+          const newAccount: Account = {
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: 'imap',
+            config,
+            name: formData.username, // Use username as display name
+            status: 'working',
+          };
+          const updatedAccounts = [...existingAccounts, newAccount];
+          await window.storeAPI.set("accounts", updatedAccounts);
         }
         if (onNext) onNext();
       } else {
