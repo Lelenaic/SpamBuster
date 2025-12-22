@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Mail, ChevronDown, Settings, Plus } from "lucide-react";
 import { Account, AccountStatus } from "@/lib/mail";
 
@@ -42,15 +43,35 @@ export default function Sidebar() {
         if (storedAccounts.length > 0 && !currentAccount) {
           setCurrentAccount(storedAccounts[0]);
         }
+        
+        // Update current account if it exists in the new accounts list
+        if (currentAccount) {
+          const updatedCurrentAccount = storedAccounts.find(acc => acc.id === currentAccount.id);
+          if (updatedCurrentAccount) {
+            setCurrentAccount(updatedCurrentAccount);
+          }
+        }
       }
     };
     loadAccounts();
-  }, []);
+    
+    // Listen for account updates using CustomEvent
+    const handleAccountsUpdated = () => {
+      loadAccounts();
+    };
+    
+    window.addEventListener('accounts-updated', handleAccountsUpdated);
+    
+    return () => {
+      window.removeEventListener('accounts-updated', handleAccountsUpdated);
+    };
+  }, [currentAccount]);
 
   if (pathname.startsWith('/wizard')) return null;
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-sidebar-border text-card-foreground flex flex-col">
+    <TooltipProvider>
+      <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-sidebar-border text-card-foreground flex flex-col">
       {/* Account Selector */}
       <div className="p-4 border-b border-sidebar-border">
         {currentAccount ? (
@@ -61,7 +82,17 @@ export default function Sidebar() {
                 <span className="text-sm text-sidebar-foreground">{currentAccount.name || currentAccount.config.username}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className={`w-2 h-2 rounded-full ${getStatusColor(currentAccount.status)}`}></span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span 
+                      className={`w-2 h-2 rounded-full ${getStatusColor(currentAccount.status)} hover:opacity-80 cursor-pointer`}
+                      onClick={(e) => e.stopPropagation()}
+                    ></span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Status: {currentAccount.status}</p>
+                  </TooltipContent>
+                </Tooltip>
                 <ChevronDown className="w-4 h-4" />
               </div>
             </div>
@@ -90,7 +121,17 @@ export default function Sidebar() {
             >
               <Mail className="w-5 h-5" />
               <span className="text-sm text-sidebar-foreground">{account.name || account.config.username}</span>
-              <span className={`w-2 h-2 rounded-full ml-auto ${getStatusColor(account.status)}`}></span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span 
+                    className={`w-2 h-2 rounded-full ml-auto ${getStatusColor(account.status)} hover:opacity-80 cursor-pointer`}
+                    onClick={(e) => e.stopPropagation()}
+                  ></span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Status: {account.status}</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           ))}
           <div className="flex items-center space-x-3 p-2 hover:bg-sidebar-accent rounded cursor-pointer bg-sidebar-primary/10 border border-sidebar-primary/20" onClick={() => { if (typeof window !== 'undefined' && window.electronAPI) window.electronAPI.send('open-wizard-window'); }}>
@@ -138,6 +179,7 @@ export default function Sidebar() {
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
 
