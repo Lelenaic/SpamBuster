@@ -65,6 +65,7 @@ jobs:
       run: npx electron-builder
       env:
         CSC_IDENTITY_AUTO_DISCOVERY: false
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Download all artifacts
       uses: actions/download-artifact@v4
