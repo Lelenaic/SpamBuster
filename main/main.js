@@ -21,6 +21,10 @@ ipcMain.handle('store:set', async (event, key, value) => {
   return store.set(key, value);
 });
 
+ipcMain.on('open-wizard-window', () => {
+  createWizardWindow();
+});
+
 const appServe = app.isPackaged ? serve({
   directory: path.join(__dirname, "../out")
 }) : null;
@@ -44,6 +48,32 @@ const createWindow = () => {
     }
   } else {
     win.loadURL("http://localhost:3000");
+    win.webContents.openDevTools();
+    win.webContents.on("did-fail-load", (e, code, desc) => {
+      win.webContents.reloadIgnoringCache();
+    });
+  }
+}
+
+const createWizardWindow = () => {
+  const win = new BrowserWindow({
+    width: 1000,
+    height: 600,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js")
+    }
+  });
+
+  if (app.isPackaged) {
+    if (appServe) {
+      appServe(win).then(() => {
+        console.log('Successfully loaded packaged wizard app');
+      }).catch(err => {
+        console.error('Error loading packaged wizard app:', err);
+      });
+    }
+  } else {
+    win.loadURL("http://localhost:3000/wizard");
     win.webContents.openDevTools();
     win.webContents.on("did-fail-load", (e, code, desc) => {
       win.webContents.reloadIgnoringCache();

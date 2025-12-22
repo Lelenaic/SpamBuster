@@ -6,9 +6,19 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { IconBrandGmail, IconMail, IconChevronDown, IconSettings, IconPlus } from "@tabler/icons-react";
 
+declare global {
+  interface Window {
+    electronAPI?: {
+      send: (channel: string, ...args: unknown[]) => void;
+    };
+  }
+}
+
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+
+  if (pathname === '/wizard') return null;
 
   return (
     <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-sidebar-border text-card-foreground flex flex-col">
@@ -34,7 +44,7 @@ export default function Sidebar() {
             <span className="text-sm text-sidebar-foreground">user@gmail.com</span>
             <span className="w-2 h-2 bg-green-500 rounded-full ml-auto"></span>
           </div>
-          <div className="flex items-center space-x-3 p-2 hover:bg-sidebar-accent rounded cursor-pointer bg-sidebar-primary/10 border border-sidebar-primary/20">
+          <div className="flex items-center space-x-3 p-2 hover:bg-sidebar-accent rounded cursor-pointer bg-sidebar-primary/10 border border-sidebar-primary/20" onClick={() => { if (typeof window !== 'undefined' && window.electronAPI) window.electronAPI.send('open-wizard-window'); }}>
             <IconPlus className="w-5 h-5" />
             <span className="text-sm text-sidebar-foreground">Add an account</span>
           </div>
