@@ -5,7 +5,8 @@
   "main": "main/main.js",
   "scripts": {
     "dev": "concurrently -n \"NEXT,ELECTRON\" -c \"yellow,blue\" --kill-others \"next dev\" \"electron .\"",
-    "build": "next build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
+    "build": "next build && electron-builder",
+    "mac-build": "next build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
     "start": "next start",
     "lint": "eslint"
   },
