@@ -8,7 +8,7 @@ interface MainContentProps {
 
 export default function MainContent({ children }: MainContentProps) {
   const pathname = usePathname();
-  const isWizard = pathname === '/wizard';
+  const isWizard = pathname.startsWith('/wizard');
 
   return (
     <main className={`flex-1 ${isWizard ? 'ml-0 p-0 overflow-hidden' : 'ml-64 p-6 overflow-auto'} bg-secondary`}>

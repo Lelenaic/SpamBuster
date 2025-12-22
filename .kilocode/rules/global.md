@@ -11,7 +11,7 @@ The project is a NextJS project and aims to be desktop only with ElectronJS.
 The UI library is Shadcn UI with TailwindCSS and Tailwind Animate CSS. If needed, add the shadcn components with: npx shadcn@latest add <component>
 As this is a desktop app, there are no backend server. All the data need to be stored locally using electron-store only.
 The project uses NPM as package manager.
-If you need icons, @tabler/icons-react is installed.
+If you need icons, lucide-icons is installed.
 
 
 # Documentation

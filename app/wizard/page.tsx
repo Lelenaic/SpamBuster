@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { IconMail } from "@tabler/icons-react";
+import { Mail } from "lucide-react";
 
 export default function WizardPage() {
   return (
@@ -10,7 +10,7 @@ export default function WizardPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-            <IconMail className="w-6 h-6 text-primary-foreground" />
+            <Mail className="w-6 h-6 text-primary-foreground" />
           </div>
           <CardTitle className="text-2xl">Welcome to SpamBuster</CardTitle>
           <CardDescription>

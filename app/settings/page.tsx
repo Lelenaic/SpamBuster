@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { IconRefresh, IconCheck, IconChevronDown } from "@tabler/icons-react"
+import { RefreshCw, Check, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Command,
@@ -204,7 +204,7 @@ export default function Settings() {
                     {selectedModel
                       ? models.find((model) => model === selectedModel)
                       : loadingModels ? "Loading models..." : "Select model..."}
-                    <IconChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
@@ -223,7 +223,7 @@ export default function Settings() {
                             }}
                           >
                             {model}
-                            <IconCheck
+                            <Check
                               className={cn(
                                 "ml-auto h-4 w-4",
                                 selectedModel === model ? "opacity-100" : "opacity-0"
@@ -242,7 +242,7 @@ export default function Settings() {
                 variant="outline"
                 size="icon"
               >
-                <IconRefresh className="h-4 w-4" />
+                <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
           </div>
