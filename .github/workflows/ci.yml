@@ -25,9 +25,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        for i in {1..3}; do
-          npm ci && break || sleep 5
-        done
+        npm ci || (sleep 5 && npm ci) || (sleep 5 && npm ci)
 
     - name: Build Next.js
       run: npm run build
