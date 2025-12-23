@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { Rule } from '@/lib/types';
 import { Account } from '@/lib/mail/types';
@@ -95,7 +96,7 @@ export default function RulesPage() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="name" className="mb-2 block">Rule Name</Label>
+                <Label htmlFor="name" className="mb-2 block">Rule Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -104,8 +105,8 @@ export default function RulesPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="text" className="mb-2 block">Rule Text</Label>
-                <Input
+                <Label htmlFor="text" className="mb-2 block">Rule Text <span className="text-red-500">*</span></Label>
+                <Textarea
                   id="text"
                   value={formData.text}
                   onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
