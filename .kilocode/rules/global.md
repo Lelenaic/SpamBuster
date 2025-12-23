@@ -13,6 +13,7 @@ As this is a desktop app, there are no backend server. All the data need to be s
 The project uses NPM as package manager.
 If you need icons, lucide-icons is installed.
 Never write tests, build or run npm run dev as npm run dev is always running. If an app restart is needed, just tell me.
+If you need to use charts, chart.js and react-chartjs-2 are installed.
 
 
 # Documentation

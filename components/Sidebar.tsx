@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Mail, ChevronDown, Settings, Plus } from "lucide-react";
+import { Mail, ChevronDown, Settings, Plus, Shield } from "lucide-react";
 import { Account, AccountStatus } from "@/lib/mail";
 
 const getStatusColor = (status: AccountStatus) => {
@@ -29,8 +29,8 @@ export default function Sidebar() {
 
   useEffect(() => {
     const loadAccounts = async () => {
-      if (typeof window !== "undefined" && window.storeAPI) {
-        const storedAccounts = (await window.storeAPI.get("accounts")) as Account[] || [];
+      if (typeof window !== "undefined" && window.accountsAPI) {
+        const storedAccounts = await window.accountsAPI.getAll();
         setAccounts(storedAccounts);
         if (storedAccounts.length > 0 && !currentAccount) {
           setCurrentAccount(storedAccounts[0]);
@@ -54,22 +54,6 @@ export default function Sidebar() {
       }
     };
     loadAccounts();
-    
-    // Listen for account updates using CustomEvent
-    const handleAccountsUpdated = () => {
-      loadAccounts();
-    };
-
-    window.addEventListener('accounts-updated', handleAccountsUpdated);
-
-    // Also listen for IPC from main process (for cross-window updates)
-    window.electronAPI?.on('accounts-updated', () => {
-      window.dispatchEvent(new CustomEvent('accounts-updated'));
-    });
-
-    return () => {
-      window.removeEventListener('accounts-updated', handleAccountsUpdated);
-    };
   }, [currentAccount]);
 
   if (pathname.startsWith('/wizard')) return null;
@@ -154,7 +138,7 @@ export default function Sidebar() {
           <Link href="/">
             <Button
               variant="ghost"
-              className={`w-full justify-start cursor-pointer transition-colors ${
+              className={`w-full justify-start cursor-pointer transition-colors mb-2 ${
                 pathname === "/"
                   ? 'bg-white text-black hover:bg-white'
                   : 'text-white hover:bg-white/10'
@@ -162,6 +146,19 @@ export default function Sidebar() {
             >
               <Mail className="w-5 h-5 mr-2" />
               Dashboard
+            </Button>
+          </Link>
+          <Link href="/rules">
+            <Button
+              variant="ghost"
+              className={`w-full justify-start cursor-pointer transition-colors ${
+                pathname === "/rules"
+                  ? 'bg-white text-black hover:bg-white'
+                  : 'text-white hover:bg-white/10'
+              }`}
+            >
+              <Shield className="w-5 h-5 mr-2" />
+              Rules
             </Button>
           </Link>
         </div>

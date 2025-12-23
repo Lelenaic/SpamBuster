@@ -97,29 +97,18 @@ function SettingsContent() {
 
   useEffect(() => {
     const loadSettings = async () => {
-      if (typeof window !== "undefined" && window.storeAPI) {
-        setAiSource((await window.storeAPI.get("aiSource") as string) ?? "ollama")
-        setOllamaBaseUrl((await window.storeAPI.get("ollamaBaseUrl") as string) ?? "http://localhost:11434")
-        setOllamaApiKey((await window.storeAPI.get("ollamaApiKey") as string) ?? "")
-        setOpenRouterApiKey((await window.storeAPI.get("openRouterApiKey") as string) ?? "")
-        setSelectedModel((await window.storeAPI.get("selectedModel") as string) ?? "")
+      if (typeof window !== "undefined" && window.aiAPI) {
+        setAiSource(await window.aiAPI.getAISource())
+        setOllamaBaseUrl(await window.aiAPI.getOllamaBaseUrl())
+        setOllamaApiKey(await window.aiAPI.getOllamaApiKey())
+        setOpenRouterApiKey(await window.aiAPI.getOpenRouterApiKey())
+        setSelectedModel(await window.aiAPI.getSelectedModel())
 
-        const mailAccounts = (await window.storeAPI.get("accounts") as Account[]) || []
+        const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
       }
     }
     loadSettings()
-
-    // Listen for account updates
-    const handleAccountsUpdated = () => {
-      loadSettings()
-    }
-
-    window.addEventListener('accounts-updated', handleAccountsUpdated)
-
-    return () => {
-      window.removeEventListener('accounts-updated', handleAccountsUpdated)
-    }
   }, [])
 
   const handleTabChange = (value: string) => {
@@ -133,33 +122,33 @@ function SettingsContent() {
     setAiSource(value)
     setSelectedModel("")
     setModels([])
-    if (typeof window !== "undefined" && window.storeAPI) {
-      await window.storeAPI.set("aiSource", value)
-      await window.storeAPI.set("selectedModel", "")
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setAISource(value)
+      await window.aiAPI.setSelectedModel("")
     }
     toast.success("AI provider updated successfully")
   }
 
   const handleOllamaBaseUrlChange = async (value: string) => {
     setOllamaBaseUrl(value)
-    if (typeof window !== "undefined" && window.storeAPI) {
-      await window.storeAPI.set("ollamaBaseUrl", value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setOllamaBaseUrl(value)
     }
     toast.success("Ollama base URL updated")
   }
 
   const handleOllamaApiKeyChange = async (value: string) => {
     setOllamaApiKey(value)
-    if (typeof window !== "undefined" && window.storeAPI) {
-      await window.storeAPI.set("ollamaApiKey", value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setOllamaApiKey(value)
     }
     toast.success("Ollama API key updated")
   }
 
   const handleOpenRouterApiKeyChange = async (value: string) => {
     setOpenRouterApiKey(value)
-    if (typeof window !== "undefined" && window.storeAPI) {
-      await window.storeAPI.set("openRouterApiKey", value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setOpenRouterApiKey(value)
     }
     toast.success("OpenRouter API key updated")
   }
@@ -190,12 +179,9 @@ function SettingsContent() {
 
   const confirmDelete = async () => {
     if (accountToDelete) {
-      const updatedAccounts = mailAccounts.filter(acc => acc.id !== accountToDelete.id)
+      await window.accountsAPI.delete(accountToDelete.id)
+      const updatedAccounts = await window.accountsAPI.getAll()
       setMailAccounts(updatedAccounts)
-      if (typeof window !== "undefined" && window.storeAPI) {
-        await window.storeAPI.set("accounts", updatedAccounts)
-        window.dispatchEvent(new CustomEvent('accounts-updated'))
-      }
       toast.success("Account deleted successfully")
     }
     setDeleteDialogOpen(false)
@@ -249,19 +235,13 @@ function SettingsContent() {
         const result = await provider.testConnection(newConfig)
         
         if (result.success) {
-          const updatedAccount = {
-            ...accountToModify,
+          await window.accountsAPI.update(accountToModify.id, {
             config: newConfig,
             name: modifyFormData.username,
             status: 'working' as const,
-          }
-          
-          const updatedAccounts = mailAccounts.map(acc => acc.id === accountToModify.id ? updatedAccount : acc)
+          })
+          const updatedAccounts = await window.accountsAPI.getAll()
           setMailAccounts(updatedAccounts)
-          if (typeof window !== "undefined" && window.storeAPI) {
-            await window.storeAPI.set("accounts", updatedAccounts)
-            window.dispatchEvent(new CustomEvent('accounts-updated'))
-          }
           toast.success("Account updated successfully")
           setModifyDialogOpen(false)
           setAccountToModify(null)
@@ -278,18 +258,9 @@ function SettingsContent() {
 
   const handleToggleAccount = async (account: Account) => {
     const newStatus: AccountStatus = account.status === 'disabled' ? 'working' : 'disabled'
-    const updatedAccount = {
-      ...account,
-      status: newStatus,
-    }
-    
-    const updatedAccounts = mailAccounts.map(acc => acc.id === account.id ? updatedAccount : acc)
+    await window.accountsAPI.update(account.id, { status: newStatus })
+    const updatedAccounts = await window.accountsAPI.getAll()
     setMailAccounts(updatedAccounts)
-    if (typeof window !== "undefined" && window.storeAPI) {
-      await window.storeAPI.set("accounts", updatedAccounts)
-      window.dispatchEvent(new CustomEvent('accounts-updated'))
-    }
-    
     toast.success(`Account ${newStatus === 'disabled' ? 'disabled' : 'enabled'} successfully`)
   }
 
@@ -312,8 +283,8 @@ function SettingsContent() {
 
   const handleModelChange = async (value: string) => {
     setSelectedModel(value)
-    if (typeof window !== "undefined" && window.storeAPI) {
-      await window.storeAPI.set("selectedModel", value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setSelectedModel(value)
     }
     toast.success("Model updated")
   }
