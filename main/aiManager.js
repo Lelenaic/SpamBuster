@@ -50,6 +50,56 @@ class AIManager {
   setSelectedEmbedModel(value) {
     this.store.set('selectedEmbedModel', value);
   }
+
+  registerHandlers(ipcMain) {
+    ipcMain.handle('ai:getAISource', async () => {
+      return this.getAISource();
+    });
+
+    ipcMain.handle('ai:setAISource', async (event, value) => {
+      return this.setAISource(value);
+    });
+
+    ipcMain.handle('ai:getOllamaBaseUrl', async () => {
+      return this.getOllamaBaseUrl();
+    });
+
+    ipcMain.handle('ai:setOllamaBaseUrl', async (event, value) => {
+      return this.setOllamaBaseUrl(value);
+    });
+
+    ipcMain.handle('ai:getOllamaApiKey', async () => {
+      return this.getOllamaApiKey();
+    });
+
+    ipcMain.handle('ai:setOllamaApiKey', async (event, value) => {
+      return this.setOllamaApiKey(value);
+    });
+
+    ipcMain.handle('ai:getOpenRouterApiKey', async () => {
+      return this.getOpenRouterApiKey();
+    });
+
+    ipcMain.handle('ai:setOpenRouterApiKey', async (event, value) => {
+      return this.setOpenRouterApiKey(value);
+    });
+
+    ipcMain.handle('ai:getSelectedModel', async () => {
+      return this.getSelectedModel();
+    });
+
+    ipcMain.handle('ai:setSelectedModel', async (event, value) => {
+      return this.setSelectedModel(value);
+    });
+
+    ipcMain.handle('ai:getSelectedEmbedModel', async () => {
+      return this.getSelectedEmbedModel();
+    });
+
+    ipcMain.handle('ai:setSelectedEmbedModel', async (event, value) => {
+      return this.setSelectedEmbedModel(value);
+    });
+  }
 }
 
 module.exports = { AIManager };

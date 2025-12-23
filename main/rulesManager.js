@@ -41,6 +41,28 @@ class RulesManager {
     this.store.set('rules', filtered);
     return true;
   }
+
+  registerHandlers(ipcMain) {
+    ipcMain.handle('rules:getAll', async () => {
+      return this.getAll();
+    });
+
+    ipcMain.handle('rules:getById', async (event, id) => {
+      return this.getById(id);
+    });
+
+    ipcMain.handle('rules:create', async (event, ruleData) => {
+      return this.create(ruleData);
+    });
+
+    ipcMain.handle('rules:update', async (event, id, updates) => {
+      return this.update(id, updates);
+    });
+
+    ipcMain.handle('rules:delete', async (event, id) => {
+      return this.delete(id);
+    });
+  }
 }
 
 module.exports = { RulesManager };
