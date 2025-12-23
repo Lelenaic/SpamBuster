@@ -25,11 +25,15 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Install snapcraft (Ubuntu only)
+      if: matrix.os == 'ubuntu-latest'
+      run: snap install snapcraft --classic
+
     - name: Build Next.js
       run: npm run build
       env:
-        CSC_LINK: ${{ secrets.CERT_LINK }}
-        CSC_KEY_PASSWORD: ${{ secrets.CERT_PASSWORD }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        CSC_LINK: ${{ secrets.CERT_LINK }}
+        CSC_KEY_PASSWORD: ${{ secrets.CERT_PASSWORD }}
         SNAPCRAFT_STORE_LOGIN_TOKEN: ${{ secrets.SNAPCRAFT_STORE_LOGIN_TOKEN }}
