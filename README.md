@@ -1,4 +1,5 @@
-# SpamBuster
+
+![SpamBuster](/spambuster.jpg)
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.1.0-black?style=flat&logo=next.js)](https://nextjs.org)
 [![Electron](https://img.shields.io/badge/Electron-39.2.7-blue?style=flat&logo=electron)](https://www.electronjs.org/)
@@ -12,9 +13,8 @@ Uses OpenRouter or Ollama to classify emails based on your custom anti-spam rule
 ## ✨ Features
 
 - **AI-Driven Spam Detection**: Leverage powerful LLMs via OpenRouter or local Ollama.
-- **IMAP Integration**: Connect to Gmail, Outlook, or any IMAP server using [imapflow](https://imapflow.com).
+- **IMAP Integration**: Connect to Gmail, Outlook, or any IMAP server.
 - **Custom Rules**: Configure rules sent to AI for intelligent spam filtering.
-- **Setup Wizard**: Guided onboarding with welcome, account selection, and IMAP settings.
 - **Cross-Platform**: Native builds for macOS (DMG), Windows (NSIS), Linux (AppImage, Snap).
 - **Modern UI**: Shadcn UI components, Tailwind CSS, Lucide React icons, Sonner toasts.
 
