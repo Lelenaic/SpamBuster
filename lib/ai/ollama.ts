@@ -10,6 +10,11 @@ export class OllamaService implements AIService {
     return data.models.map((m: { name: string }) => m.name)
   }
 
+  async listEmbeddingModels(): Promise<string[]> {
+    // For Ollama, embedding models are the same as regular models
+    return this.listModels()
+  }
+
   async sendMessage(message: string, model?: string): Promise<string> {
     const response = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',

@@ -137,6 +137,16 @@ ipcMain.handle('ai:setSelectedModel', async (event, value) => {
   return aiManager.setSelectedModel(value);
 });
 
+ipcMain.handle('ai:getSelectedEmbedModel', async () => {
+  if (!aiManager) throw new Error('AIManager not initialized');
+  return aiManager.getSelectedEmbedModel();
+});
+
+ipcMain.handle('ai:setSelectedEmbedModel', async (event, value) => {
+  if (!aiManager) throw new Error('AIManager not initialized');
+  return aiManager.setSelectedEmbedModel(value);
+});
+
 ipcMain.on('accounts-updated', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('accounts-updated');
@@ -208,7 +218,8 @@ const createWindow = () => {
     width: 1150,
     height: 730,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js")
+      preload: path.join(__dirname, "preload.js"),
+      webSecurity: false,
     }
   });
 

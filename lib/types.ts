@@ -53,6 +53,8 @@ declare global {
       setOpenRouterApiKey: (value: string) => Promise<void>
       getSelectedModel: () => Promise<string>
       setSelectedModel: (value: string) => Promise<void>
+      getSelectedEmbedModel: () => Promise<string>
+      setSelectedEmbedModel: (value: string) => Promise<void>
     }
   }
 }

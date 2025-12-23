@@ -15,6 +15,18 @@ export class OpenRouterService implements AIService {
     return data.data.map((m: { id: string }) => m.id)
   }
 
+  async listEmbeddingModels(): Promise<string[]> {
+    const response = await fetch(`${this.baseUrl}/embeddings/models`, {
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    if (!response.ok) throw new Error('Failed to fetch embedding models')
+    const data = await response.json()
+    return data.data.map((m: { id: string }) => m.id)
+  }
+
   async sendMessage(message: string, model?: string): Promise<string> {
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',

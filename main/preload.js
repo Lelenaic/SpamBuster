@@ -46,4 +46,6 @@ contextBridge.exposeInMainWorld("aiAPI", {
     setOpenRouterApiKey: (value) => ipcRenderer.invoke('ai:setOpenRouterApiKey', value),
     getSelectedModel: () => ipcRenderer.invoke('ai:getSelectedModel'),
     setSelectedModel: (value) => ipcRenderer.invoke('ai:setSelectedModel', value),
+    getSelectedEmbedModel: () => ipcRenderer.invoke('ai:getSelectedEmbedModel'),
+    setSelectedEmbedModel: (value) => ipcRenderer.invoke('ai:setSelectedEmbedModel', value),
 });

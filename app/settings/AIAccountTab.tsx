@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { TabsContent } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
 import { RefreshCw, Check, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -40,6 +41,16 @@ interface AIAccountTabProps {
   setModelComboboxOpen: (open: boolean) => void
   testingConnection: boolean
   setTestingConnection: (testing: boolean) => void
+  selectedEmbedModel: string
+  setSelectedEmbedModel: (value: string) => void
+  embedModels: string[]
+  setEmbedModels: (models: string[]) => void
+  loadingEmbedModels: boolean
+  setLoadingEmbedModels: (loading: boolean) => void
+  embedModelComboboxOpen: boolean
+  setEmbedModelComboboxOpen: (open: boolean) => void
+  testingEmbedConnection: boolean
+  setTestingEmbedConnection: (testing: boolean) => void
   handleAiSourceChange: (value: string) => Promise<void>
   handleOllamaBaseUrlChange: (value: string) => Promise<void>
   handleOllamaApiKeyChange: (value: string) => Promise<void>
@@ -47,6 +58,9 @@ interface AIAccountTabProps {
   fetchModels: () => Promise<void>
   handleModelChange: (value: string) => Promise<void>
   handleTestConnection: () => Promise<void>
+  fetchEmbedModels: () => Promise<void>
+  handleEmbedModelChange: (value: string) => Promise<void>
+  handleTestEmbedConnection: () => Promise<void>
 }
 
 export default function AIAccountTab({
@@ -68,6 +82,16 @@ export default function AIAccountTab({
   setModelComboboxOpen,
   testingConnection,
   setTestingConnection,
+  selectedEmbedModel,
+  setSelectedEmbedModel,
+  embedModels,
+  setEmbedModels,
+  loadingEmbedModels,
+  setLoadingEmbedModels,
+  embedModelComboboxOpen,
+  setEmbedModelComboboxOpen,
+  testingEmbedConnection,
+  setTestingEmbedConnection,
   handleAiSourceChange,
   handleOllamaBaseUrlChange,
   handleOllamaApiKeyChange,
@@ -75,9 +99,16 @@ export default function AIAccountTab({
   fetchModels,
   handleModelChange,
   handleTestConnection,
+  fetchEmbedModels,
+  handleEmbedModelChange,
+  handleTestEmbedConnection,
 }: AIAccountTabProps) {
   return (
     <TabsContent value="ai" className="space-y-8 mt-6">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-bold">AI Model Configuration</h2>
+        <p className="text-muted-foreground">Select the AI model that will be used to analyze your emails for spam detection.</p>
+      </div>
       <div className="space-y-2">
         <Label htmlFor="ai-source">AI Provider</Label>
         <Select value={aiSource} onValueChange={handleAiSourceChange}>
@@ -195,6 +226,86 @@ export default function AIAccountTab({
             variant="outline"
           >
             {testingConnection ? "Testing..." : "Test Connection"}
+          </Button>
+        </div>
+      )}
+      <Separator />
+      <div className="space-y-2">
+        <h2 className="text-2xl font-bold">Embedding Model Configuration</h2>
+        <p className="text-muted-foreground">Select the embedding model that will be used to insert emails into the vector database. If you select none, the feature will be disabled.
+          <br />
+          If you're on Ollama, we recommend using the "mxbai-embed-large" model for best results.
+          <br />
+          If you're on OpenRouter, we recommand using the "openai/text-embedding-3-large" model for best results. If you prefer a cheaper model, you can use "openai/text-embedding-3-small" instead.
+        </p>
+      </div>
+      {(aiSource === 'ollama' || aiSource === 'openrouter') && (
+        <div className="space-y-2">
+          <Label htmlFor="embed-model">Embedding Model</Label>
+          <div className="flex gap-2">
+            <Popover open={embedModelComboboxOpen} onOpenChange={setEmbedModelComboboxOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={embedModelComboboxOpen}
+                  className="flex-1 justify-between"
+                  disabled={loadingEmbedModels || (aiSource === 'ollama' && !ollamaBaseUrl) || (aiSource === 'openrouter' && !openRouterApiKey)}
+                >
+                  {selectedEmbedModel
+                    ? embedModels.find((model) => model === selectedEmbedModel)
+                    : loadingEmbedModels ? "Loading models..." : "Select embedding model..."}
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder="Search embedding model..." className="h-9" />
+                  <CommandList>
+                    <CommandEmpty>No embedding model found.</CommandEmpty>
+                    <CommandGroup>
+                      {embedModels.map((model) => (
+                        <CommandItem
+                          key={model}
+                          value={model}
+                          onSelect={(currentValue) => {
+                            handleEmbedModelChange(currentValue === selectedEmbedModel ? "" : currentValue)
+                            setEmbedModelComboboxOpen(false)
+                          }}
+                        >
+                          {model}
+                          <Check
+                            className={cn(
+                              "ml-auto h-4 w-4",
+                              selectedEmbedModel === model ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <Button
+              onClick={fetchEmbedModels}
+              disabled={loadingEmbedModels || (aiSource === 'ollama' && !ollamaBaseUrl) || (aiSource === 'openrouter' && !openRouterApiKey)}
+              variant="outline"
+              size="icon"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+      {(aiSource === 'ollama' || aiSource === 'openrouter') && (
+        <div className="space-y-2">
+          <Button
+            onClick={handleTestEmbedConnection}
+            disabled={testingEmbedConnection || (aiSource === 'ollama' && !ollamaBaseUrl) || (aiSource === 'openrouter' && !openRouterApiKey)}
+            variant="outline"
+          >
+            {testingEmbedConnection ? "Testing..." : "Test Embed Connection"}
           </Button>
         </div>
       )}

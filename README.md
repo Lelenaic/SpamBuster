@@ -22,7 +22,7 @@ Uses OpenRouter or Ollama to classify emails based on your custom anti-spam rule
 
 Download pre-built binaries from the [latest release](https://github.com/lelenaic/spambuster/releases/latest) for Linux, MacOS and Windows.
 
-**Note**: A Linux Snap is available `snap install spambuster`.
+[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/spambuster)
 
 
 ## 📋 TODO

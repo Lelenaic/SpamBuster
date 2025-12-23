@@ -42,6 +42,14 @@ class AIManager {
   setSelectedModel(value) {
     this.store.set('selectedModel', value);
   }
+
+  getSelectedEmbedModel() {
+    return this.store.get('selectedEmbedModel', '');
+  }
+
+  setSelectedEmbedModel(value) {
+    this.store.set('selectedEmbedModel', value);
+  }
 }
 
 module.exports = { AIManager };

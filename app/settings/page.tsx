@@ -28,6 +28,16 @@ function SettingsContent() {
 
   const [testingConnection, setTestingConnection] = useState(false)
 
+  const [selectedEmbedModel, setSelectedEmbedModel] = useState<string>("")
+
+  const [embedModels, setEmbedModels] = useState<string[]>([])
+
+  const [loadingEmbedModels, setLoadingEmbedModels] = useState(false)
+
+  const [embedModelComboboxOpen, setEmbedModelComboboxOpen] = useState(false)
+
+  const [testingEmbedConnection, setTestingEmbedConnection] = useState(false)
+
   const [mailAccounts, setMailAccounts] = useState<Account[]>([])
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null)
@@ -53,6 +63,7 @@ function SettingsContent() {
         setOllamaApiKey(await window.aiAPI.getOllamaApiKey())
         setOpenRouterApiKey(await window.aiAPI.getOpenRouterApiKey())
         setSelectedModel(await window.aiAPI.getSelectedModel())
+        setSelectedEmbedModel(await window.aiAPI.getSelectedEmbedModel())
 
         const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
@@ -72,9 +83,12 @@ function SettingsContent() {
     setAiSource(value)
     setSelectedModel("")
     setModels([])
+    setSelectedEmbedModel("")
+    setEmbedModels([])
     if (typeof window !== "undefined" && window.aiAPI) {
       await window.aiAPI.setAISource(value)
       await window.aiAPI.setSelectedModel("")
+      await window.aiAPI.setSelectedEmbedModel("")
     }
   }
 
@@ -98,6 +112,12 @@ function SettingsContent() {
       await window.aiAPI.setOpenRouterApiKey(value)
     }
   }
+
+  useEffect(() => {
+    if ((aiSource === 'ollama' && ollamaBaseUrl) || (aiSource === 'openrouter' && openRouterApiKey)) {
+      fetchModels()
+    }
+  }, [aiSource, ollamaBaseUrl, openRouterApiKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchModels = async () => {
     setLoadingModels(true)
@@ -134,6 +154,50 @@ function SettingsContent() {
       // Error handled in component
     } finally {
       setTestingConnection(false)
+    }
+  }
+
+  useEffect(() => {
+    if ((aiSource === 'ollama' && ollamaBaseUrl) || (aiSource === 'openrouter' && openRouterApiKey)) {
+      fetchEmbedModels()
+    }
+  }, [aiSource, ollamaBaseUrl, openRouterApiKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchEmbedModels = async () => {
+    setLoadingEmbedModels(true)
+    try {
+      const config = aiSource === 'ollama'
+        ? { baseUrl: ollamaBaseUrl, apiKey: ollamaApiKey }
+        : { apiKey: openRouterApiKey }
+      const service = createAIService(aiSource, config)
+      const modelNames = await service.listEmbeddingModels()
+      setEmbedModels(modelNames.sort((a: string, b: string) => a.localeCompare(b)))
+    } catch {
+      setEmbedModels([])
+    } finally {
+      setLoadingEmbedModels(false)
+    }
+  }
+
+  const handleEmbedModelChange = async (value: string) => {
+    setSelectedEmbedModel(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setSelectedEmbedModel(value)
+    }
+  }
+
+  const handleTestEmbedConnection = async () => {
+    setTestingEmbedConnection(true)
+    try {
+      const config = aiSource === 'ollama'
+        ? { baseUrl: ollamaBaseUrl, apiKey: ollamaApiKey }
+        : { apiKey: openRouterApiKey }
+      const service = createAIService(aiSource, config)
+      await service.testConnection()
+    } catch {
+      // Error handled in component
+    } finally {
+      setTestingEmbedConnection(false)
     }
   }
 
@@ -259,6 +323,16 @@ function SettingsContent() {
             setModelComboboxOpen={setModelComboboxOpen}
             testingConnection={testingConnection}
             setTestingConnection={setTestingConnection}
+            selectedEmbedModel={selectedEmbedModel}
+            setSelectedEmbedModel={setSelectedEmbedModel}
+            embedModels={embedModels}
+            setEmbedModels={setEmbedModels}
+            loadingEmbedModels={loadingEmbedModels}
+            setLoadingEmbedModels={setLoadingEmbedModels}
+            embedModelComboboxOpen={embedModelComboboxOpen}
+            setEmbedModelComboboxOpen={setEmbedModelComboboxOpen}
+            testingEmbedConnection={testingEmbedConnection}
+            setTestingEmbedConnection={setTestingEmbedConnection}
             handleAiSourceChange={handleAiSourceChange}
             handleOllamaBaseUrlChange={handleOllamaBaseUrlChange}
             handleOllamaApiKeyChange={handleOllamaApiKeyChange}
@@ -266,6 +340,9 @@ function SettingsContent() {
             fetchModels={fetchModels}
             handleModelChange={handleModelChange}
             handleTestConnection={handleTestConnection}
+            fetchEmbedModels={fetchEmbedModels}
+            handleEmbedModelChange={handleEmbedModelChange}
+            handleTestEmbedConnection={handleTestEmbedConnection}
           />
           <MailAccountsTab
             mailAccounts={mailAccounts}
