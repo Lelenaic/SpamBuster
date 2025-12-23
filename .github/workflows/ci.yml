@@ -28,9 +28,7 @@ jobs:
     - name: Build Next.js
       run: npm run build
       env:
-        CSC_IDENTITY_AUTO_DISCOVERY: false
         CSC_LINK: ${{ secrets.CERT_LINK }}
         CSC_KEY_PASSWORD: ${{ secrets.CERT_PASSWORD }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
