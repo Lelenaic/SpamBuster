@@ -79,7 +79,11 @@
     "snap": {
       "confinement": "strict",
       "base": "core22",
-      "plugs": ["default", "network-bind"]
+      "plugs": ["default", "network-bind"],
+      "title": "SpamBuster",
+      "summary": "AI-powered spam email cleaner",
+      "description": "SpamBuster is an AI anti-spam application that helps you clean your inbox from unwanted emails.",
+      "grade": "stable"
     },
     "publish": [{
       "provider": "github",
