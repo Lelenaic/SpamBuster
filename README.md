@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SpamBuster
 
-## Getting Started
+[![Next.js](https://img.shields.io/badge/Next.js-16.1.0-black?style=flat&logo=next.js)](https://nextjs.org)
+[![Electron](https://img.shields.io/badge/Electron-39.2.7-blue?style=flat&logo=electron)](https://www.electronjs.org/)
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![GitHub Releases](https://img.shields.io/github/downloads/lelenaic/spambuster/latest/total.svg)](https://github.com/lelenaic/spambuster/releases/latest)
 
-First, run the development server:
+AI-powered spam email cleaner for your desktop (macOS, Linux, Windows).
+
+Uses OpenRouter or Ollama to classify emails based on your custom anti-spam rules.
+
+## ✨ Features
+
+- **AI-Driven Spam Detection**: Leverage powerful LLMs via OpenRouter or local Ollama.
+- **IMAP Integration**: Connect to Gmail, Outlook, or any IMAP server using [imapflow](https://imapflow.com).
+- **Custom Rules**: Configure rules sent to AI for intelligent spam filtering.
+- **Setup Wizard**: Guided onboarding with welcome, account selection, and IMAP settings.
+- **Cross-Platform**: Native builds for macOS (DMG), Windows (NSIS), Linux (AppImage, Snap).
+- **Modern UI**: Shadcn UI components, Tailwind CSS, Lucide React icons, Sonner toasts.
+- **Local-First**: Settings persisted with [electron-store](https://github.com/sindresorhus/electron-store).
+
+## 🚀 Installation
+
+Download pre-built binaries from the [latest release](https://github.com/lelenaic/spambuster/releases/latest) for Linux, MacOS and Windows.
+
+**Note**: A Linux Snap is available `snap install spambuster`.
+
+## 🛠️ Development
 
 ```bash
+git clone https://github.com/lelenaic/spambuster.git
+cd spambuster
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `npm run dev`: Concurrent Next.js dev server + Electron.
+- `npm run build`: Build production app (`next build && electron-builder`).
+- `npm run mac-build`: macOS build without auto identity discovery (no app signature).
+- `npm run lint`: ESLint check.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🔨 CI/CD
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+[GitHub Actions](https://github.com/lelenaic/spambuster/actions/workflows/ci.yml) builds and publishes releases on tag pushes:
 
-## Learn More
+- Ubuntu: AppImage + Snap
+- macOS: DMG
+- Windows: NSIS installer
 
-To learn more about Next.js, take a look at the following resources:
+Secrets configured for code signing and Snap store.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📖 Setup Flow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Welcome**: Introduction to SpamBuster.
+2. **Account Selection**: Choose email provider or custom IMAP.
+3. **IMAP Settings**: Enter server details, credentials.
+4. **AI Configuration**: Select OpenRouter/Ollama, API keys/models.
+5. **Rules**: Define custom anti-spam prompts/rules.
 
-## Deploy on Vercel
+## 🤝 Contributing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Contributions welcome! Fork, PRs to `main`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📋 TODO
+- Outlook/M365 support
+- Gmail/Workspace support
+- Auto update
+
+## � License
+
+[MIT License](LICENSE) © 2025 [Lénaïc Grolleau](https://lenaic.me).
+
+---
+
+⭐ [Star on GitHub](https://github.com/lelenaic/spambuster) · [Issues](https://github.com/lelenaic/spambuster/issues) · [lenaic.me](https://lenaic.me)
