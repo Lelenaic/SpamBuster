@@ -78,7 +78,7 @@
     },
     "snap": {
       "confinement": "strict",
-      "base": "core22",
+      "base": "core24",
       "plugs": ["default", "network-bind"],
       "title": "SpamBuster",
       "summary": "AI-powered spam email cleaner",
