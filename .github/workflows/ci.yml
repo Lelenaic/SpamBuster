@@ -36,4 +36,4 @@ jobs:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
         CSC_LINK: ${{ secrets.CERT_LINK }}
         CSC_KEY_PASSWORD: ${{ secrets.CERT_PASSWORD }}
-        SNAPCRAFT_STORE_LOGIN_TOKEN: ${{ secrets.SNAPCRAFT_STORE_LOGIN_TOKEN }}
+        SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_LOGIN_TOKEN }}
