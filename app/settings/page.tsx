@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { createAIService } from "@/lib/ai"
 import { Account, AccountStatus, MailProviderFactory } from "@/lib/mail"
 import "@/lib/types"
@@ -298,79 +298,83 @@ function SettingsContent() {
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-      <div className="bg-card rounded-xl border shadow-sm p-8">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ai">AI Account</TabsTrigger>
-            <TabsTrigger value="mail">Mail Accounts</TabsTrigger>
-          </TabsList>
-          <AIAccountTab
-            aiSource={aiSource}
-            setAiSource={setAiSource}
-            ollamaBaseUrl={ollamaBaseUrl}
-            setOllamaBaseUrl={setOllamaBaseUrl}
-            ollamaApiKey={ollamaApiKey}
-            setOllamaApiKey={setOllamaApiKey}
-            openRouterApiKey={openRouterApiKey}
-            setOpenRouterApiKey={setOpenRouterApiKey}
-            selectedModel={selectedModel}
-            setSelectedModel={setSelectedModel}
-            models={models}
-            setModels={setModels}
-            loadingModels={loadingModels}
-            setLoadingModels={setLoadingModels}
-            modelComboboxOpen={modelComboboxOpen}
-            setModelComboboxOpen={setModelComboboxOpen}
-            testingConnection={testingConnection}
-            setTestingConnection={setTestingConnection}
-            selectedEmbedModel={selectedEmbedModel}
-            setSelectedEmbedModel={setSelectedEmbedModel}
-            embedModels={embedModels}
-            setEmbedModels={setEmbedModels}
-            loadingEmbedModels={loadingEmbedModels}
-            setLoadingEmbedModels={setLoadingEmbedModels}
-            embedModelComboboxOpen={embedModelComboboxOpen}
-            setEmbedModelComboboxOpen={setEmbedModelComboboxOpen}
-            testingEmbedConnection={testingEmbedConnection}
-            setTestingEmbedConnection={setTestingEmbedConnection}
-            handleAiSourceChange={handleAiSourceChange}
-            handleOllamaBaseUrlChange={handleOllamaBaseUrlChange}
-            handleOllamaApiKeyChange={handleOllamaApiKeyChange}
-            handleOpenRouterApiKeyChange={handleOpenRouterApiKeyChange}
-            fetchModels={fetchModels}
-            handleModelChange={handleModelChange}
-            handleTestConnection={handleTestConnection}
-            fetchEmbedModels={fetchEmbedModels}
-            handleEmbedModelChange={handleEmbedModelChange}
-            handleTestEmbedConnection={handleTestEmbedConnection}
-          />
-          <MailAccountsTab
-            mailAccounts={mailAccounts}
-            setMailAccounts={setMailAccounts}
-            deleteDialogOpen={deleteDialogOpen}
-            setDeleteDialogOpen={setDeleteDialogOpen}
-            accountToDelete={accountToDelete}
-            setAccountToDelete={setAccountToDelete}
-            modifyDialogOpen={modifyDialogOpen}
-            setModifyDialogOpen={setModifyDialogOpen}
-            accountToModify={accountToModify}
-            setAccountToModify={setAccountToModify}
-            modifyFormData={modifyFormData}
-            setModifyFormData={setModifyFormData}
-            testingModify={testingModify}
-            setTestingModify={setTestingModify}
-            testingAccountId={testingAccountId}
-            setTestingAccountId={setTestingAccountId}
-            handleDeleteAccount={handleDeleteAccount}
-            confirmDelete={confirmDelete}
-            handleModifyAccount={handleModifyAccount}
-            handleTestAccount={handleTestAccount}
-            handleModifyFormChange={handleModifyFormChange}
-            handleSaveModify={handleSaveModify}
-            handleToggleAccount={handleToggleAccount}
-          />
-        </Tabs>
-      </div>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="ai">AI Account</TabsTrigger>
+          <TabsTrigger value="mail">Mail Accounts</TabsTrigger>
+        </TabsList>
+        <div className="bg-card rounded-xl border shadow-sm p-8">
+          <TabsContent value="ai">
+            <AIAccountTab
+              aiSource={aiSource}
+              setAiSource={setAiSource}
+              ollamaBaseUrl={ollamaBaseUrl}
+              setOllamaBaseUrl={setOllamaBaseUrl}
+              ollamaApiKey={ollamaApiKey}
+              setOllamaApiKey={setOllamaApiKey}
+              openRouterApiKey={openRouterApiKey}
+              setOpenRouterApiKey={setOpenRouterApiKey}
+              selectedModel={selectedModel}
+              setSelectedModel={setSelectedModel}
+              models={models}
+              setModels={setModels}
+              loadingModels={loadingModels}
+              setLoadingModels={setLoadingModels}
+              modelComboboxOpen={modelComboboxOpen}
+              setModelComboboxOpen={setModelComboboxOpen}
+              testingConnection={testingConnection}
+              setTestingConnection={setTestingConnection}
+              selectedEmbedModel={selectedEmbedModel}
+              setSelectedEmbedModel={setSelectedEmbedModel}
+              embedModels={embedModels}
+              setEmbedModels={setEmbedModels}
+              loadingEmbedModels={loadingEmbedModels}
+              setLoadingEmbedModels={setLoadingEmbedModels}
+              embedModelComboboxOpen={embedModelComboboxOpen}
+              setEmbedModelComboboxOpen={setEmbedModelComboboxOpen}
+              testingEmbedConnection={testingEmbedConnection}
+              setTestingEmbedConnection={setTestingEmbedConnection}
+              handleAiSourceChange={handleAiSourceChange}
+              handleOllamaBaseUrlChange={handleOllamaBaseUrlChange}
+              handleOllamaApiKeyChange={handleOllamaApiKeyChange}
+              handleOpenRouterApiKeyChange={handleOpenRouterApiKeyChange}
+              fetchModels={fetchModels}
+              handleModelChange={handleModelChange}
+              handleTestConnection={handleTestConnection}
+              fetchEmbedModels={fetchEmbedModels}
+              handleEmbedModelChange={handleEmbedModelChange}
+              handleTestEmbedConnection={handleTestEmbedConnection}
+            />
+          </TabsContent>
+          <TabsContent value="mail">
+            <MailAccountsTab
+              mailAccounts={mailAccounts}
+              setMailAccounts={setMailAccounts}
+              deleteDialogOpen={deleteDialogOpen}
+              setDeleteDialogOpen={setDeleteDialogOpen}
+              accountToDelete={accountToDelete}
+              setAccountToDelete={setAccountToDelete}
+              modifyDialogOpen={modifyDialogOpen}
+              setModifyDialogOpen={setModifyDialogOpen}
+              accountToModify={accountToModify}
+              setAccountToModify={setAccountToModify}
+              modifyFormData={modifyFormData}
+              setModifyFormData={setModifyFormData}
+              testingModify={testingModify}
+              setTestingModify={setTestingModify}
+              testingAccountId={testingAccountId}
+              setTestingAccountId={setTestingAccountId}
+              handleDeleteAccount={handleDeleteAccount}
+              confirmDelete={confirmDelete}
+              handleModifyAccount={handleModifyAccount}
+              handleTestAccount={handleTestAccount}
+              handleModifyFormChange={handleModifyFormChange}
+              handleSaveModify={handleSaveModify}
+              handleToggleAccount={handleToggleAccount}
+            />
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   )
 }
