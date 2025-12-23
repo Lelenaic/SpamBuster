@@ -83,8 +83,6 @@
     },
     "publish": [{
       "provider": "github",
-      "owner": "lelenaic",
-      "repo": "spambuster",
       "releaseType": "release"
     }]
   }
