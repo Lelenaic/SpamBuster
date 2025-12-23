@@ -63,7 +63,7 @@
     "files": [
       "main",
       "app",
-      ".next",
+      "out",
       "node_modules",
       "package.json"
     ],
