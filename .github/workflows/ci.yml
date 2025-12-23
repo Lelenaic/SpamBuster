@@ -27,7 +27,7 @@ jobs:
 
     - name: Install snapcraft (Ubuntu only)
       if: matrix.os == 'ubuntu-latest'
-      run: snap install snapcraft --classic
+      run: sudo snap install snapcraft --classic
 
     - name: Build Next.js
       run: npm run build
