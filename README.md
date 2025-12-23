@@ -17,7 +17,6 @@ Uses OpenRouter or Ollama to classify emails based on your custom anti-spam rule
 - **Setup Wizard**: Guided onboarding with welcome, account selection, and IMAP settings.
 - **Cross-Platform**: Native builds for macOS (DMG), Windows (NSIS), Linux (AppImage, Snap).
 - **Modern UI**: Shadcn UI components, Tailwind CSS, Lucide React icons, Sonner toasts.
-- **Local-First**: Settings persisted with [electron-store](https://github.com/sindresorhus/electron-store).
 
 ## 🚀 Installation
 
