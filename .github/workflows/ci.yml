@@ -32,3 +32,4 @@ jobs:
         CSC_KEY_PASSWORD: ${{ secrets.CERT_PASSWORD }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        SNAPCRAFT_STORE_LOGIN_TOKEN: ${{ secrets.SNAPCRAFT_STORE_LOGIN_TOKEN }}

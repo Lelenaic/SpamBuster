@@ -74,13 +74,18 @@
       "target": "dmg"
     },
     "linux": {
-      "target": "AppImage"
+      "target": ["AppImage", "snap"]
     },
-    "publish": {
+    "snap": {
+      "confinement": "strict",
+      "base": "core22",
+      "plugs": ["default", "network-bind"]
+    },
+    "publish": [{
       "provider": "github",
       "owner": "lelenaic",
       "repo": "spambuster",
       "releaseType": "release"
-    }
+    }]
   }
 }
