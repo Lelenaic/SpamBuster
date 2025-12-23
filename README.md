@@ -24,6 +24,12 @@ Download pre-built binaries from the [latest release](https://github.com/lelenai
 
 **Note**: A Linux Snap is available `snap install spambuster`.
 
+
+## 📋 TODO
+- Outlook/Microsoft 365 support
+- Gmail/Google Workspace support
+- Auto update
+
 ## 🛠️ Development
 
 ```bash
@@ -59,11 +65,6 @@ Secrets configured for code signing and Snap store.
 ## 🤝 Contributing
 
 Contributions welcome! Fork, PRs to `main`.
-
-## 📋 TODO
-- Outlook/M365 support
-- Gmail/Workspace support
-- Auto update
 
 ## � License
 
