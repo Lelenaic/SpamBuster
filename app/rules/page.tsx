@@ -26,7 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus } from 'lucide-react';
+import { Plus, Edit3, Trash2, Power } from 'lucide-react';
 import { Rule } from '@/lib/types';
 import { Account } from '@/lib/mail/types';
 
@@ -34,6 +34,7 @@ export default function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     text: '',
@@ -66,23 +67,73 @@ export default function RulesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const newRule = await window.rulesAPI.create({
-        name: formData.name,
-        text: formData.text,
-        enabled: formData.enabled,
-        emailAccounts: formData.applyToAll ? null : formData.selectedAccounts,
-      });
-      setRules(prev => [...prev, newRule]);
+      if (editingRule) {
+        const updatedRule = await window.rulesAPI.update(editingRule.id, {
+          name: formData.name,
+          text: formData.text,
+          enabled: formData.enabled,
+          emailAccounts: formData.applyToAll ? null : formData.selectedAccounts,
+        });
+        if (updatedRule) {
+          setRules(prev => prev.map(r => r.id === editingRule.id ? updatedRule : r));
+        }
+      } else {
+        const newRule = await window.rulesAPI.create({
+          name: formData.name,
+          text: formData.text,
+          enabled: formData.enabled,
+          emailAccounts: formData.applyToAll ? null : formData.selectedAccounts,
+        });
+        setRules(prev => [...prev, newRule]);
+      }
       setFormData({ name: '', text: '', enabled: true, applyToAll: true, selectedAccounts: [] });
+      setEditingRule(null);
       setIsModalOpen(false);
     } catch (error) {
-      console.error('Failed to create rule:', error);
+      console.error('Failed to save rule:', error);
+    }
+  };
+
+  const handleEdit = (rule: Rule) => {
+    setEditingRule(rule);
+    setFormData({
+      name: rule.name,
+      text: rule.text,
+      enabled: rule.enabled,
+      applyToAll: rule.emailAccounts === null,
+      selectedAccounts: rule.emailAccounts || [],
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (ruleId: string) => {
+    if (window.confirm('Are you sure you want to delete this rule?')) {
+      try {
+        await window.rulesAPI.delete(ruleId);
+        setRules(prev => prev.filter(r => r.id !== ruleId));
+      } catch (error) {
+        console.error('Failed to delete rule:', error);
+      }
+    }
+  };
+
+  const handleToggleEnabled = async (rule: Rule) => {
+    try {
+      const updatedRule = await window.rulesAPI.update(rule.id, { enabled: !rule.enabled });
+      if (updatedRule) {
+        setRules(prev => prev.map(r => r.id === rule.id ? updatedRule : r));
+      }
+    } catch (error) {
+      console.error('Failed to toggle rule:', error);
     }
   };
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Rules</h1>
+      <p className="text-muted-foreground mb-6">
+        Rules are instructions sent to the AI to help identify and filter spam emails. Create custom rules to define what constitutes spam for your email accounts.
+      </p>
       <Tabs defaultValue="my-rules" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="my-rules">My rules</TabsTrigger>
@@ -99,9 +150,9 @@ export default function RulesPage() {
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New Rule</DialogTitle>
-                  </DialogHeader>
+                   <DialogHeader>
+                     <DialogTitle>{editingRule ? 'Edit Rule' : 'Create New Rule'}</DialogTitle>
+                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                       <Label htmlFor="name" className="mb-2 block">Rule Name <span className="text-red-500">*</span></Label>
@@ -164,10 +215,14 @@ export default function RulesPage() {
                       </div>
                     )}
                     <div className="flex justify-end space-x-2">
-                      <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                      <Button type="button" variant="outline" onClick={() => {
+                        setIsModalOpen(false);
+                        setEditingRule(null);
+                        setFormData({ name: '', text: '', enabled: true, applyToAll: true, selectedAccounts: [] });
+                      }}>
                         Cancel
                       </Button>
-                      <Button type="submit">Create Rule</Button>
+                      <Button type="submit">{editingRule ? 'Update Rule' : 'Create Rule'}</Button>
                     </div>
                   </form>
                 </DialogContent>
@@ -181,7 +236,7 @@ export default function RulesPage() {
                 <Accordion type="single" collapsible className="w-full">
                   {rules.map((rule) => (
                     <AccordionItem key={rule.id} value={rule.id}>
-                      <AccordionTrigger className="flex items-center gap-2">
+                      <AccordionTrigger className="flex items-center gap-2 justify-start">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div
@@ -202,6 +257,32 @@ export default function RulesPage() {
                           <p className="text-xs text-muted-foreground mt-2">
                             Applied to: {rule.emailAccounts === null ? 'All accounts' : `${rule.emailAccounts.length} account(s)`}
                           </p>
+                          <div className="flex gap-2 mt-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEdit(rule)}
+                            >
+                              <Edit3 className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleToggleEnabled(rule)}
+                            >
+                              <Power className="w-4 h-4 mr-1" />
+                              {rule.enabled ? 'Disable' : 'Enable'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDelete(rule.id)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
                         </div>
                       </AccordionContent>
                     </AccordionItem>
