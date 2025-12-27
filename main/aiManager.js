@@ -51,6 +51,14 @@ class AIManager {
     this.store.set('selectedEmbedModel', value);
   }
 
+  getAISensitivity() {
+    return this.store.get('aiSensitivity', 7);
+  }
+
+  setAISensitivity(value) {
+    this.store.set('aiSensitivity', value);
+  }
+
   registerHandlers(ipcMain) {
     ipcMain.handle('ai:getAISource', async () => {
       return this.getAISource();
@@ -98,6 +106,14 @@ class AIManager {
 
     ipcMain.handle('ai:setSelectedEmbedModel', async (event, value) => {
       return this.setSelectedEmbedModel(value);
+    });
+
+    ipcMain.handle('ai:getAISensitivity', async () => {
+      return this.getAISensitivity();
+    });
+
+    ipcMain.handle('ai:setAISensitivity', async (event, value) => {
+      return this.setAISensitivity(value);
     });
   }
 }

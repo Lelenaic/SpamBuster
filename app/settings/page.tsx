@@ -6,13 +6,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { createAIService } from "@/lib/ai"
 import { Account, AccountStatus, MailProviderFactory } from "@/lib/mail"
 import "@/lib/types"
+import GeneralTab from "./GeneralTab"
 import AIAccountTab from "./AIAccountTab"
 import MailAccountsTab from "./MailAccountsTab"
 
 function SettingsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'ai')
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'general')
 
   const [aiSource, setAiSource] = useState<string>("ollama")
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState<string>("http://localhost:11434")
@@ -54,6 +55,7 @@ function SettingsContent() {
   
   const [testingModify, setTestingModify] = useState(false)
   const [testingAccountId, setTestingAccountId] = useState<string | null>(null)
+  const [aiSensitivity, setAiSensitivity] = useState<number>(7)
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -64,6 +66,7 @@ function SettingsContent() {
         setOpenRouterApiKey(await window.aiAPI.getOpenRouterApiKey())
         setSelectedModel(await window.aiAPI.getSelectedModel())
         setSelectedEmbedModel(await window.aiAPI.getSelectedEmbedModel())
+        setAiSensitivity(await window.aiAPI.getAISensitivity())
 
         const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
@@ -295,15 +298,29 @@ function SettingsContent() {
     setMailAccounts(updatedAccounts)
   }
 
+  const handleAiSensitivityChange = async (value: number) => {
+    setAiSensitivity(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setAISensitivity(value)
+    }
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="ai">AI Account</TabsTrigger>
           <TabsTrigger value="mail">Mail Accounts</TabsTrigger>
         </TabsList>
         <div className="bg-card rounded-xl border shadow-sm p-8">
+          <TabsContent value="general">
+            <GeneralTab
+              aiSensitivity={aiSensitivity}
+              setAiSensitivity={handleAiSensitivityChange}
+            />
+          </TabsContent>
           <TabsContent value="ai">
             <AIAccountTab
               aiSource={aiSource}

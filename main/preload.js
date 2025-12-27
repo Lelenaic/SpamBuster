@@ -48,4 +48,6 @@ contextBridge.exposeInMainWorld("aiAPI", {
     setSelectedModel: (value) => ipcRenderer.invoke('ai:setSelectedModel', value),
     getSelectedEmbedModel: () => ipcRenderer.invoke('ai:getSelectedEmbedModel'),
     setSelectedEmbedModel: (value) => ipcRenderer.invoke('ai:setSelectedEmbedModel', value),
+    getAISensitivity: () => ipcRenderer.invoke('ai:getAISensitivity'),
+    setAISensitivity: (value) => ipcRenderer.invoke('ai:setAISensitivity', value),
 });

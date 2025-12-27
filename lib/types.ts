@@ -55,6 +55,8 @@ declare global {
       setSelectedModel: (value: string) => Promise<void>
       getSelectedEmbedModel: () => Promise<string>
       setSelectedEmbedModel: (value: string) => Promise<void>
+      getAISensitivity: () => Promise<number>
+      setAISensitivity: (value: number) => Promise<void>
     }
   }
 }
