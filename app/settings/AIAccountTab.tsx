@@ -104,7 +104,7 @@ export default function AIAccountTab({
   handleTestEmbedConnection,
 }: AIAccountTabProps) {
   return (
-    <TabsContent value="ai" className="space-y-8 mt-6">
+    <TabsContent value="ai" className="space-y-8">
       <div className="space-y-2">
         <h2 className="text-2xl font-bold">AI Model Configuration</h2>
         <p className="text-muted-foreground">Select the AI model that will be used to analyze your emails for spam detection.</p>

@@ -108,7 +108,7 @@ export default function MailAccountsTab({
 }: MailAccountsTabProps) {
   return (
     <>
-      <TabsContent value="mail" className="space-y-8 mt-6">
+      <TabsContent value="mail" className="space-y-8">
         <h2 className="text-xl font-semibold">Mail Accounts</h2>
         {mailAccounts.length === 0 ? (
           <p className="text-muted-foreground">No mail accounts configured.</p>
