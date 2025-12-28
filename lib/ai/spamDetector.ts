@@ -8,19 +8,21 @@ export interface SpamAnalysisResult {
 }
 
 export class SpamDetectorService {
-  private aiService: AIService | null = null
-
-  constructor(
-    private aiSource: string,
-    private config: { baseUrl?: string; apiKey?: string },
-    private selectedModel?: string
-  ) {}
+  constructor() {}
 
   private async getAIService(): Promise<AIService> {
-    if (!this.aiService) {
-      this.aiService = createAIService(this.aiSource, this.config)
+    if (typeof window === 'undefined' || !window.aiAPI) {
+      throw new Error('AI API not available')
     }
-    return this.aiService
+
+    return await createAIService()
+  }
+
+  private async getSelectedModel(): Promise<string> {
+    if (typeof window === 'undefined' || !window.aiAPI) {
+      return ''
+    }
+    return await window.aiAPI.getSelectedModel()
   }
 
   private buildPrompt(emailContent: string, rules: Rule[]): string {
@@ -68,7 +70,8 @@ Do not include any other text or formatting.`
       const aiService = await this.getAIService()
       const prompt = this.buildPrompt(emailContent, rules)
 
-      const response = await aiService.sendMessage(prompt, this.selectedModel)
+      const selectedModel = await this.getSelectedModel()
+      const response = await aiService.sendMessage(prompt, selectedModel)
 
       // Parse the JSON response
       const result = JSON.parse(response.trim())

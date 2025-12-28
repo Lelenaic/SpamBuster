@@ -2,14 +2,23 @@ import { AIService } from './types'
 import { OllamaService } from './ollama'
 import { OpenRouterService } from './openrouter'
 
-export function createAIService(source: string, config: { baseUrl?: string; apiKey?: string }): AIService {
-  switch (source) {
+export async function createAIService(): Promise<AIService> {
+  if (typeof window === 'undefined' || !window.aiAPI) {
+    throw new Error('AI API not available')
+  }
+
+  const aiSource = await window.aiAPI.getAISource()
+  
+  switch (aiSource) {
     case 'ollama':
-      return new OllamaService(config.baseUrl || 'http://localhost:11434', config.apiKey)
+      const ollamaBaseUrl = await window.aiAPI.getOllamaBaseUrl()
+      const ollamaApiKey = await window.aiAPI.getOllamaApiKey()
+      return new OllamaService(ollamaBaseUrl || 'http://localhost:11434', ollamaApiKey)
     case 'openrouter':
-      if (!config.apiKey) throw new Error('API key required for OpenRouter')
-      return new OpenRouterService(config.apiKey, config.baseUrl)
+      const openRouterApiKey = await window.aiAPI.getOpenRouterApiKey()
+      if (!openRouterApiKey) throw new Error('API key required for OpenRouter')
+      return new OpenRouterService(openRouterApiKey)
     default:
-      throw new Error(`Unknown AI source: ${source}`)
+      throw new Error(`Unknown AI source: ${aiSource}`)
   }
 }

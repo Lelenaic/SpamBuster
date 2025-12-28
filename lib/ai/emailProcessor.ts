@@ -12,7 +12,6 @@ interface Store {
   set: (key: string, value: unknown) => void
 }
 
-
 export interface ProcessedEmailResult {
   emailId: string
   checksum: string
@@ -30,31 +29,15 @@ export interface ProcessingStats {
 }
 
 export class EmailProcessorService {
-  private aiService: AIService | null = null
   private processedChecksums: Set<string> = new Set()
-  private store: Store
 
-  constructor(
-    private aiSource: string,
-    private aiConfig: { baseUrl?: string; apiKey?: string },
-    private selectedModel?: string,
-    private sensitivityThreshold: number = 7,
-    store?: Store
-  ) {
-    this.store = store || { get: () => [], set: () => {} } as Store
+  constructor(private store: Store) {
     this.loadProcessedChecksums()
   }
 
-  private async getAIService(): Promise<AIService> {
-    if (!this.aiService) {
-      this.aiService = createAIService(this.aiSource, this.aiConfig)
-    }
-    return this.aiService
-  }
-
-  private loadProcessedChecksums(): void {
+  private async loadProcessedChecksums(): Promise<void> {
     try {
-      const savedChecksums = this.store.get('processedEmailChecksums', []) as string[]
+      const savedChecksums = (this.store.get('processedEmailChecksums', []) as string[]) || []
       this.processedChecksums = new Set(savedChecksums)
       console.log(`Loaded ${this.processedChecksums.size} processed email checksums`)
     } catch (error) {
@@ -63,13 +46,22 @@ export class EmailProcessorService {
     }
   }
 
-  private saveProcessedChecksums(): void {
-    try {
-      const checksumsArray = Array.from(this.processedChecksums)
-      this.store.set('processedEmailChecksums', checksumsArray)
-    } catch (error) {
-      console.error('Error saving processed checksums:', error)
+  private async getAIService(): Promise<AIService> {
+    return await createAIService()
+  }
+
+  private async getSensitivity(): Promise<number> {
+    if (typeof window === 'undefined' || !window.aiAPI) {
+      return 7
     }
+    return await window.aiAPI.getAISensitivity()
+  }
+
+  private async getSelectedModel(): Promise<string> {
+    if (typeof window === 'undefined' || !window.aiAPI) {
+      return ''
+    }
+    return await window.aiAPI.getSelectedModel()
   }
 
   private generateChecksum(subject: string, body: string): string {
@@ -129,6 +121,15 @@ ${email.body}`
     }
   }
 
+  private async saveProcessedChecksums(): Promise<void> {
+    try {
+      const checksumsArray = Array.from(this.processedChecksums)
+      this.store.set('processedEmailChecksums', checksumsArray)
+    } catch (error) {
+      console.error('Error saving processed checksums:', error)
+    }
+  }
+
   async processAccountEmails(
     account: Account,
     rules: Rule[],
@@ -149,7 +150,11 @@ ${email.body}`
       // Fetch unprocessed emails
       const emails = await this.fetchUnprocessedEmails(account, maxAgeDays)
       stats.totalEmails = emails.length
-      const detector = new SpamDetectorService(this.aiSource, this.aiConfig, this.selectedModel)
+
+      // Get AI service and configuration
+      const aiService = await this.getAIService()
+      const sensitivity = await this.getSensitivity()
+      const selectedModel = await this.getSelectedModel()
 
       for (const email of emails) {
         try {
@@ -168,13 +173,15 @@ ${email.body}`
           }
 
           // Analyze email with AI
+          const detector = new SpamDetectorService();
+          
           const result: SpamAnalysisResult = await detector.analyzeEmail(
             this.buildEmailContent(email),
             applicableRules
           )
 
           // Check if email should be moved to spam
-          const isSpam = result.score >= this.sensitivityThreshold
+          const isSpam = result.score >= sensitivity
 
           if (isSpam) {
             // Move email to spam folder
@@ -186,7 +193,7 @@ ${email.body}`
 
           // Mark as processed
           this.processedChecksums.add(checksum)
-          this.saveProcessedChecksums() // Save immediately after adding
+          await this.saveProcessedChecksums() // Save immediately after adding
           stats.processedEmails++
 
         } catch (error) {

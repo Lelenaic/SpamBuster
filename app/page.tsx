@@ -7,12 +7,46 @@ import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
 import { Alert as AlertType } from '@/lib/types'
 import { AlertsManager } from '@/lib/alerts'
+import ProcessingStatus from '@/components/ProcessingStatus'
+import { useEmailProcessing } from '@/lib/hooks/useEmailProcessing'
+import { EmailProcessorService } from '@/lib/ai/emailProcessor'
+import { Account } from '@/lib/mail/types'
+import { Rule } from '@/lib/types'
 
 export default function Home() {
   const [alerts, setAlerts] = useState<AlertType[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [rules, setRules] = useState<Rule[]>([])
+
+  // Initialize email processor with store
+  const [processor, setProcessor] = useState<EmailProcessorService | null>(null)
+
+  useEffect(() => {
+    const initializeProcessor = async () => {
+      if (typeof window !== 'undefined' && window.storeAPI) {
+        const store = {
+          get: window.storeAPI.get,
+          set: window.storeAPI.set
+        }
+        const newProcessor = new EmailProcessorService(store)
+        setProcessor(newProcessor)
+      }
+    }
+    initializeProcessor()
+  }, [])
+
+  const processing = useEmailProcessing(accounts, rules, processor || undefined)
 
   useEffect(() => {
     AlertsManager.list().then(setAlerts)
+    
+    // Load accounts and rules
+    if (typeof window !== 'undefined' && window.accountsAPI) {
+      window.accountsAPI.getAll().then(setAccounts)
+    }
+    if (typeof window !== 'undefined' && window.rulesAPI) {
+      window.rulesAPI.getAll().then(setRules)
+    }
   }, [])
 
   const handleDelete = async (id: string) => {
@@ -24,6 +58,22 @@ export default function Home() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-foreground mb-6">Dashboard</h1>
+      
+      {/* Real-time Processing Status */}
+      {processor && (
+        <ProcessingStatus
+          onStartProcessing={processing.startProcessing}
+          onPauseProcessing={processing.pauseProcessing}
+          onStopProcessing={processing.stopProcessing}
+          isProcessing={processing.isProcessing}
+          status={processing.status}
+          overallStats={processing.overallStats}
+          accountStats={processing.accountStats}
+          currentAccount={processing.currentAccount}
+          progress={processing.progress}
+        />
+      )}
+      
       <div className="bg-card rounded-lg shadow p-6">
         <p className="text-muted-foreground">Welcome to SpamBuster! This is your dashboard where you can monitor and manage your email anti-spam settings.</p>
         <hr className="mt-6" />
