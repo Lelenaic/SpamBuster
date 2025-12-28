@@ -28,19 +28,31 @@ export interface ProcessingStats {
 
 export class EmailProcessorService {
   private processedChecksums: string[] = []
+  private initialized = false
 
   constructor(private store: Store) {
-    this.loadProcessedChecksums()
+    // Don't initialize in constructor - use async initialization
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initialized) {
+      await this.loadProcessedChecksums()
+      this.initialized = true
+    }
   }
 
   private async loadProcessedChecksums(): Promise<void> {
     try {
-      const savedChecksums = this.store.get('processedEmailChecksums', [])
+      console.log('🔍 Loading processed email checksums from storage...')
+      const savedChecksums = await this.store.get('processedEmailChecksums', [])
       // Ensure it's always an array
       this.processedChecksums = Array.isArray(savedChecksums) ? savedChecksums : []
-      console.log(`Loaded ${this.processedChecksums.length} processed email checksums`)
+      console.log(`✅ Loaded ${this.processedChecksums.length} processed email checksums`)
+      if (this.processedChecksums.length > 0) {
+        console.log('📋 First few checksums:', this.processedChecksums.slice(0, 3))
+      }
     } catch (error) {
-      console.error('Error loading processed checksums:', error)
+      console.error('❌ Error loading processed checksums:', error)
       this.processedChecksums = []
     }
   }
@@ -118,9 +130,11 @@ ${email.body}`
 
   private async saveProcessedChecksums(): Promise<void> {
     try {
-      this.store.set('processedEmailChecksums', this.processedChecksums)
+      console.log(`💾 Saving ${this.processedChecksums.length} processed email checksums...`)
+      await this.store.set('processedEmailChecksums', this.processedChecksums)
+      console.log('✅ Successfully saved processed email checksums')
     } catch (error) {
-      console.error('Error saving processed checksums:', error)
+      console.error('❌ Error saving processed checksums:', error)
     }
   }
 
@@ -138,6 +152,9 @@ ${email.body}`
     }
 
     try {
+      // Ensure the service is initialized
+      await this.ensureInitialized()
+      
       // Get applicable rules for this account
       const applicableRules = this.getApplicableRules(rules, account.id)
       
@@ -165,9 +182,12 @@ ${email.body}`
           }
           
           if (this.processedChecksums.includes(checksum)) {
+            console.log(`⏭️  Skipping already processed email: ${email.subject}`)
             stats.skippedEmails++
             continue
           }
+          
+          console.log(`🆕 Processing new email: ${email.subject}`)
 
           // Analyze email with AI
           const detector = new SpamDetectorService();
@@ -252,24 +272,26 @@ ${email.body}`
     return { accountStats, overallStats }
   }
 
-  clearProcessedCache(): void {
+  async clearProcessedCache(): Promise<void> {
     this.processedChecksums = []
     try {
-      this.store.set('processedEmailChecksums', [])
+      await this.store.set('processedEmailChecksums', [])
     } catch (error) {
       console.error('Error clearing processed checksums from storage:', error)
     }
   }
 
-  getProcessedCount(): number {
+  async getProcessedCount(): Promise<number> {
+    await this.ensureInitialized()
     return this.processedChecksums.length
   }
 
-  refreshProcessedChecksums(): void {
-    this.loadProcessedChecksums()
+  async refreshProcessedChecksums(): Promise<void> {
+    await this.loadProcessedChecksums()
   }
 
-  hasEmailBeenProcessed(subject: string, body: string): boolean {
+  async hasEmailBeenProcessed(subject: string, body: string): Promise<boolean> {
+    await this.ensureInitialized()
     const checksum = this.generateChecksum(subject, body)
     return this.processedChecksums.includes(checksum)
   }

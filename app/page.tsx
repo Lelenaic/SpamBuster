@@ -29,6 +29,8 @@ export default function Home() {
           set: window.storeAPI.set
         }
         const newProcessor = new EmailProcessorService(store)
+        // Ensure the processor is initialized before using it
+        await newProcessor.refreshProcessedChecksums()
         setProcessor(newProcessor)
       }
     }
@@ -63,8 +65,8 @@ export default function Home() {
       {processor && (
         <ProcessingStatus
           onStartProcessing={processing.startProcessing}
-          onPauseProcessing={processing.pauseProcessing}
           onStopProcessing={processing.stopProcessing}
+          onClearChecksums={processing.clearChecksums}
           isProcessing={processing.isProcessing}
           status={processing.status}
           overallStats={processing.overallStats}

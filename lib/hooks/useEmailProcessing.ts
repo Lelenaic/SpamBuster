@@ -6,7 +6,7 @@ import type { AccountProcessingStats } from '@/components/ProcessingStatus'
 import { Account } from '@/lib/mail/types'
 import { Rule } from '@/lib/types'
 
-export type ProcessingStatus = 'idle' | 'processing' | 'paused' | 'completed' | 'error'
+export type ProcessingStatus = 'idle' | 'processing' | 'completed' | 'error'
 
 interface UseEmailProcessingReturn {
   // State
@@ -19,9 +19,9 @@ interface UseEmailProcessingReturn {
 
   // Actions
   startProcessing: () => Promise<void>
-  pauseProcessing: () => void
   stopProcessing: () => void
   refreshStats: () => void
+  clearChecksums: () => Promise<void>
 }
 
 export function useEmailProcessing(
@@ -72,13 +72,7 @@ export function useEmailProcessing(
     }
   }, [accounts, rules, processor])
 
-  const pauseProcessing = useCallback(() => {
-    if (processingRef.current) {
-      setStatus('paused')
-      // In a real implementation, you would pause the processing here
-      // For now, we'll just set the status
-    }
-  }, [])
+
 
   const stopProcessing = useCallback(() => {
     if (processingRef.current) {
@@ -90,6 +84,23 @@ export function useEmailProcessing(
       }
     }
   }, [])
+
+  const clearChecksums = useCallback(async () => {
+    if (processor) {
+      await processor.clearProcessedCache()
+      // Reset stats since we're clearing the cache
+      setOverallStats({
+        totalEmails: 0,
+        spamEmails: 0,
+        processedEmails: 0,
+        skippedEmails: 0,
+        errors: 0
+      })
+      setAccountStats({})
+      setCurrentAccount(undefined)
+      setStatus('idle')
+    }
+  }, [processor])
 
   const refreshStats = useCallback(() => {
     // This would refresh the current processing stats
@@ -112,8 +123,8 @@ export function useEmailProcessing(
 
     // Actions
     startProcessing,
-    pauseProcessing,
     stopProcessing,
-    refreshStats
+    refreshStats,
+    clearChecksums
   }
 }

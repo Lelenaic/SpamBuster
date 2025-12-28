@@ -27,6 +27,9 @@ export class SpamDetectorService {
 
   private buildPrompt(emailContent: string, rules: Rule[]): string {
     const basePrompt = `You are a spam email detection expert. Analyze the following email content and determine if it's spam.
+    Only classify as spam if the main intent is unwanted commercial promotion, fraud, or phishing. Messages that are informal, have typos, or mention typical spam topics are not spam if they look like normal human conversation.
+    When in doubt, classify as legitimate (ham). Avoid calling a message spam unless there are multiple strong indicators.
+    Single weak indicators like minor grammar mistakes or a generic greeting alone should not raise the spam score above 3/10.
 
 Your task is to provide a spam score from 0 to 10, where:
 - 0 = Definitely not spam (legitimate email)
@@ -49,6 +52,12 @@ ALSO consider ham signals:
 - Expected from known contacts
 - Normal grammar and professional tone
 - No suspicious links/attachments
+
+Urgency alone is not enough; combine urgency with suspicious links or sensitive data requests to consider high spam.
+
+Large brands (e.g., banks, SaaS tools) sending password-reset or invoice emails are often legitimate; only score high if the email requests credentials on an external/non-brand domain.
+
+If the email contains realistic order numbers, invoice IDs, and consistent branding, treat it as more likely legitimate unless links look deceptive.
 
 Take into account that encoding issues can happend, this must not be a sole reason to consider an email as spam.
 
@@ -92,8 +101,12 @@ Do not include any other text or formatting.`
       const selectedModel = await this.getSelectedModel()
       const response = await aiService.sendMessage(prompt, selectedModel)
 
-      // Parse the JSON response
-      const result = JSON.parse(response.trim())
+      // Extract JSON from response using regex (handles AI models that add comments)
+      const jsonMatch = response.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        throw new Error('No valid JSON found in AI response')
+      }
+      const result = JSON.parse(jsonMatch[0])
 
       // Validate the response structure
       if (typeof result.score !== 'number' || result.score < 0 || result.score > 10) {

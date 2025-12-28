@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { 
   Play, 
-  Pause, 
   Square, 
   RefreshCw, 
   Mail, 
@@ -15,7 +14,8 @@ import {
   ShieldCheck,
   Clock,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Trash2
 } from 'lucide-react'
 
 export interface ProcessingStats {
@@ -30,12 +30,12 @@ export interface AccountProcessingStats {
   [accountId: string]: ProcessingStats
 }
 
-export type ProcessingStatus = 'idle' | 'processing' | 'paused' | 'completed' | 'error'
+export type ProcessingStatus = 'idle' | 'processing' | 'completed' | 'error'
 
 interface ProcessingStatusProps {
   onStartProcessing: () => Promise<void>
-  onPauseProcessing: () => void
   onStopProcessing: () => void
+  onClearChecksums: () => Promise<void>
   isProcessing: boolean
   status: ProcessingStatus
   overallStats: ProcessingStats
@@ -46,8 +46,8 @@ interface ProcessingStatusProps {
 
 export default function ProcessingStatus({
   onStartProcessing,
-  onPauseProcessing,
   onStopProcessing,
+  onClearChecksums,
   isProcessing,
   status,
   overallStats,
@@ -56,6 +56,16 @@ export default function ProcessingStatus({
   progress
 }: ProcessingStatusProps) {
   const [isStarting, setIsStarting] = useState(false)
+  const [isClearing, setIsClearing] = useState(false)
+
+  const handleClearChecksums = async () => {
+    setIsClearing(true)
+    try {
+      await onClearChecksums()
+    } finally {
+      setIsClearing(false)
+    }
+  }
 
   const handleStart = async () => {
     setIsStarting(true)
@@ -70,8 +80,7 @@ export default function ProcessingStatus({
     switch (status) {
       case 'processing':
         return <RefreshCw className="h-4 w-4 animate-spin" />
-      case 'paused':
-        return <Pause className="h-4 w-4" />
+
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />
       case 'error':
@@ -85,8 +94,7 @@ export default function ProcessingStatus({
     switch (status) {
       case 'processing':
         return 'bg-blue-500'
-      case 'paused':
-        return 'bg-yellow-500'
+
       case 'completed':
         return 'bg-green-500'
       case 'error':
@@ -100,8 +108,7 @@ export default function ProcessingStatus({
     switch (status) {
       case 'processing':
         return 'Processing emails...'
-      case 'paused':
-        return 'Processing paused'
+
       case 'completed':
         return 'Processing completed'
       case 'error':
@@ -229,18 +236,23 @@ export default function ProcessingStatus({
             </Button>
           )}
           
-          {isProcessing && (
+          {!isProcessing && ['idle', 'completed'].includes(status) && (
             <Button 
-              onClick={onPauseProcessing}
+              onClick={handleClearChecksums}
+              disabled={isClearing}
               variant="outline"
               className="flex-1"
             >
-              <Pause className="h-4 w-4 mr-2" />
-              Pause
+              {isClearing ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Clear Checksums
             </Button>
           )}
           
-          {(isProcessing || status === 'paused') && (
+          {(isProcessing) && (
             <Button 
               onClick={onStopProcessing}
               variant="destructive"

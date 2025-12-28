@@ -23,7 +23,6 @@ export class OllamaService implements AIService {
     })
     if (!response.ok) throw new Error('Failed to send message')
     const data = await response.json()
-    console.log(data)
     return data.response
   }
 
