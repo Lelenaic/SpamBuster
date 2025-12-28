@@ -26,9 +26,24 @@ export interface ProcessingStats {
   errors: number
 }
 
+export interface ProcessingState {
+  isProcessing: boolean
+  startTime: number
+  accounts: Array<{ id: string; type: string; status: string }>
+  rulesCount: number
+  maxAgeDays: number
+}
+
 export class EmailProcessorService {
   private processedChecksums: string[] = []
   private initialized = false
+  private isProcessing = false
+  private currentProcessingData: {
+    accounts: Account[]
+    rules: Rule[]
+    maxAgeDays: number
+    startTime: number
+  } | null = null
 
   constructor(private store: Store) {
     // Don't initialize in constructor - use async initialization
@@ -232,6 +247,32 @@ ${email.body}`
     rules: Rule[],
     maxAgeDays: number = 7
   ): Promise<{ accountStats: Record<string, ProcessingStats>; overallStats: ProcessingStats }> {
+    if (this.isProcessing) {
+      console.warn('Processing is already in progress')
+      return { accountStats: {}, overallStats: { totalEmails: 0, spamEmails: 0, processedEmails: 0, skippedEmails: 0, errors: 0 } }
+    }
+
+    this.isProcessing = true
+    this.currentProcessingData = {
+      accounts: [...accounts],
+      rules: [...rules],
+      maxAgeDays,
+      startTime: Date.now()
+    }
+
+    // Persist processing state to store for cross-navigation persistence
+    try {
+      await this.store.set('emailProcessingState', {
+        isProcessing: true,
+        startTime: Date.now(),
+        accounts: accounts.map(a => ({ id: a.id, type: a.type, status: a.status })),
+        rulesCount: rules.length,
+        maxAgeDays
+      })
+    } catch (error) {
+      console.error('Failed to persist processing state:', error)
+    }
+
     const accountStats: Record<string, ProcessingStats> = {}
     const overallStats: ProcessingStats = {
       totalEmails: 0,
@@ -241,31 +282,44 @@ ${email.body}`
       errors: 0
     }
 
-    // Filter active accounts
-    const activeAccounts = accounts.filter(account => account.status === 'working')
+    try {
+      // Filter active accounts
+      const activeAccounts = accounts.filter(account => account.status === 'working')
 
-    for (const account of activeAccounts) {
-      try {
-        const stats = await this.processAccountEmails(account, rules, maxAgeDays)
-        accountStats[account.id] = stats
+      for (const account of activeAccounts) {
+        try {
+          const stats = await this.processAccountEmails(account, rules, maxAgeDays)
+          accountStats[account.id] = stats
 
-        // Aggregate stats
-        overallStats.totalEmails += stats.totalEmails
-        overallStats.spamEmails += stats.spamEmails
-        overallStats.processedEmails += stats.processedEmails
-        overallStats.skippedEmails += stats.skippedEmails
-        overallStats.errors += stats.errors
+          // Aggregate stats
+          overallStats.totalEmails += stats.totalEmails
+          overallStats.spamEmails += stats.spamEmails
+          overallStats.processedEmails += stats.processedEmails
+          overallStats.skippedEmails += stats.skippedEmails
+          overallStats.errors += stats.errors
 
-      } catch (error) {
-        console.error(`Failed to process account ${account.id}:`, error)
-        accountStats[account.id] = {
-          totalEmails: 0,
-          spamEmails: 0,
-          processedEmails: 0,
-          skippedEmails: 0,
-          errors: 1
+        } catch (error) {
+          console.error(`Failed to process account ${account.id}:`, error)
+          accountStats[account.id] = {
+            totalEmails: 0,
+            spamEmails: 0,
+            processedEmails: 0,
+            skippedEmails: 0,
+            errors: 1
+          }
+          overallStats.errors++
         }
-        overallStats.errors++
+      }
+
+    } finally {
+      this.isProcessing = false
+      this.currentProcessingData = null
+      
+      // Clear processing state from store
+      try {
+        await this.store.set('emailProcessingState', null)
+      } catch (error) {
+        console.error('Failed to clear processing state:', error)
       }
     }
 
@@ -294,5 +348,50 @@ ${email.body}`
     await this.ensureInitialized()
     const checksum = this.generateChecksum(subject, body)
     return this.processedChecksums.includes(checksum)
+  }
+
+  // Methods for persistent state tracking
+  isCurrentlyProcessing(): boolean {
+    return this.isProcessing
+  }
+
+  getCurrentProcessingData(): {
+    accounts: Account[]
+    rules: Rule[]
+    maxAgeDays: number
+    startTime: number
+  } | null {
+    return this.currentProcessingData ? { ...this.currentProcessingData } : null
+  }
+
+  stopProcessing(): void {
+    this.isProcessing = false
+    this.currentProcessingData = null
+    
+    // Clear processing state from store
+    try {
+      this.store.set('emailProcessingState', null)
+    } catch (error) {
+      console.error('Failed to clear processing state:', error)
+    }
+  }
+
+  async isProcessingFromStore(): Promise<boolean> {
+    try {
+      const state = await this.store.get('emailProcessingState', null) as ProcessingState | null
+      return state !== null && state.isProcessing === true
+    } catch (error) {
+      console.error('Failed to check processing state from store:', error)
+      return false
+    }
+  }
+
+  async getProcessingStateFromStore(): Promise<ProcessingState | null> {
+    try {
+      return await this.store.get('emailProcessingState', null) as ProcessingState | null
+    } catch (error) {
+      console.error('Failed to get processing state from store:', error)
+      return null
+    }
   }
 }

@@ -127,10 +127,7 @@ function SettingsContent() {
   const fetchModels = async () => {
     setLoadingModels(true)
     try {
-      const config = aiSource === 'ollama'
-        ? { baseUrl: ollamaBaseUrl, apiKey: ollamaApiKey }
-        : { apiKey: openRouterApiKey }
-      const service = createAIService(aiSource, config)
+      const service = await createAIService()
       const modelNames = await service.listModels()
       setModels(modelNames.sort((a: string, b: string) => a.localeCompare(b)))
     } catch {
@@ -150,10 +147,7 @@ function SettingsContent() {
   const handleTestConnection = async () => {
     setTestingConnection(true)
     try {
-      const config = aiSource === 'ollama'
-        ? { baseUrl: ollamaBaseUrl, apiKey: ollamaApiKey }
-        : { apiKey: openRouterApiKey }
-      const service = createAIService(aiSource, config)
+      const service = await createAIService()
       await service.testConnection()
     } catch {
       // Error handled in component
@@ -171,10 +165,7 @@ function SettingsContent() {
   const fetchEmbedModels = async () => {
     setLoadingEmbedModels(true)
     try {
-      const config = aiSource === 'ollama'
-        ? { baseUrl: ollamaBaseUrl, apiKey: ollamaApiKey }
-        : { apiKey: openRouterApiKey }
-      const service = createAIService(aiSource, config)
+      const service = await createAIService()
       const modelNames = await service.listEmbeddingModels()
       setEmbedModels(modelNames.sort((a: string, b: string) => a.localeCompare(b)))
     } catch {
@@ -194,10 +185,7 @@ function SettingsContent() {
   const handleTestEmbedConnection = async () => {
     setTestingEmbedConnection(true)
     try {
-      const config = aiSource === 'ollama'
-        ? { baseUrl: ollamaBaseUrl, apiKey: ollamaApiKey }
-        : { apiKey: openRouterApiKey }
-      const service = createAIService(aiSource, config)
+      const service = await createAIService()
       await service.testConnection()
     } catch {
       // Error handled in component

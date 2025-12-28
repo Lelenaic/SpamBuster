@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from 'react'
 import { EmailProcessorService, ProcessingStats } from '@/lib/ai/emailProcessor'
 import type { AccountProcessingStats } from '@/components/ProcessingStatus'
 import { Account } from '@/lib/mail/types'
@@ -8,27 +8,40 @@ import { Rule } from '@/lib/types'
 
 export type ProcessingStatus = 'idle' | 'processing' | 'completed' | 'error'
 
-interface UseEmailProcessingReturn {
-  // State
+interface ProcessingState {
   status: ProcessingStatus
   overallStats: ProcessingStats
   accountStats: AccountProcessingStats
-  currentAccount: string | undefined
+  currentAccount?: string
   progress: number
   isProcessing: boolean
+}
 
-  // Actions
+interface ProcessingContextType extends ProcessingState {
   startProcessing: () => Promise<void>
   stopProcessing: () => void
   refreshStats: () => void
   clearChecksums: () => Promise<void>
 }
 
-export function useEmailProcessing(
-  accounts: Account[],
-  rules: Rule[],
+const ProcessingContext = createContext<ProcessingContextType | null>(null)
+
+export function useProcessingContext() {
+  const context = useContext(ProcessingContext)
+  if (!context) {
+    throw new Error('useProcessingContext must be used within ProcessingProvider')
+  }
+  return context
+}
+
+interface ProcessingProviderProps {
+  children: ReactNode
+  accounts: Account[]
+  rules: Rule[]
   processor?: EmailProcessorService
-): UseEmailProcessingReturn {
+}
+
+export function ProcessingProvider({ children, accounts, rules, processor }: ProcessingProviderProps) {
   const [status, setStatus] = useState<ProcessingStatus>('idle')
   const [overallStats, setOverallStats] = useState<ProcessingStats>({
     totalEmails: 0,
@@ -42,28 +55,26 @@ export function useEmailProcessing(
   const processingRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // Check if processing is ongoing when processor becomes available
-  useEffect(() => {
-    const checkProcessingState = async () => {
-      if (processor) {
-        try {
-          // Check both in-memory state and store state for robustness
-          const inMemoryProcessing = processor.isCurrentlyProcessing()
-          const storeProcessing = await processor.isProcessingFromStore()
-          
-          if (inMemoryProcessing || storeProcessing) {
-            console.log('🔄 Detected ongoing processing, restoring state...')
-            processingRef.current = true
-            setStatus('processing')
-            abortControllerRef.current = new AbortController()
-          }
-        } catch (error) {
-          console.error('Error checking processing state:', error)
-        }
-      }
+  // Check processor state on mount and when processor changes
+  const checkProcessorState = useCallback(() => {
+    if (processor && processor.isCurrentlyProcessing()) {
+      console.log('🔄 Detected ongoing processing, restoring state...')
+      processingRef.current = true
+      setStatus('processing')
+      abortControllerRef.current = new AbortController()
     }
-    
-    checkProcessingState()
+  }, [processor])
+
+  // Check processor state when component mounts
+  useEffect(() => {
+    checkProcessorState()
+  }, [])
+
+  // Also check whenever processor prop changes
+  useEffect(() => {
+    if (processor) {
+      checkProcessorState()
+    }
   }, [processor])
 
   const calculateProgress = useCallback((stats: ProcessingStats): number => {
@@ -93,14 +104,11 @@ export function useEmailProcessing(
       setStatus('error')
     } finally {
       processingRef.current = false
-      // Also ensure processor state is consistent
       if (processor) {
         processor.stopProcessing()
       }
     }
   }, [accounts, rules, processor])
-
-
 
   const stopProcessing = useCallback(() => {
     if (processingRef.current) {
@@ -111,7 +119,6 @@ export function useEmailProcessing(
         abortControllerRef.current.abort()
       }
       
-      // Also stop the processor's internal processing state
       if (processor) {
         processor.stopProcessing()
       }
@@ -121,7 +128,6 @@ export function useEmailProcessing(
   const clearChecksums = useCallback(async () => {
     if (processor) {
       await processor.clearProcessedCache()
-      // Reset stats since we're clearing the cache
       setOverallStats({
         totalEmails: 0,
         spamEmails: 0,
@@ -135,59 +141,29 @@ export function useEmailProcessing(
     }
   }, [processor])
 
-  // Poll for processing state changes to handle edge cases
-  useEffect(() => {
-    if (!processor || !processingRef.current) return
-    
-    const interval = setInterval(async () => {
-      try {
-        const storeProcessing = await processor.isProcessingFromStore()
-        const inMemoryProcessing = processor.isCurrentlyProcessing()
-        
-        if (inMemoryProcessing || storeProcessing) {
-          if (!processingRef.current) {
-            console.log('🔄 Restoring lost processing state...')
-            processingRef.current = true
-            setStatus('processing')
-          }
-        } else {
-          if (processingRef.current) {
-            console.log('🛑 Processing completed, updating state...')
-            processingRef.current = false
-            setStatus('completed')
-          }
-        }
-      } catch (error) {
-        console.error('Error polling processing state:', error)
-      }
-    }, 2000) // Check every 2 seconds
-    
-    return () => clearInterval(interval)
-  }, [processor, processingRef.current])
-
   const refreshStats = useCallback(() => {
-    // This would refresh the current processing stats
-    // For now, we'll just recalculate the progress
     const newProgress = calculateProgress(overallStats)
-    // setProgress(newProgress) - we could add this to state if needed
   }, [overallStats, calculateProgress])
 
   const progress = calculateProgress(overallStats)
   const isProcessing = status === 'processing'
 
-  return {
-    // State
+  const value: ProcessingContextType = {
     status,
     overallStats,
     accountStats,
     currentAccount,
     progress,
     isProcessing,
-
-    // Actions
     startProcessing,
     stopProcessing,
     refreshStats,
     clearChecksums
   }
+
+  return (
+    <ProcessingContext.Provider value={value}>
+      {children}
+    </ProcessingContext.Provider>
+  )
 }
