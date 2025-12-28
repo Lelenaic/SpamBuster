@@ -119,7 +119,7 @@ export default function ProcessingStatus({
   }
 
   const accountsArray = Object.entries(accountStats)
-  const activeAccounts = accountsArray.filter(([_, stats]) => stats.totalEmails > 0)
+  const activeAccounts = accountsArray.filter(([, stats]) => stats.totalEmails > 0)
 
   return (
     <Card className="mb-6">

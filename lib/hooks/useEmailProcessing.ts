@@ -163,12 +163,12 @@ export function useEmailProcessing(
     }, 2000) // Check every 2 seconds
     
     return () => clearInterval(interval)
-  }, [processor, processingRef.current])
+  }, [processor])
 
   const refreshStats = useCallback(() => {
     // This would refresh the current processing stats
     // For now, we'll just recalculate the progress
-    const newProgress = calculateProgress(overallStats)
+    calculateProgress(overallStats)
     // setProgress(newProgress) - we could add this to state if needed
   }, [overallStats, calculateProgress])
 

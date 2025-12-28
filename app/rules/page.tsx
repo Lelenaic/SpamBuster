@@ -60,9 +60,7 @@ export default function RulesPage() {
     fetchData();
   }, []);
 
-  const truncateText = (text: string, maxLength: number = 50) => {
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Account, AccountStatus, MailProviderFactory } from "@/lib/mail"
+import { Account, AccountStatus } from "@/lib/mail"
 
 const getStatusColor = (status: AccountStatus) => {
   switch (status) {
@@ -83,21 +83,14 @@ interface MailAccountsTabProps {
 
 export default function MailAccountsTab({
   mailAccounts,
-  setMailAccounts,
   deleteDialogOpen,
   setDeleteDialogOpen,
   accountToDelete,
-  setAccountToDelete,
   modifyDialogOpen,
   setModifyDialogOpen,
-  accountToModify,
-  setAccountToModify,
   modifyFormData,
-  setModifyFormData,
   testingModify,
-  setTestingModify,
   testingAccountId,
-  setTestingAccountId,
   handleDeleteAccount,
   confirmDelete,
   handleModifyAccount,

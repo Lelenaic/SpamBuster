@@ -122,7 +122,7 @@ function SettingsContent() {
     if ((aiSource === 'ollama' && ollamaBaseUrl) || (aiSource === 'openrouter' && openRouterApiKey)) {
       fetchModels()
     }
-  }, [aiSource, ollamaBaseUrl, openRouterApiKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [aiSource, ollamaBaseUrl, openRouterApiKey])
 
   const fetchModels = async () => {
     setLoadingModels(true)
@@ -160,7 +160,7 @@ function SettingsContent() {
     if ((aiSource === 'ollama' && ollamaBaseUrl) || (aiSource === 'openrouter' && openRouterApiKey)) {
       fetchEmbedModels()
     }
-  }, [aiSource, ollamaBaseUrl, openRouterApiKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [aiSource, ollamaBaseUrl, openRouterApiKey])
 
   const fetchEmbedModels = async () => {
     setLoadingEmbedModels(true)

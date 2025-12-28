@@ -65,33 +65,21 @@ interface AIAccountTabProps {
 
 export default function AIAccountTab({
   aiSource,
-  setAiSource,
   ollamaBaseUrl,
-  setOllamaBaseUrl,
   ollamaApiKey,
-  setOllamaApiKey,
   openRouterApiKey,
-  setOpenRouterApiKey,
   selectedModel,
-  setSelectedModel,
   models,
-  setModels,
   loadingModels,
-  setLoadingModels,
   modelComboboxOpen,
   setModelComboboxOpen,
   testingConnection,
-  setTestingConnection,
   selectedEmbedModel,
-  setSelectedEmbedModel,
   embedModels,
-  setEmbedModels,
   loadingEmbedModels,
-  setLoadingEmbedModels,
   embedModelComboboxOpen,
   setEmbedModelComboboxOpen,
   testingEmbedConnection,
-  setTestingEmbedConnection,
   handleAiSourceChange,
   handleOllamaBaseUrlChange,
   handleOllamaApiKeyChange,
@@ -234,9 +222,9 @@ export default function AIAccountTab({
         <h2 className="text-2xl font-bold">Embedding Model Configuration</h2>
         <p className="text-muted-foreground">Select the embedding model that will be used to insert emails into the vector database. If you select none, the feature will be disabled.
           <br />
-          If you're on Ollama, we recommend using the "mxbai-embed-large" model for best results.
+          If you&apos;re on Ollama, we recommend using the &quot;mxbai-embed-large&quot; model for best results.
           <br />
-          If you're on OpenRouter, we recommand using the "openai/text-embedding-3-large" model for best results. If you prefer a cheaper model, you can use "openai/text-embedding-3-small" instead.
+          If you&apos;re on OpenRouter, we recommand using the &quot;openai/text-embedding-3-large&quot; model for best results. If you prefer a cheaper model, you can use &quot;openai/text-embedding-3-small&quot; instead.
         </p>
       </div>
       {(aiSource === 'ollama' || aiSource === 'openrouter') && (

@@ -68,14 +68,14 @@ export function ProcessingProvider({ children, accounts, rules, processor }: Pro
   // Check processor state when component mounts
   useEffect(() => {
     checkProcessorState()
-  }, [])
+  }, [checkProcessorState])
 
   // Also check whenever processor prop changes
   useEffect(() => {
     if (processor) {
       checkProcessorState()
     }
-  }, [processor])
+  }, [processor, checkProcessorState])
 
   const calculateProgress = useCallback((stats: ProcessingStats): number => {
     if (stats.totalEmails === 0) return 0
@@ -142,7 +142,7 @@ export function ProcessingProvider({ children, accounts, rules, processor }: Pro
   }, [processor])
 
   const refreshStats = useCallback(() => {
-    const newProgress = calculateProgress(overallStats)
+    calculateProgress(overallStats)
   }, [overallStats, calculateProgress])
 
   const progress = calculateProgress(overallStats)
