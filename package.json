@@ -1,11 +1,15 @@
 {
   "name": "spambuster",
-  "version": "0.2.1",
+  "version": "0.2.0",
   "private": true,
   "main": "main/main.js",
   "author": {
     "name": "Lenaic GROLLEAU",
     "url": "https://lenaic.me"
+  },
+  "repository": {
+    "url": "github:Lelenaic/SpamBuster",
+    "type": "git"
   },
   "description": "SpamBuster is an AI anti-spam application.",
   "scripts": {

@@ -58,14 +58,9 @@ export class EmailProcessorService {
 
   private async loadProcessedChecksums(): Promise<void> {
     try {
-      console.log('🔍 Loading processed email checksums from storage...')
       const savedChecksums = await this.store.get('processedEmailChecksums', [])
       // Ensure it's always an array
       this.processedChecksums = Array.isArray(savedChecksums) ? savedChecksums : []
-      console.log(`✅ Loaded ${this.processedChecksums.length} processed email checksums`)
-      if (this.processedChecksums.length > 0) {
-        console.log('📋 First few checksums:', this.processedChecksums.slice(0, 3))
-      }
     } catch (error) {
       console.error('❌ Error loading processed checksums:', error)
       this.processedChecksums = []

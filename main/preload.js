@@ -19,6 +19,10 @@ contextBridge.exposeInMainWorld("storeAPI", {
     set: (key, value) => ipcRenderer.invoke('store:set', key, value),
 });
 
+contextBridge.exposeInMainWorld("packageAPI", {
+    getInfo: () => ipcRenderer.invoke('package:get-info'),
+});
+
 contextBridge.exposeInMainWorld("rulesAPI", {
     getAll: () => ipcRenderer.invoke('rules:getAll'),
     getById: (id) => ipcRenderer.invoke('rules:getById', id),
@@ -52,4 +56,8 @@ contextBridge.exposeInMainWorld("aiAPI", {
     setAISensitivity: (value) => ipcRenderer.invoke('ai:setAISensitivity', value),
     getEmailAgeDays: () => ipcRenderer.invoke('ai:getEmailAgeDays'),
     setEmailAgeDays: (value) => ipcRenderer.invoke('ai:setEmailAgeDays', value),
+});
+
+contextBridge.exposeInMainWorld("shellAPI", {
+    openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
 });

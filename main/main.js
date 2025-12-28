@@ -1,5 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, shell } = require("electron");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const serve = require("electron-serve").default;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -10,6 +10,8 @@ const { RulesManager } = require("./rulesManager");
 const { AccountsManager } = require("./accountsManager");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { AIManager } = require("./aiManager");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { getPackageInfo } = require("./packageJson");
 
 let store;
 let rulesManager;
@@ -42,6 +44,15 @@ ipcMain.handle('store:set', async (event, key, value) => {
   return store.set(key, value);
 });
 
+
+ipcMain.handle('package:get-info', async () => {
+  return getPackageInfo();
+});
+
+// Handle opening external URLs in the default browser
+ipcMain.handle('shell:openExternal', async (event, url) => {
+  return shell.openExternal(url);
+});
 
 ipcMain.on('open-wizard-window', () => {
   createWizardWindow();

@@ -4,6 +4,7 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { Toaster } from "sonner";
 import MainContent from "@/components/MainContent";
+import { VersionUpdateNotification } from "@/components/VersionUpdateNotification";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
           </MainContent>
         </div>
         <Toaster />
+        <VersionUpdateNotification />
       </body>
     </html>
   );
