@@ -56,6 +56,7 @@ function SettingsContent() {
   const [testingModify, setTestingModify] = useState(false)
   const [testingAccountId, setTestingAccountId] = useState<string | null>(null)
   const [aiSensitivity, setAiSensitivity] = useState<number>(7)
+  const [emailAgeDays, setEmailAgeDays] = useState<number>(7)
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -67,6 +68,7 @@ function SettingsContent() {
         setSelectedModel(await window.aiAPI.getSelectedModel())
         setSelectedEmbedModel(await window.aiAPI.getSelectedEmbedModel())
         setAiSensitivity(await window.aiAPI.getAISensitivity())
+        setEmailAgeDays(await window.aiAPI.getEmailAgeDays())
 
         const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
@@ -305,6 +307,13 @@ function SettingsContent() {
     }
   }
 
+  const handleEmailAgeDaysChange = async (value: number) => {
+    setEmailAgeDays(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setEmailAgeDays(value)
+    }
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -319,6 +328,8 @@ function SettingsContent() {
             <GeneralTab
               aiSensitivity={aiSensitivity}
               setAiSensitivity={handleAiSensitivityChange}
+              emailAgeDays={emailAgeDays}
+              setEmailAgeDays={handleEmailAgeDaysChange}
             />
           </TabsContent>
           <TabsContent value="ai">

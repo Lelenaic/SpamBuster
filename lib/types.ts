@@ -57,6 +57,8 @@ declare global {
       setSelectedEmbedModel: (value: string) => Promise<void>
       getAISensitivity: () => Promise<number>
       setAISensitivity: (value: number) => Promise<void>
+      getEmailAgeDays: () => Promise<number>
+      setEmailAgeDays: (value: number) => Promise<void>
     }
   }
 }

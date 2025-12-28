@@ -1,3 +1,5 @@
 export * from './factory'
 export * from './types'
 export * from './openrouter'
+export * from './spamDetector'
+export * from './emailProcessor'

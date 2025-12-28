@@ -59,6 +59,14 @@ class AIManager {
     this.store.set('aiSensitivity', value);
   }
 
+  getEmailAgeDays() {
+    return this.store.get('emailAgeDays', 7);
+  }
+
+  setEmailAgeDays(value) {
+    this.store.set('emailAgeDays', value);
+  }
+
   registerHandlers(ipcMain) {
     ipcMain.handle('ai:getAISource', async () => {
       return this.getAISource();
@@ -114,6 +122,14 @@ class AIManager {
 
     ipcMain.handle('ai:setAISensitivity', async (event, value) => {
       return this.setAISensitivity(value);
+    });
+
+    ipcMain.handle('ai:getEmailAgeDays', async () => {
+      return this.getEmailAgeDays();
+    });
+
+    ipcMain.handle('ai:setEmailAgeDays', async (event, value) => {
+      return this.setEmailAgeDays(value);
     });
   }
 }

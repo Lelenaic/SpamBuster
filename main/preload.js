@@ -50,4 +50,6 @@ contextBridge.exposeInMainWorld("aiAPI", {
     setSelectedEmbedModel: (value) => ipcRenderer.invoke('ai:setSelectedEmbedModel', value),
     getAISensitivity: () => ipcRenderer.invoke('ai:getAISensitivity'),
     setAISensitivity: (value) => ipcRenderer.invoke('ai:setAISensitivity', value),
+    getEmailAgeDays: () => ipcRenderer.invoke('ai:getEmailAgeDays'),
+    setEmailAgeDays: (value) => ipcRenderer.invoke('ai:setEmailAgeDays', value),
 });

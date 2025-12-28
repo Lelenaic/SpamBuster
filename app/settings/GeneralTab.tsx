@@ -3,20 +3,32 @@
 import { Label } from "@/components/ui/label"
 import { TabsContent } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
+import { Input } from "@/components/ui/input"
 
 interface GeneralTabProps {
   aiSensitivity: number
   setAiSensitivity: (value: number) => void
+  emailAgeDays: number
+  setEmailAgeDays: (value: number) => void
 }
 
 export default function GeneralTab({
   aiSensitivity,
   setAiSensitivity,
+  emailAgeDays,
+  setEmailAgeDays,
 }: GeneralTabProps) {
   const handleSensitivityChange = (value: string) => {
     const numValue = parseInt(value)
     if (!isNaN(numValue) && numValue >= 1 && numValue <= 10) {
       setAiSensitivity(numValue)
+    }
+  }
+
+  const handleEmailAgeDaysChange = (value: string) => {
+    const numValue = parseInt(value)
+    if (!isNaN(numValue) && numValue >= 1 && numValue <= 365) {
+      setEmailAgeDays(numValue)
     }
   }
 
@@ -40,6 +52,9 @@ export default function GeneralTab({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="ai-sensitivity">AI Filtering Sensitivity</Label>
+            <p className="text-sm text-muted-foreground">
+              The threshold of sensitivity for AI spam detection. Higher values make the AI more aggressive in flagging emails as spam (default: 7).
+            </p>
             <div className="px-3">
               <Slider
                 id="ai-sensitivity"
@@ -58,6 +73,24 @@ export default function GeneralTab({
             </div>
             <p className="text-sm text-muted-foreground">
               {getSensitivityDescription(aiSensitivity)}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4 mt-10">
+          <div className="space-y-2">
+            <Label htmlFor="email-age-days">Email Age Analysis (Days)</Label>
+            <Input
+              id="email-age-days"
+              type="number"
+              min="1"
+              max="365"
+              value={emailAgeDays}
+              onChange={(e) => handleEmailAgeDaysChange(e.target.value)}
+              className="w-32"
+            />
+            <p className="text-sm text-muted-foreground">
+              Number of days to look back when analyzing email age for spam detection (default: 7 days)
             </p>
           </div>
         </div>

@@ -13,9 +13,29 @@ export interface TestConnectionResult {
   error?: string;
 }
 
+export interface FetchEmailsResult {
+  success: boolean;
+  emails?: EmailData[];
+  error?: string;
+}
+
+export interface MoveEmailResult {
+  success: boolean;
+  error?: string;
+}
+
 export interface MailProvider {
   testConnection(config: MailConnectionConfig): Promise<TestConnectionResult>;
-  // Add other methods as needed, like fetchEmails, etc.
+  fetchEmails(config: MailConnectionConfig, maxAgeDays: number): Promise<FetchEmailsResult>;
+  moveEmailToSpam(config: MailConnectionConfig, emailId: string): Promise<MoveEmailResult>;
+}
+
+export interface EmailData {
+  id: string
+  subject: string
+  body: string
+  from: string
+  date: Date
 }
 
 export type MailProviderType = 'imap' | 'gmail' | 'outlook';
