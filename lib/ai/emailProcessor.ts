@@ -94,13 +94,6 @@ export class EmailProcessorService {
     return diffDays <= maxAgeDays
   }
 
-  private buildEmailContent(email: EmailData): string {
-    return `From: ${email.from}
-Subject: ${email.subject}
-Date: ${email.date.toISOString()}
-
-${email.body}`
-  }
 
   private getApplicableRules(rules: Rule[], accountId: string): Rule[] {
     return rules.filter(rule => 
@@ -201,9 +194,9 @@ ${email.body}`
 
           // Analyze email with AI
           const detector = new SpamDetectorService();
-          
+
           const result: SpamAnalysisResult = await detector.analyzeEmail(
-            this.buildEmailContent(email),
+            email,
             applicableRules
           )
 

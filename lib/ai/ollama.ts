@@ -19,7 +19,7 @@ export class OllamaService implements AIService {
     const response = await fetch(`${this.baseUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt: message, stream: false })
+      body: JSON.stringify({ model, prompt: message, stream: false, format: 'json' })
     })
     if (!response.ok) throw new Error('Failed to send message')
     const data = await response.json()
