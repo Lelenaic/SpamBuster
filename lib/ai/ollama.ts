@@ -16,13 +16,14 @@ export class OllamaService implements AIService {
   }
 
   async sendMessage(message: string, model?: string): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
+    const response = await fetch(`${this.baseUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, prompt: message, stream: false })
     })
     if (!response.ok) throw new Error('Failed to send message')
     const data = await response.json()
+    console.log(data)
     return data.response
   }
 

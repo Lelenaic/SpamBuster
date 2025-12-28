@@ -1,6 +1,4 @@
-import { createAIService } from './factory'
 import { SpamDetectorService, SpamAnalysisResult } from './spamDetector'
-import { AIService } from './types'
 import { Account, EmailData } from '../mail/types'
 import { MailProviderFactory } from '../mail/factory'
 import { Rule } from '../types'
@@ -29,7 +27,7 @@ export interface ProcessingStats {
 }
 
 export class EmailProcessorService {
-  private processedChecksums: Set<string> = new Set()
+  private processedChecksums: string[] = []
 
   constructor(private store: Store) {
     this.loadProcessedChecksums()
@@ -37,17 +35,14 @@ export class EmailProcessorService {
 
   private async loadProcessedChecksums(): Promise<void> {
     try {
-      const savedChecksums = (this.store.get('processedEmailChecksums', []) as string[]) || []
-      this.processedChecksums = new Set(savedChecksums)
-      console.log(`Loaded ${this.processedChecksums.size} processed email checksums`)
+      const savedChecksums = this.store.get('processedEmailChecksums', [])
+      // Ensure it's always an array
+      this.processedChecksums = Array.isArray(savedChecksums) ? savedChecksums : []
+      console.log(`Loaded ${this.processedChecksums.length} processed email checksums`)
     } catch (error) {
       console.error('Error loading processed checksums:', error)
-      this.processedChecksums = new Set()
+      this.processedChecksums = []
     }
-  }
-
-  private async getAIService(): Promise<AIService> {
-    return await createAIService()
   }
 
   private async getSensitivity(): Promise<number> {
@@ -123,8 +118,7 @@ ${email.body}`
 
   private async saveProcessedChecksums(): Promise<void> {
     try {
-      const checksumsArray = Array.from(this.processedChecksums)
-      this.store.set('processedEmailChecksums', checksumsArray)
+      this.store.set('processedEmailChecksums', this.processedChecksums)
     } catch (error) {
       console.error('Error saving processed checksums:', error)
     }
@@ -152,9 +146,7 @@ ${email.body}`
       stats.totalEmails = emails.length
 
       // Get AI service and configuration
-      const aiService = await this.getAIService()
       const sensitivity = await this.getSensitivity()
-      const selectedModel = await this.getSelectedModel()
 
       for (const email of emails) {
         try {
@@ -167,7 +159,12 @@ ${email.body}`
           // Generate checksum to avoid duplicate processing
           const checksum = this.generateChecksum(email.subject, email.body)
           
-          if (this.processedChecksums.has(checksum)) {
+          // Ensure processedChecksums is always an array
+          if (!Array.isArray(this.processedChecksums)) {
+            this.processedChecksums = []
+          }
+          
+          if (this.processedChecksums.includes(checksum)) {
             stats.skippedEmails++
             continue
           }
@@ -192,7 +189,7 @@ ${email.body}`
           }
 
           // Mark as processed
-          this.processedChecksums.add(checksum)
+          this.processedChecksums.push(checksum)
           await this.saveProcessedChecksums() // Save immediately after adding
           stats.processedEmails++
 
@@ -256,7 +253,7 @@ ${email.body}`
   }
 
   clearProcessedCache(): void {
-    this.processedChecksums.clear()
+    this.processedChecksums = []
     try {
       this.store.set('processedEmailChecksums', [])
     } catch (error) {
@@ -265,7 +262,7 @@ ${email.body}`
   }
 
   getProcessedCount(): number {
-    return this.processedChecksums.size
+    return this.processedChecksums.length
   }
 
   refreshProcessedChecksums(): void {
@@ -274,6 +271,6 @@ ${email.body}`
 
   hasEmailBeenProcessed(subject: string, body: string): boolean {
     const checksum = this.generateChecksum(subject, body)
-    return this.processedChecksums.has(checksum)
+    return this.processedChecksums.includes(checksum)
   }
 }

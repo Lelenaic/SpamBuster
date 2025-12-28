@@ -214,7 +214,7 @@ export default function ProcessingStatus({
 
         {/* Control Buttons */}
         <div className="flex gap-2">
-          {!isProcessing && status === 'idle' && (
+          {!isProcessing && ['idle', 'completed'].includes(status) && (
             <Button 
               onClick={handleStart} 
               disabled={isStarting}
@@ -248,17 +248,6 @@ export default function ProcessingStatus({
             >
               <Square className="h-4 w-4 mr-2" />
               Stop
-            </Button>
-          )}
-          
-          {status === 'completed' && (
-            <Button 
-              onClick={handleStart}
-              disabled={isStarting}
-              className="flex-1"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Process Again
             </Button>
           )}
         </div>

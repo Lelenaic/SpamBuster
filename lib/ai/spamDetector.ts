@@ -33,15 +33,34 @@ Your task is to provide a spam score from 0 to 10, where:
 - 5 = Unsure, could be either
 - 10 = Definitely spam (100% sure it's spam)
 
-Consider these spam indicators:
-- Unsolicited commercial content
-- Urgency or pressure tactics
-- Poor grammar or suspicious formatting
-- Suspicious links or attachments
-- Generic greetings
-- Requests for personal information
-- Too good to be true offers
-- Phishing attempts
+Spam indicators (check ALL, but weigh context):
+- Unsolicited commercial promotions or ads
+- High urgency/scarcity tactics (e.g., "act now or lose!")
+- Poor grammar, all caps, excessive punctuation (!!!)
+- Suspicious/masked links or attachments
+- Generic greetings (e.g., "Dear User")
+- Requests for personal/financial info
+- Unrealistic offers (free money, prizes)
+- Phishing (fake login pages, urgent account issues)
+
+ALSO consider ham signals:
+- Personalized greetings or references
+- Legitimate business/receipt confirmations
+- Expected from known contacts
+- Normal grammar and professional tone
+- No suspicious links/attachments
+
+Take into account that encoding issues can happend, this must not be a sole reason to consider an email as spam.
+
+Examples:
+
+Email 1: "Hi John, meeting rescheduled to Friday due to my family emergency. Best, Sarah."
+Reasoning: Personalized greeting, legitimate request, no indicators present.
+Score: 0 (ham)
+
+Email 2: "URGENT! Your account expires! Click here NOW to verify: bit.ly/fake!!!"
+Reasoning: Generic urgency, suspicious shortened link, all caps, pressure tactics.
+Score: 9 (spam)
 
 Additional user-defined rules to consider:`
 

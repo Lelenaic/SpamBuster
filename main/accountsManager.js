@@ -50,6 +50,71 @@ class AccountsManager {
     return this.ImapFlow;
   }
 
+  async parseEmail(message) {
+    try {
+      // Convert buffer to string for parsing
+      const emailSource = message.source ? message.source.toString() : '';
+      
+      // Basic email parsing - extract key fields
+      const subject = message.envelope?.subject || '(No Subject)';
+      const from = this.parseEmailAddress(message.envelope?.from);
+      const date = message.internalDate ? new Date(message.internalDate) : new Date();
+      
+      // Extract body content - this is a simplified version
+      // In a real implementation, you'd want to parse MIME content properly
+      const body = this.parseEmailBody(emailSource) || emailSource.substring(0, 1000);
+      
+      return {
+        id: message.uid.toString(),
+        subject: subject,
+        body: body,
+        from: from,
+        date: date
+      };
+    } catch (error) {
+      console.error('Error parsing email:', error);
+      return null;
+    }
+  }
+
+  parseEmailAddress(addresses) {
+    if (!addresses || !Array.isArray(addresses)) {
+      return 'Unknown Sender';
+    }
+    
+    const address = addresses[0];
+    if (address?.address) {
+      return address.address;
+    }
+    
+    return 'Unknown Sender';
+  }
+
+  parseEmailBody(emailSource) {
+    try {
+      // Simple body extraction - looks for text/plain content
+      const lines = emailSource.split('\n');
+      let bodyStart = false;
+      let bodyLines = [];
+      
+      for (const line of lines) {
+        if (line.trim() === '') {
+          bodyStart = true;
+          continue;
+        }
+        
+        if (bodyStart && !line.startsWith('Content-')) {
+          bodyLines.push(line);
+        }
+      }
+      
+      return bodyLines.join('\n').trim();
+    } catch (error) {
+      console.error('Error extracting body:', error);
+      return null;
+    }
+  }
+
   registerHandlers(ipcMain) {
     ipcMain.handle('accounts:getAll', async () => {
       return this.getAll();
@@ -110,6 +175,128 @@ class AccountsManager {
           errorMessage = error.responseText;
         }
 
+        return { success: false, error: errorMessage };
+      }
+    });
+
+    ipcMain.handle('fetch-emails', async (event, config, maxAgeDays) => {
+      try {
+        // Safety fallback for undefined maxAgeDays
+        const safeMaxAgeDays = maxAgeDays || 7;
+        
+        const ImapFlowClass = await this.getImapFlow();
+        const clientOptions = {
+          host: config.host,
+          port: config.port,
+          secure: config.secure,
+          auth: {
+            user: config.username,
+            pass: config.password,
+          },
+        };
+
+        // Add TLS options if allowing unsigned certificates
+        if (config.allowUnsignedCertificate) {
+          clientOptions.tls = {
+            rejectUnauthorized: false,
+          };
+          clientOptions.ignoreTLS = true;
+        }
+
+        const client = new ImapFlowClass(clientOptions);
+        await client.connect();
+
+        // Calculate date range
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - safeMaxAgeDays);
+        
+        // Fetch emails from INBOX within the date range
+        const messages = [];
+        
+        const lock = await client.getMailboxLock('INBOX');
+        try {
+          for await (let msg of client.fetch('1:*', {
+            uid: true,
+            envelope: true,
+            source: true,
+            bodyStructure: true,
+            internalDate: true,
+          })) {
+            // Parse the email
+            const email = await this.parseEmail(msg);
+            if (email) {
+              messages.push(email);
+            }
+          }
+        } finally {
+          lock.release();
+        }
+
+        await client.logout();
+        return { success: true, emails: messages };
+      } catch (error) {
+        console.error('Failed to fetch emails:', error);
+        let errorMessage = 'Failed to fetch emails';
+        if (error.response) {
+          errorMessage = error.response;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        return { success: false, error: errorMessage };
+      }
+    });
+
+    ipcMain.handle('move-email-to-spam', async (event, config, emailId) => {
+      try {
+        const ImapFlowClass = await this.getImapFlow();
+        const clientOptions = {
+          host: config.host,
+          port: config.port,
+          secure: config.secure,
+          auth: {
+            user: config.username,
+            pass: config.password,
+          },
+        };
+
+        // Add TLS options if allowing unsigned certificates
+        if (config.allowUnsignedCertificate) {
+          clientOptions.tls = {
+            rejectUnauthorized: false,
+          };
+          clientOptions.ignoreTLS = true;
+        }
+
+        const client = new ImapFlowClass(clientOptions);
+        await client.connect();
+
+        // Move email to spam folder
+        // Try different spam folder names
+        const spamFolders = ['Spam', 'Junk', 'Spam Folder', 'Junk E-mail'];
+        let moved = false;
+
+        for (const folderName of spamFolders) {
+          try {
+            await client.messageMove(emailId, folderName);
+            moved = true;
+            console.log(`Moved email ${emailId} to ${folderName}`);
+            break;
+          } catch (moveError) {
+            console.log(`Failed to move to ${folderName}:`, moveError.message);
+          }
+        }
+
+        await client.logout();
+        return { success: moved };
+      } catch (error) {
+        console.error('Failed to move email to spam:', error);
+        let errorMessage = 'Failed to move email to spam';
+        if (error.response) {
+          errorMessage = error.response;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
         return { success: false, error: errorMessage };
       }
     });
