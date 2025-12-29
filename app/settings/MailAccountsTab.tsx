@@ -2,9 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { TabsContent } from "@/components/ui/tabs"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
 import { RefreshCw, Trash2, Edit, Power } from "lucide-react"
 import {
   AlertDialog,
@@ -24,14 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Account, AccountStatus } from "@/lib/mail"
+import { ImapForm } from "@/components/ImapForm"
 
 const getStatusColor = (status: AccountStatus) => {
   switch (status) {
@@ -168,73 +159,7 @@ export default function MailAccountsTab({
             <DialogTitle>Modify Account</DialogTitle>
             <DialogDescription>Update your account settings.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="modify-username">Username</Label>
-              <Input
-                id="modify-username"
-                type="text"
-                value={modifyFormData.username}
-                onChange={(e) => handleModifyFormChange("username", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="modify-password">Password</Label>
-              <Input
-                id="modify-password"
-                type="password"
-                value={modifyFormData.password}
-                onChange={(e) => handleModifyFormChange("password", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="modify-host">Host</Label>
-              <Input
-                id="modify-host"
-                type="text"
-                value={modifyFormData.host}
-                onChange={(e) => handleModifyFormChange("host", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="modify-port">Port</Label>
-              <Input
-                id="modify-port"
-                type="number"
-                value={modifyFormData.port}
-                onChange={(e) => handleModifyFormChange("port", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="modify-secure">Security</Label>
-              <Select value={modifyFormData.secure} onValueChange={(value) => {
-                handleModifyFormChange("secure", value)
-                if (value === "false") {
-                  handleModifyFormChange("allowUnsignedCertificate", false)
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">TLS/SSL</SelectItem>
-                  <SelectItem value="false">None</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {modifyFormData.secure === "true" && (
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="modify-allowUnsignedCertificate"
-                  checked={modifyFormData.allowUnsignedCertificate}
-                  onCheckedChange={(checked) => handleModifyFormChange("allowUnsignedCertificate", checked)}
-                />
-                <Label htmlFor="modify-allowUnsignedCertificate" className="text-sm">
-                  Allow unsigned SSL certificates
-                </Label>
-              </div>
-            )}
-          </div>
+          <ImapForm formData={modifyFormData} onChange={handleModifyFormChange} prefix="modify-" />
           <DialogFooter>
             <Button onClick={handleSaveModify} disabled={testingModify}>
               {testingModify ? "Testing..." : "Test and Save"}

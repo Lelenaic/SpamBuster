@@ -3,14 +3,11 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Mail, AlertCircle } from "lucide-react";
 import { MailProviderFactory, MailConnectionConfig, Account } from "@/lib/mail";
 import { toast } from "sonner";
+import { ImapForm } from "@/components/ImapForm";
 
 interface ImapSettingsStepProps {
   onBack?: () => void;
@@ -96,76 +93,7 @@ export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="your.email@example.com"
-              value={formData.username}
-              onChange={(e) => handleInputChange("username", e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={(e) => handleInputChange("password", e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="host">Host</Label>
-            <Input
-              id="host"
-              type="text"
-              placeholder="imap.example.com"
-              value={formData.host}
-              onChange={(e) => handleInputChange("host", e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="port">Port</Label>
-            <Input
-              id="port"
-              type="number"
-              placeholder="993"
-              value={formData.port}
-              onChange={(e) => handleInputChange("port", e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="secure">Security</Label>
-            <Select value={formData.secure} onValueChange={(value) => {
-              handleInputChange("secure", value);
-              // Reset allowUnsignedCertificate when switching to non-secure
-              if (value === "false") {
-                handleInputChange("allowUnsignedCertificate", false);
-              }
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select security type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="true">TLS/SSL</SelectItem>
-                <SelectItem value="false">None</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {formData.secure === "true" && (
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="allowUnsignedCertificate"
-                checked={formData.allowUnsignedCertificate}
-                onCheckedChange={(checked) => handleInputChange("allowUnsignedCertificate", checked)}
-              />
-              <Label htmlFor="allowUnsignedCertificate" className="text-sm">
-                Allow unsigned SSL certificates
-              </Label>
-            </div>
-          )}
+          <ImapForm formData={formData} onChange={handleInputChange} />
           {errorMessage && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />

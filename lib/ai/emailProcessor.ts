@@ -367,7 +367,7 @@ export class EmailProcessorService {
   async isProcessingFromStore(): Promise<boolean> {
     try {
       const state = await this.store.get('emailProcessingState', null) as ProcessingState | null
-      return state !== null && state.isProcessing === true
+      return state !== null && state !== undefined && state.isProcessing === true
     } catch (error) {
       console.error('Failed to check processing state from store:', error)
       return false
