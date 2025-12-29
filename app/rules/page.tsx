@@ -153,7 +153,8 @@ export default function RulesPage() {
                    </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <Label htmlFor="name" className="mb-2 block">Rule Name <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="name" className="block">Rule Name <span className="text-red-500">*</span></Label>
+                      <p className="text-sm text-muted-foreground mb-2">Only for you to know which one it is</p>
                       <Input
                         id="name"
                         value={formData.name}
@@ -162,7 +163,8 @@ export default function RulesPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="text" className="mb-2 block">Rule Text <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="text" className="block">Rule Text <span className="text-red-500">*</span></Label>
+                      <p className="text-sm text-muted-foreground mb-2">This is the prompt sent to the AI</p>
                       <Textarea
                         id="text"
                         value={formData.text}
