@@ -211,13 +211,13 @@ class AccountsManager {
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(endDate.getDate() - safeMaxAgeDays);
-        
+
         // Fetch emails from INBOX within the date range
         const messages = [];
-        
+
         const lock = await client.getMailboxLock('INBOX');
         try {
-          for await (let msg of client.fetch('1:*', {
+          for await (let msg of client.fetch({ since: startDate }, {
             uid: true,
             envelope: true,
             source: true,

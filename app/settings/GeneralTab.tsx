@@ -33,10 +33,11 @@ export default function GeneralTab({
   }
 
   const getSensitivityDescription = (value: number) => {
-    if (value <= 4) return "Conservative - Only flags obvious spam"
+    if (value <= 1) return "Everything is spam"
+    if (value <= 4) return "Aggressive - Catches more spam but may have more false positives"
     if (value <= 7) return "Balanced - Good balance between false positives and spam detection"
-    if (value <= 8) return "Aggressive - Catches more spam but may have more false positives"
-    return "Very Aggressive - Maximum spam detection, highest chance of false positives"
+    if (value <= 8) return "Conservative - Only flags obvious spam"
+    return "Very Conservative - Almost no false positives, will miss many spams"
   }
 
   return (
@@ -67,9 +68,9 @@ export default function GeneralTab({
               />
             </div>
             <div className="flex justify-between text-sm font-medium">
-              <span>Conservative</span>
+              <span>Aggressive</span>
               <span className="text-primary font-bold">{aiSensitivity}</span>
-              <span>Very Aggressive</span>
+              <span>Conservative</span>
             </div>
             <p className="text-sm text-muted-foreground">
               {getSensitivityDescription(aiSensitivity)}
