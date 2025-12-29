@@ -5,6 +5,7 @@ export interface MailConnectionConfig {
   username: string;
   password: string;
   allowUnsignedCertificate?: boolean;
+  spamFolder?: string;
   // Add other common options as needed
 }
 

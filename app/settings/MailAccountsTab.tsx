@@ -44,6 +44,7 @@ type ModifyFormData = {
   port: number
   secure: string
   allowUnsignedCertificate: boolean
+  spamFolder: string
 }
 
 interface MailAccountsTabProps {
@@ -63,6 +64,10 @@ interface MailAccountsTabProps {
   setTestingModify: (testing: boolean) => void
   testingAccountId: string | null
   setTestingAccountId: (id: string | null) => void
+  modifyFolders: { name: string; path: string }[]
+  setModifyFolders: (folders: { name: string; path: string }[]) => void
+  loadingModifyFolders: boolean
+  setLoadingModifyFolders: (loading: boolean) => void
   handleDeleteAccount: (account: Account) => void
   confirmDelete: () => Promise<void>
   handleModifyAccount: (account: Account) => void
@@ -70,6 +75,7 @@ interface MailAccountsTabProps {
   handleModifyFormChange: (field: string, value: string | boolean) => void
   handleSaveModify: () => Promise<void>
   handleToggleAccount: (account: Account) => Promise<void>
+  handleFetchModifyFolders: () => Promise<void>
 }
 
 export default function MailAccountsTab({
@@ -82,6 +88,8 @@ export default function MailAccountsTab({
   modifyFormData,
   testingModify,
   testingAccountId,
+  modifyFolders,
+  loadingModifyFolders,
   handleDeleteAccount,
   confirmDelete,
   handleModifyAccount,
@@ -89,6 +97,7 @@ export default function MailAccountsTab({
   handleModifyFormChange,
   handleSaveModify,
   handleToggleAccount,
+  handleFetchModifyFolders,
 }: MailAccountsTabProps) {
   return (
     <>
@@ -159,7 +168,14 @@ export default function MailAccountsTab({
             <DialogTitle>Modify Account</DialogTitle>
             <DialogDescription>Update your account settings.</DialogDescription>
           </DialogHeader>
-          <ImapForm formData={modifyFormData} onChange={handleModifyFormChange} prefix="modify-" />
+          <ImapForm
+            formData={modifyFormData}
+            onChange={handleModifyFormChange}
+            prefix="modify-"
+            folders={modifyFolders}
+            onFetchFolders={handleFetchModifyFolders}
+            loadingFolders={loadingModifyFolders}
+          />
           <DialogFooter>
             <Button onClick={handleSaveModify} disabled={testingModify}>
               {testingModify ? "Testing..." : "Test and Save"}

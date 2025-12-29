@@ -4,6 +4,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, Check, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useState } from "react";
 
 interface ImapFormData {
   username: string;
@@ -12,15 +29,27 @@ interface ImapFormData {
   port: number;
   secure: string;
   allowUnsignedCertificate: boolean;
+  spamFolder: string;
+}
+
+interface Folder {
+  name: string;
+  path: string;
 }
 
 interface ImapFormProps {
   formData: ImapFormData;
   onChange: (field: string, value: string | boolean) => void;
   prefix?: string;
+  folders?: Folder[];
+  onFetchFolders?: () => Promise<void>;
+  loadingFolders?: boolean;
 }
 
-export function ImapForm({ formData, onChange, prefix = "" }: ImapFormProps) {
+export function ImapForm({ formData, onChange, prefix = "", folders = [], onFetchFolders, loadingFolders = false }: ImapFormProps) {
+  const [spamFolderOpen, setSpamFolderOpen] = useState(false);
+  const [spamFolderSearch, setSpamFolderSearch] = useState("");
+
   const handleInputChange = (field: string, value: string | boolean) => {
     onChange(field, value);
     // Clear error message when user changes any field - handled by parent
@@ -75,6 +104,82 @@ export function ImapForm({ formData, onChange, prefix = "" }: ImapFormProps) {
           value={formData.port}
           onChange={(e) => handleInputChange("port", e.target.value)}
         />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${prefix}spamFolder`}>Spam Folder</Label>
+        <div className="flex gap-2">
+          <Popover open={spamFolderOpen} onOpenChange={(open) => {
+            setSpamFolderOpen(open);
+            if (open) {
+              const cleanName = folders.find(f => f.path === formData.spamFolder)?.name || formData.spamFolder || "";
+              setSpamFolderSearch(cleanName);
+            }
+          }}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={spamFolderOpen}
+                className="flex-1 justify-between"
+              >
+                {formData.spamFolder
+                  ? formData.spamFolder.replace(/^INBOX\./, '')
+                  : "Select spam folder..."}
+                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+              <Command>
+                <CommandInput
+                  placeholder="Search folder..."
+                  className="h-9"
+                  value={spamFolderSearch}
+                  onValueChange={(value) => {
+                    setSpamFolderSearch(value);
+                    handleInputChange("spamFolder", value);
+                  }}
+                />
+                <CommandList>
+                  <CommandEmpty>No folder found.</CommandEmpty>
+                  <CommandGroup>
+                    {folders.map((folder) => (
+                      <CommandItem
+                        key={folder.path}
+                        value={folder.name}
+                        onSelect={(currentValue) => {
+                          const selectedFolder = folders.find(f => f.name === currentValue);
+                          if (selectedFolder) {
+                            handleInputChange("spamFolder", selectedFolder.path);
+                            setSpamFolderSearch(selectedFolder.name);
+                          }
+                          setSpamFolderOpen(false);
+                        }}
+                      >
+                        {folder.name}
+                        <Check
+                          className={cn(
+                            "ml-auto h-4 w-4",
+                            folders.find(f => f.path === formData.spamFolder)?.name === folder.name ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          {onFetchFolders && (
+            <Button
+              onClick={onFetchFolders}
+              disabled={loadingFolders}
+              variant="outline"
+              size="icon"
+            >
+              <RefreshCw className={`h-4 w-4 ${loadingFolders ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
+        </div>
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${prefix}secure`}>Security</Label>

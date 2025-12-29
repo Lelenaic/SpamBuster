@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld("accountsAPI", {
     create: (accountData) => ipcRenderer.invoke('accounts:create', accountData),
     update: (id, updates) => ipcRenderer.invoke('accounts:update', id, updates),
     delete: (id) => ipcRenderer.invoke('accounts:delete', id),
+    listMailboxFolders: (config) => ipcRenderer.invoke('list-mailbox-folders', config),
 });
 
 contextBridge.exposeInMainWorld("analyzedEmailsAPI", {

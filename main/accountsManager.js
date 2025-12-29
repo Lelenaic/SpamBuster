@@ -314,6 +314,50 @@ class AccountsManager {
       }
     });
 
+    ipcMain.handle('list-mailbox-folders', async (event, config) => {
+      try {
+        const ImapFlowClass = await this.getImapFlow();
+        const clientOptions = {
+          host: config.host,
+          port: config.port,
+          secure: config.secure,
+          auth: {
+            user: config.username,
+            pass: config.password,
+          },
+        };
+
+        // Add TLS options if allowing unsigned certificates
+        if (config.allowUnsignedCertificate) {
+          clientOptions.tls = {
+            rejectUnauthorized: false,
+          };
+          clientOptions.ignoreTLS = true;
+        }
+
+        const client = new ImapFlowClass(clientOptions);
+        await client.connect();
+
+        const mailboxList = await client.list();
+        const mailboxes = mailboxList.map(mailbox => ({
+          name: mailbox.path.startsWith('INBOX.') ? mailbox.path.substring(6) : mailbox.path,
+          path: mailbox.path,
+        }));
+
+        await client.logout();
+        return { success: true, folders: mailboxes };
+      } catch (error) {
+        console.error('Failed to list mailboxes:', error);
+        let errorMessage = 'Failed to list mailboxes';
+        if (error.response) {
+          errorMessage = error.response;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        return { success: false, error: errorMessage };
+      }
+    });
+
     ipcMain.handle('move-email-to-spam', async (event, config, emailId) => {
       try {
         const ImapFlowClass = await this.getImapFlow();
@@ -342,25 +386,31 @@ class AccountsManager {
         const lock = await client.getMailboxLock('INBOX');
 
         // Move email to spam folder
-        // Try different spam folder names
-        const spamFolders = ['Spam', 'Junk', 'Spam Folder', 'Junk E-mail'];
+        const spamFolder = config.spamFolder || 'Spam';
         let moved = false;
 
-        for (const folderName of spamFolders) {
+        try {
+          // Try UID-based move first
           try {
-            // Try UID-based move first
+            await client.messageMove({ uid: emailId }, spamFolder);
+            moved = true;
+          } catch (uidError) {
+            // Fallback to sequence number
+            await client.messageMove(emailId, spamFolder);
+            moved = true;
+          }
+        } catch (moveError) {
+          console.log(`Failed to move to ${spamFolder}:`, moveError.message);
+          // Fallback to other common spam folders if specified folder fails
+          const fallbackFolders = ['Spam', 'Junk', 'Spam Folder', 'Junk E-mail'].filter(f => f !== spamFolder);
+          for (const folderName of fallbackFolders) {
             try {
               await client.messageMove({ uid: emailId }, folderName);
               moved = true;
               break;
-            } catch (uidError) {
-              // Fallback to sequence number
-              await client.messageMove(emailId, folderName);
-              moved = true;
-              break;
+            } catch (fallbackError) {
+              console.log(`Failed to move to ${folderName}:`, fallbackError.message);
             }
-          } catch (moveError) {
-            console.log(`Failed to move to ${folderName}:`, moveError.message);
           }
         }
 

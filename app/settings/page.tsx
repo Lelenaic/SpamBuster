@@ -51,10 +51,13 @@ function SettingsContent() {
     port: 993,
     secure: "true",
     allowUnsignedCertificate: false,
+    spamFolder: "Spam",
   })
   
   const [testingModify, setTestingModify] = useState(false)
   const [testingAccountId, setTestingAccountId] = useState<string | null>(null)
+  const [modifyFolders, setModifyFolders] = useState<{ name: string; path: string }[]>([])
+  const [loadingModifyFolders, setLoadingModifyFolders] = useState(false)
   const [aiSensitivity, setAiSensitivity] = useState<number>(7)
   const [emailAgeDays, setEmailAgeDays] = useState<number>(7)
 
@@ -203,6 +206,7 @@ function SettingsContent() {
         port: accountToModify.config.port,
         secure: accountToModify.config.secure ? "true" : "false",
         allowUnsignedCertificate: accountToModify.config.allowUnsignedCertificate || false,
+        spamFolder: accountToModify.config.spamFolder || "Spam",
       })
     }
   }, [accountToModify])
@@ -224,7 +228,10 @@ function SettingsContent() {
 
   const handleModifyAccount = (account: Account) => {
     setAccountToModify(account)
+    setModifyFolders([])
     setModifyDialogOpen(true)
+    // Fetch folders automatically when opening modify dialog
+    handleFetchModifyFolders()
   }
 
   const handleTestAccount = async (account: Account) => {
@@ -256,6 +263,7 @@ function SettingsContent() {
         username: modifyFormData.username,
         password: modifyFormData.password,
         allowUnsignedCertificate: modifyFormData.allowUnsignedCertificate,
+        spamFolder: modifyFormData.spamFolder,
       }
       
       try {
@@ -286,6 +294,23 @@ function SettingsContent() {
     await window.accountsAPI.update(account.id, { status: newStatus })
     const updatedAccounts = await window.accountsAPI.getAll()
     setMailAccounts(updatedAccounts)
+  }
+
+  const handleFetchModifyFolders = async () => {
+    if (!accountToModify) return;
+    setLoadingModifyFolders(true);
+    try {
+      const result = await (window.accountsAPI as any).listMailboxFolders(accountToModify.config);
+      if (result.success) {
+        setModifyFolders(result.folders || []);
+      } else {
+        console.error('Failed to fetch folders:', result.error);
+      }
+    } catch (error) {
+      console.error('Failed to fetch folders:', error);
+    } finally {
+      setLoadingModifyFolders(false);
+    }
   }
 
   const handleAiSensitivityChange = async (value: number) => {
@@ -380,6 +405,10 @@ function SettingsContent() {
               setTestingModify={setTestingModify}
               testingAccountId={testingAccountId}
               setTestingAccountId={setTestingAccountId}
+              modifyFolders={modifyFolders}
+              setModifyFolders={setModifyFolders}
+              loadingModifyFolders={loadingModifyFolders}
+              setLoadingModifyFolders={setLoadingModifyFolders}
               handleDeleteAccount={handleDeleteAccount}
               confirmDelete={confirmDelete}
               handleModifyAccount={handleModifyAccount}
@@ -387,6 +416,7 @@ function SettingsContent() {
               handleModifyFormChange={handleModifyFormChange}
               handleSaveModify={handleSaveModify}
               handleToggleAccount={handleToggleAccount}
+              handleFetchModifyFolders={handleFetchModifyFolders}
             />
           </TabsContent>
         </div>

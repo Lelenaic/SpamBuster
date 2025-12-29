@@ -30,6 +30,7 @@ declare global {
       create: (accountData: unknown) => Promise<unknown>;
       update: (id: string, updates: unknown) => Promise<unknown>;
       delete: (id: string) => Promise<void>;
+      listMailboxFolders: (config: unknown) => Promise<{ success: boolean; folders?: { name: string; path: string }[]; error?: string }>;
     };
     analyzedEmailsAPI: {
       getAll: () => Promise<unknown[]>;
