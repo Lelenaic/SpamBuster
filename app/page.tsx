@@ -14,6 +14,7 @@ import { useEmailProcessing } from '@/lib/hooks/useEmailProcessing'
 import { EmailProcessorService } from '@/lib/ai/emailProcessor'
 import { Account } from '@/lib/mail/types'
 import { Rule } from '@/lib/types'
+import { toast } from 'sonner'
 
 interface AnalyzedEmail {
   id: string
@@ -87,12 +88,27 @@ export default function Home() {
     setAlerts(prev => prev.filter(a => a.id !== id))
   }
 
-  const handleManualSpam = async (emailId: string) => {
+  const handleManualSpam = async (email: AnalyzedEmail) => {
     if (window.analyzedEmailsAPI) {
-      await window.analyzedEmailsAPI.update(emailId, { manualOverride: true, manualIsSpam: true })
+      await window.analyzedEmailsAPI.update(email.id, { manualOverride: true, manualIsSpam: true })
       // Refresh the list
       const emails = await window.analyzedEmailsAPI.getAll()
       setAnalyzedEmails(emails as AnalyzedEmail[])
+
+      // Move email to spam folder
+      const account = accounts.find(acc => acc.id === email.accountId)
+      if (account && window.electronAPI) {
+        try {
+          const result = await window.electronAPI.invoke('move-email-to-spam', account.config, email.emailId) as { success: boolean; error?: string }
+          if (result.success) {
+            toast.success('Email moved to spam folder')
+          } else {
+            toast.error('Failed to move email to spam folder: ' + (result.error || 'Unknown error'))
+          }
+        } catch (error) {
+          toast.error('Failed to move email to spam folder')
+        }
+      }
     }
   }
 
@@ -206,7 +222,7 @@ export default function Home() {
                         </div>
                       ) : (
                         <div className="flex gap-2 pt-2">
-                          <Button size="sm" variant="destructive" onClick={() => handleManualSpam(email.id)}>
+                          <Button size="sm" variant="destructive" onClick={() => handleManualSpam(email)}>
                             <AlertTriangle className="h-4 w-4" />
                             It's a SPAM
                           </Button>
