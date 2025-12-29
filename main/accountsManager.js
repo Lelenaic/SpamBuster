@@ -338,6 +338,9 @@ class AccountsManager {
         const client = new ImapFlowClass(clientOptions);
         await client.connect();
 
+        // Select INBOX first (required for moving messages)
+        const lock = await client.getMailboxLock('INBOX');
+
         // Move email to spam folder
         // Try different spam folder names
         const spamFolders = ['Spam', 'Junk', 'Spam Folder', 'Junk E-mail'];
@@ -345,15 +348,23 @@ class AccountsManager {
 
         for (const folderName of spamFolders) {
           try {
-            await client.messageMove(emailId, folderName);
-            moved = true;
-            console.log(`Moved email ${emailId} to ${folderName}`);
-            break;
+            // Try UID-based move first
+            try {
+              await client.messageMove({ uid: emailId }, folderName);
+              moved = true;
+              break;
+            } catch (uidError) {
+              // Fallback to sequence number
+              await client.messageMove(emailId, folderName);
+              moved = true;
+              break;
+            }
           } catch (moveError) {
             console.log(`Failed to move to ${folderName}:`, moveError.message);
           }
         }
 
+        lock.release();
         await client.logout();
         return { success: moved };
       } catch (error) {
