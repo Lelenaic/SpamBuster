@@ -31,6 +31,13 @@ declare global {
       update: (id: string, updates: unknown) => Promise<unknown>;
       delete: (id: string) => Promise<void>;
     };
+    analyzedEmailsAPI: {
+      getAll: () => Promise<unknown[]>;
+      getById: (id: string) => Promise<unknown>;
+      create: (emailData: unknown) => Promise<unknown>;
+      update: (id: string, updates: unknown) => Promise<unknown>;
+      delete: (id: string) => Promise<void>;
+    };
     aiAPI: {
       getAISource: () => Promise<string>;
       setAISource: (value: string) => Promise<void>;

@@ -39,6 +39,14 @@ contextBridge.exposeInMainWorld("accountsAPI", {
     delete: (id) => ipcRenderer.invoke('accounts:delete', id),
 });
 
+contextBridge.exposeInMainWorld("analyzedEmailsAPI", {
+    getAll: () => ipcRenderer.invoke('analyzedEmails:getAll'),
+    getById: (id) => ipcRenderer.invoke('analyzedEmails:getById', id),
+    create: (emailData) => ipcRenderer.invoke('analyzedEmails:create', emailData),
+    update: (id, updates) => ipcRenderer.invoke('analyzedEmails:update', id, updates),
+    delete: (id) => ipcRenderer.invoke('analyzedEmails:delete', id),
+});
+
 contextBridge.exposeInMainWorld("aiAPI", {
     getAISource: () => ipcRenderer.invoke('ai:getAISource'),
     setAISource: (value) => ipcRenderer.invoke('ai:setAISource', value),

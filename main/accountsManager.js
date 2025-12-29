@@ -116,6 +116,51 @@ class AccountsManager {
     }
   }
 
+  // Analyzed Emails CRUD
+  getAllAnalyzedEmails() {
+    return this.store.get('analyzedEmails', []);
+  }
+
+  getAnalyzedEmailById(id) {
+    const emails = this.getAllAnalyzedEmails();
+    return emails.find(e => e.id === id);
+  }
+
+  createAnalyzedEmail(emailData) {
+    const emails = this.getAllAnalyzedEmails();
+    const newEmail = {
+      id: uuidv4(),
+      ...emailData,
+      analyzedAt: new Date().toISOString()
+    };
+    emails.push(newEmail);
+
+    // Keep only the last 50 emails
+    if (emails.length > 50) {
+      emails.splice(0, emails.length - 50);
+    }
+
+    this.store.set('analyzedEmails', emails);
+    return newEmail;
+  }
+
+  updateAnalyzedEmail(id, updates) {
+    const emails = this.getAllAnalyzedEmails();
+    const index = emails.findIndex(e => e.id === id);
+    if (index === -1) return undefined;
+    emails[index] = { ...emails[index], ...updates };
+    this.store.set('analyzedEmails', emails);
+    return emails[index];
+  }
+
+  deleteAnalyzedEmail(id) {
+    const emails = this.getAllAnalyzedEmails();
+    const filtered = emails.filter(e => e.id !== id);
+    if (filtered.length === emails.length) return false;
+    this.store.set('analyzedEmails', filtered);
+    return true;
+  }
+
   registerHandlers(ipcMain) {
     ipcMain.handle('accounts:getAll', async () => {
       return this.getAll();
@@ -135,6 +180,27 @@ class AccountsManager {
 
     ipcMain.handle('accounts:delete', async (event, id) => {
       return this.delete(id);
+    });
+
+    // Analyzed Emails handlers
+    ipcMain.handle('analyzedEmails:getAll', async () => {
+      return this.getAllAnalyzedEmails();
+    });
+
+    ipcMain.handle('analyzedEmails:getById', async (event, id) => {
+      return this.getAnalyzedEmailById(id);
+    });
+
+    ipcMain.handle('analyzedEmails:create', async (event, emailData) => {
+      return this.createAnalyzedEmail(emailData);
+    });
+
+    ipcMain.handle('analyzedEmails:update', async (event, id, updates) => {
+      return this.updateAnalyzedEmail(id, updates);
+    });
+
+    ipcMain.handle('analyzedEmails:delete', async (event, id) => {
+      return this.deleteAnalyzedEmail(id);
     });
 
     ipcMain.handle('test-imap-connection', async (event, config) => {

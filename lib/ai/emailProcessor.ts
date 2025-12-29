@@ -203,6 +203,23 @@ export class EmailProcessorService {
           // Check if email should be moved to spam
           const isSpam = result.score >= sensitivity
 
+          // Save analysis result
+          if (typeof window !== 'undefined' && window.analyzedEmailsAPI) {
+            try {
+              await window.analyzedEmailsAPI.create({
+                emailId: email.id,
+                subject: email.subject,
+                sender: email.from,
+                score: result.score,
+                reasoning: result.reasoning,
+                accountId: account.id,
+                isSpam: isSpam
+              })
+            } catch (error) {
+              console.error('Failed to save analyzed email:', error)
+            }
+          }
+
           if (isSpam) {
             // Move email to spam folder
             const moved = await this.moveEmailToSpam(account, email.id)

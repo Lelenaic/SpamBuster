@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { X, AlertTriangle, CheckCircle, Undo } from 'lucide-react'
 import { Alert as AlertType } from '@/lib/types'
 import { AlertsManager } from '@/lib/alerts'
 import ProcessingStatus from '@/components/ProcessingStatus'
@@ -13,10 +15,25 @@ import { EmailProcessorService } from '@/lib/ai/emailProcessor'
 import { Account } from '@/lib/mail/types'
 import { Rule } from '@/lib/types'
 
+interface AnalyzedEmail {
+  id: string
+  emailId: string
+  subject: string
+  sender: string
+  score: number
+  reasoning: string
+  analyzedAt: string
+  accountId: string
+  isSpam: boolean
+  manualOverride?: boolean
+  manualIsSpam?: boolean
+}
+
 export default function Home() {
   const [alerts, setAlerts] = useState<AlertType[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [rules, setRules] = useState<Rule[]>([])
+  const [analyzedEmails, setAnalyzedEmails] = useState<AnalyzedEmail[]>([])
 
   // Initialize email processor with store
   const [processor, setProcessor] = useState<EmailProcessorService | null>(null)
@@ -41,7 +58,7 @@ export default function Home() {
 
   useEffect(() => {
     AlertsManager.list().then(setAlerts)
-    
+
     // Load accounts and rules
     if (typeof window !== 'undefined' && window.accountsAPI) {
       window.accountsAPI.getAll().then(setAccounts)
@@ -49,11 +66,52 @@ export default function Home() {
     if (typeof window !== 'undefined' && window.rulesAPI) {
       window.rulesAPI.getAll().then(setRules)
     }
+    if (typeof window !== 'undefined' && window.analyzedEmailsAPI) {
+      window.analyzedEmailsAPI.getAll().then((emails) => setAnalyzedEmails(emails as AnalyzedEmail[]))
+    }
+  }, [])
+
+  // Refresh analyzed emails every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof window !== 'undefined' && window.analyzedEmailsAPI) {
+        window.analyzedEmailsAPI.getAll().then((emails) => setAnalyzedEmails(emails as AnalyzedEmail[]))
+      }
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [])
 
   const handleDelete = async (id: string) => {
     await AlertsManager.delete(id)
     setAlerts(prev => prev.filter(a => a.id !== id))
+  }
+
+  const handleManualSpam = async (emailId: string) => {
+    if (window.analyzedEmailsAPI) {
+      await window.analyzedEmailsAPI.update(emailId, { manualOverride: true, manualIsSpam: true })
+      // Refresh the list
+      const emails = await window.analyzedEmailsAPI.getAll()
+      setAnalyzedEmails(emails as AnalyzedEmail[])
+    }
+  }
+
+  const handleManualHam = async (emailId: string) => {
+    if (window.analyzedEmailsAPI) {
+      await window.analyzedEmailsAPI.update(emailId, { manualOverride: true, manualIsSpam: false })
+      // Refresh the list
+      const emails = await window.analyzedEmailsAPI.getAll()
+      setAnalyzedEmails(emails as AnalyzedEmail[])
+    }
+  }
+
+  const handleRevert = async (emailId: string) => {
+    if (window.analyzedEmailsAPI) {
+      await window.analyzedEmailsAPI.update(emailId, { manualOverride: false, manualIsSpam: undefined })
+      // Refresh the list
+      const emails = await window.analyzedEmailsAPI.getAll()
+      setAnalyzedEmails(emails as AnalyzedEmail[])
+    }
   }
 
 
@@ -100,6 +158,69 @@ export default function Home() {
                 </AlertDescription>
               </Alert>
             ))
+          )}
+        </div>
+        <hr className="mt-6" />
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold mb-4">Analyzed Emails</h2>
+          {analyzedEmails.length === 0 ? (
+            <p className="text-muted-foreground">No emails analyzed yet.</p>
+          ) : (
+            <Accordion type="single" collapsible className="w-full">
+              {analyzedEmails.slice(-10).reverse().map((email) => (
+                <AccordionItem key={email.id} value={email.id}>
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex justify-between items-center w-full pr-4">
+                      <span className="truncate text-left">{email.subject}</span>
+                      <Badge variant={email.manualOverride ? (email.manualIsSpam ? "destructive" : "default") : (email.isSpam ? "destructive" : "default")} className={email.manualOverride ? (email.manualIsSpam ? "bg-red-500" : "bg-green-500") : (email.isSpam ? "bg-red-500" : "bg-green-500")}>
+                        {email.manualOverride ? (
+                          <>
+                            <span className="line-through">{email.isSpam ? "SPAM" : "HAM"}</span> → {email.manualIsSpam ? "SPAM" : "HAM"}
+                          </>
+                        ) : (
+                          <>{email.isSpam ? "SPAM" : "HAM"}</>
+                        )} ({email.score}/10)
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2 pt-2">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>From:</strong> {email.sender}
+                      </p>
+                      <p className="text-sm">
+                        <strong>AI Reasoning:</strong> {email.reasoning}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Analyzed on {new Date(email.analyzedAt).toLocaleString()}
+                      </p>
+                      {email.manualOverride ? (
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm">
+                            Manually marked as {email.manualIsSpam ? "SPAM" : "HAM"}
+                          </p>
+                          <Button size="sm" variant="outline" onClick={() => handleRevert(email.id)}>
+                            <Undo className="h-4 w-4" />
+                            Revert
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 pt-2">
+                          <Button size="sm" variant="destructive" onClick={() => handleManualSpam(email.id)}>
+                            <AlertTriangle className="h-4 w-4" />
+                            It's a SPAM
+                          </Button>
+                          <Button size="sm" variant="default" onClick={() => handleManualHam(email.id)}>
+                            <CheckCircle className="h-4 w-4" />
+                            It's a HAM
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           )}
         </div>
       </div>
