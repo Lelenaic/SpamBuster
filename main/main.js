@@ -92,7 +92,7 @@ const createWindow = () => {
 const createWizardWindow = () => {
   const win = new BrowserWindow({
     width: 1250,
-    height: 800,
+    height: 940,
     webPreferences: {
       preload: path.join(__dirname, "preload.js")
     }
