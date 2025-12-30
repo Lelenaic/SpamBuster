@@ -29,6 +29,7 @@ Download pre-built binaries from the [latest release](https://github.com/lelenai
 - Outlook/Microsoft 365 support
 - Gmail/Google Workspace support
 - Auto update
+- Rules community marketplace
 
 ## 🛠️ Development
 
