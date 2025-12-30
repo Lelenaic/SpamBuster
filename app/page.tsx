@@ -105,6 +105,7 @@ export default function Home() {
           } else {
             toast.error('Failed to move email to spam folder: ' + (result.error || 'Unknown error'))
           }
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
           toast.error('Failed to move email to spam folder')
         }
@@ -224,11 +225,11 @@ export default function Home() {
                         <div className="flex gap-2 pt-2">
                           <Button size="sm" variant="destructive" onClick={() => handleManualSpam(email)}>
                             <AlertTriangle className="h-4 w-4" />
-                            It's a SPAM
+                            It&apos;s a SPAM
                           </Button>
                           <Button size="sm" variant="default" onClick={() => handleManualHam(email.id)}>
                             <CheckCircle className="h-4 w-4" />
-                            It's a HAM
+                            It&apos;s a HAM
                           </Button>
                         </div>
                       )}

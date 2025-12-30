@@ -1,4 +1,4 @@
-import { Account } from './mail/types';
+import { Account, MailConnectionConfig } from './mail/types';
 
 export interface Alert {
   id: string;
@@ -41,6 +41,7 @@ declare global {
       create: (accountData: Omit<Account, 'id'>) => Promise<Account>
       update: (id: string, updates: Partial<Omit<Account, 'id'>>) => Promise<Account | undefined>
       delete: (id: string) => Promise<boolean>
+      listMailboxFolders: (config: MailConnectionConfig) => Promise<{ success: boolean; folders?: { name: string; path: string }[]; error?: string }>
     }
     aiAPI: {
       getAISource: () => Promise<string>

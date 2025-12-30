@@ -52,7 +52,7 @@ export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
 
       if (typeof window !== "undefined" && window.accountsAPI) {
         const result = await window.accountsAPI.listMailboxFolders(config);
-        if (result.success) {
+        if (result.success && result.folders) {
           setFolders(result.folders);
           // Auto-select a default if available
           const defaultFolders = ['Spam', 'Junk', 'Spam Folder', 'Junk E-mail'];

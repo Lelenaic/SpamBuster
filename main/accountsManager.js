@@ -394,6 +394,7 @@ class AccountsManager {
           try {
             await client.messageMove({ uid: emailId }, spamFolder);
             moved = true;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (uidError) {
             // Fallback to sequence number
             await client.messageMove(emailId, spamFolder);

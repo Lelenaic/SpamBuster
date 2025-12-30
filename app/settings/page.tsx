@@ -300,7 +300,7 @@ function SettingsContent() {
     if (!accountToModify) return;
     setLoadingModifyFolders(true);
     try {
-      const result = await (window.accountsAPI as any).listMailboxFolders(accountToModify.config);
+      const result = await window.accountsAPI.listMailboxFolders(accountToModify.config);
       if (result.success) {
         setModifyFolders(result.folders || []);
       } else {
