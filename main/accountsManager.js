@@ -82,12 +82,16 @@ class AccountsManager {
     if (!addresses || !Array.isArray(addresses)) {
       return 'Unknown Sender';
     }
-    
+
     const address = addresses[0];
     if (address?.address) {
+      // Return "Name <email>" format if name is available, otherwise just email
+      if (address.name) {
+        return `${address.name} <${address.address}>`;
+      }
       return address.address;
     }
-    
+
     return 'Unknown Sender';
   }
 

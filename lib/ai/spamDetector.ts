@@ -31,7 +31,7 @@ export class SpamDetectorService {
     const nameEmailMatch = email.from.match(/^([^<]+)<([^>]+)>$/)
     let senderName: string
     let senderEmail: string
-
+    
     if (nameEmailMatch) {
       senderName = nameEmailMatch[1].trim()
       senderEmail = nameEmailMatch[2].trim()
