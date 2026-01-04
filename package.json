@@ -88,6 +88,14 @@
       "target": [
         "AppImage",
         "snap"
+      ],
+      "publish": [
+        {
+          "provider": "snapStore",
+          "channels": [
+            "stable"
+          ]
+        }
       ]
     },
     "snap": {
@@ -106,10 +114,6 @@
       {
         "provider": "github",
         "releaseType": "release"
-      },
-      {
-        "provider": "snapStore",
-        "channel": "stable"
       }
     ]
   }
