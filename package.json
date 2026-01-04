@@ -106,6 +106,10 @@
       {
         "provider": "github",
         "releaseType": "release"
+      },
+      {
+        "provider": "snapStore",
+        "channel": "stable"
       }
     ]
   }
