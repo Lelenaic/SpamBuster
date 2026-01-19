@@ -60,6 +60,8 @@ declare global {
       setAISensitivity: (value: number) => Promise<void>
       getEmailAgeDays: () => Promise<number>
       setEmailAgeDays: (value: number) => Promise<void>
+      getSimplifyEmailContent: () => Promise<boolean>
+      setSimplifyEmailContent: (value: boolean) => Promise<void>
     }
   }
 }

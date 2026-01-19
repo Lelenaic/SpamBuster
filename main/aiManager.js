@@ -67,6 +67,14 @@ class AIManager {
     this.store.set('emailAgeDays', value);
   }
 
+  getSimplifyEmailContent() {
+    return this.store.get('simplifyEmailContent', true);
+  }
+
+  setSimplifyEmailContent(value) {
+    this.store.set('simplifyEmailContent', value);
+  }
+
   registerHandlers(ipcMain) {
     ipcMain.handle('ai:getAISource', async () => {
       return this.getAISource();
@@ -130,6 +138,14 @@ class AIManager {
 
     ipcMain.handle('ai:setEmailAgeDays', async (event, value) => {
       return this.setEmailAgeDays(value);
+    });
+
+    ipcMain.handle('ai:getSimplifyEmailContent', async () => {
+      return this.getSimplifyEmailContent();
+    });
+
+    ipcMain.handle('ai:setSimplifyEmailContent', async (event, value) => {
+      return this.setSimplifyEmailContent(value);
     });
   }
 }

@@ -60,6 +60,7 @@ function SettingsContent() {
   const [loadingModifyFolders, setLoadingModifyFolders] = useState(false)
   const [aiSensitivity, setAiSensitivity] = useState<number>(7)
   const [emailAgeDays, setEmailAgeDays] = useState<number>(7)
+  const [simplifyEmailContent, setSimplifyEmailContent] = useState<boolean>(true)
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -72,6 +73,7 @@ function SettingsContent() {
         setSelectedEmbedModel(await window.aiAPI.getSelectedEmbedModel())
         setAiSensitivity(await window.aiAPI.getAISensitivity())
         setEmailAgeDays(await window.aiAPI.getEmailAgeDays())
+        setSimplifyEmailContent(await window.aiAPI.getSimplifyEmailContent())
 
         const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
@@ -327,6 +329,13 @@ function SettingsContent() {
     }
   }
 
+  const handleSimplifyEmailContentChange = async (value: boolean) => {
+    setSimplifyEmailContent(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setSimplifyEmailContent(value)
+    }
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -343,6 +352,8 @@ function SettingsContent() {
               setAiSensitivity={handleAiSensitivityChange}
               emailAgeDays={emailAgeDays}
               setEmailAgeDays={handleEmailAgeDaysChange}
+              simplifyEmailContent={simplifyEmailContent}
+              setSimplifyEmailContent={handleSimplifyEmailContentChange}
             />
           </TabsContent>
           <TabsContent value="ai">

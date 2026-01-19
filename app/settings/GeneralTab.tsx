@@ -4,12 +4,15 @@ import { Label } from "@/components/ui/label"
 import { TabsContent } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface GeneralTabProps {
   aiSensitivity: number
   setAiSensitivity: (value: number) => void
   emailAgeDays: number
   setEmailAgeDays: (value: number) => void
+  simplifyEmailContent: boolean
+  setSimplifyEmailContent: (value: boolean) => void
 }
 
 export default function GeneralTab({
@@ -17,6 +20,8 @@ export default function GeneralTab({
   setAiSensitivity,
   emailAgeDays,
   setEmailAgeDays,
+  simplifyEmailContent,
+  setSimplifyEmailContent,
 }: GeneralTabProps) {
   const handleSensitivityChange = (value: string) => {
     const numValue = parseInt(value)
@@ -93,6 +98,24 @@ export default function GeneralTab({
             <p className="text-sm text-muted-foreground">
               Number of days to look back when analyzing email age for spam detection (default: 7 days)
             </p>
+          </div>
+        </div>
+
+        <div className="space-y-4 mt-10">
+          <div className="flex flex-row items-start space-x-3 space-y-0">
+            <Checkbox
+              id="simplify-email-content"
+              checked={simplifyEmailContent}
+              onCheckedChange={(checked) => setSimplifyEmailContent(checked === true)}
+            />
+            <div className="space-y-1 leading-none">
+              <Label htmlFor="simplify-email-content">
+                Simplify Email Content
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Reduce email size by turning HTML to Markdown. Improves processing speed and reduces cost. It might reduce quality as some spam/ham indications metadata from the html attributes could be lost.
+              </p>
+            </div>
           </div>
         </div>
       </div>

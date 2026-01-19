@@ -65,6 +65,8 @@ contextBridge.exposeInMainWorld("aiAPI", {
     setAISensitivity: (value) => ipcRenderer.invoke('ai:setAISensitivity', value),
     getEmailAgeDays: () => ipcRenderer.invoke('ai:getEmailAgeDays'),
     setEmailAgeDays: (value) => ipcRenderer.invoke('ai:setEmailAgeDays', value),
+    getSimplifyEmailContent: () => ipcRenderer.invoke('ai:getSimplifyEmailContent'),
+    setSimplifyEmailContent: (value) => ipcRenderer.invoke('ai:setSimplifyEmailContent', value),
 });
 
 contextBridge.exposeInMainWorld("shellAPI", {

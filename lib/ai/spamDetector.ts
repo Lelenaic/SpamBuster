@@ -2,6 +2,7 @@ import { createAIService } from './factory'
 import { AIService } from './types'
 import { Rule } from '../types'
 import { EmailData } from '../mail/types'
+import TurndownService from 'turndown'
 
 export interface SpamAnalysisResult {
   score: number // 0-10, where 0 = not spam, 10 = definitely spam
@@ -9,7 +10,11 @@ export interface SpamAnalysisResult {
 }
 
 export class SpamDetectorService {
-  constructor() {}
+  private turndownService: TurndownService
+
+  constructor() {
+    this.turndownService = new TurndownService()
+  }
 
   private async getAIService(): Promise<AIService> {
     if (typeof window === 'undefined' || !window.aiAPI) {
@@ -26,7 +31,14 @@ export class SpamDetectorService {
     return await window.aiAPI.getSelectedModel()
   }
 
-  private buildPrompt(email: EmailData, rules: Rule[]): string {
+  private async getSimplifyEmailContent(): Promise<boolean> {
+    if (typeof window === 'undefined' || !window.aiAPI) {
+      return false
+    }
+    return await window.aiAPI.getSimplifyEmailContent()
+  }
+
+  private buildPrompt(email: EmailData, rules: Rule[], shouldSimplify: boolean): string {
     // Parse sender name and email from the 'from' field
     const nameEmailMatch = email.from.match(/^([^<]+)<([^>]+)>$/)
     let senderName: string
@@ -40,6 +52,9 @@ export class SpamDetectorService {
       senderName = 'Unknown'
       senderEmail = email.from
     }
+
+    // Simplify email content if enabled
+    const simplifiedBody = shouldSimplify ? this.turndownService.turndown(email.body) : email.body
 
     const basePrompt = `You are a spam email detection expert. Analyze the following email content and determine if it's spam.
     Only classify as spam if the main intent is unwanted commercial promotion, fraud, or phishing. Messages that are informal, have typos, or mention typical spam topics are not spam if they look like normal human conversation.
@@ -86,7 +101,7 @@ export class SpamDetectorService {
     Reasoning: Generic urgency, suspicious shortened link, all caps, pressure tactics.
     Score: 9 (spam)
 
-    Additional user-defined rules to consider:`
+    Additional user-defined rules that are an absolute priority above all the other criteria:`
 
     const rulesText = rules.length > 0
       ? rules.map(rule => `- ${rule.text}`).join('\n')
@@ -100,7 +115,7 @@ Date: ${email.date.toISOString()}
 
 Email content to analyze:
 ---
-${email.body}
+${simplifiedBody}
 ---
 
 Respond ONLY with a valid JSON object in this exact format:
@@ -117,7 +132,8 @@ Do not include any other text or formatting.`
   async analyzeEmail(email: EmailData, rules: Rule[] = []): Promise<SpamAnalysisResult> {
     try {
       const aiService = await this.getAIService()
-      const prompt = this.buildPrompt(email, rules)
+      const simplifyEmailContent = await this.getSimplifyEmailContent()
+      const prompt = this.buildPrompt(email, rules, simplifyEmailContent)
 
       const selectedModel = await this.getSelectedModel()
       const response = await aiService.sendMessage(prompt, selectedModel)
