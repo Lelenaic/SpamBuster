@@ -173,6 +173,17 @@ export function useEmailProcessing(
     setStatus('processing')
     abortControllerRef.current = new AbortController()
     
+    // Reset stats to 0 before starting processing
+    setOverallStats({
+      totalEmails: 0,
+      spamEmails: 0,
+      processedEmails: 0,
+      skippedEmails: 0,
+      errors: 0
+    })
+    setAccountStats({})
+    setCurrentAccount(undefined)
+    
     try {
       // Get the user's configured email age days setting
       const emailAgeDays = await window.aiAPI.getEmailAgeDays()

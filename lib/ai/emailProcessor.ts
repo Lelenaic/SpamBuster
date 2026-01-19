@@ -208,6 +208,23 @@ export class EmailProcessorService {
       const emails = await this.fetchUnprocessedEmails(account, maxAgeDays)
       stats.totalEmails = emails.length
 
+      // Count emails that will be skipped upfront
+      let skippedCount = 0
+      for (const email of emails) {
+        // Check if email is too old
+        if (!this.isEmailOldEnough(email.date, maxAgeDays)) {
+          skippedCount++
+          continue
+        }
+        
+        // Check if already processed
+        const checksum = this.generateChecksum(email.subject, email.body)
+        if (this.processedChecksums.includes(checksum)) {
+          skippedCount++
+        }
+      }
+      stats.skippedEmails = skippedCount
+
       // Initialize account stats in currentAccountStats
       this.currentAccountStats[account.id] = { ...stats }
 
@@ -221,8 +238,7 @@ export class EmailProcessorService {
         try {
           // Check if email is old enough to process
           if (!this.isEmailOldEnough(email.date, maxAgeDays)) {
-            stats.skippedEmails++
-            continue
+            continue // Already counted as skipped
           }
 
           // Generate checksum to avoid duplicate processing
@@ -234,8 +250,7 @@ export class EmailProcessorService {
           }
           
           if (this.processedChecksums.includes(checksum)) {
-            stats.skippedEmails++
-            continue
+            continue // Already counted as skipped
           }
           
           // Analyze email with AI
