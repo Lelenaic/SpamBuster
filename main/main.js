@@ -58,6 +58,28 @@ ipcMain.on('open-wizard-window', () => {
   createWizardWindow();
 });
 
+// Processing events - forward events from main to renderer
+// These handlers receive events from the main thread and forward to the renderer
+ipcMain.on('processing:stats-update', (event, data) => {
+  event.sender.send('processing:stats-update', data);
+});
+
+ipcMain.on('processing:progress', (event, data) => {
+  event.sender.send('processing:progress', data);
+});
+
+ipcMain.on('processing:complete', (event, data) => {
+  event.sender.send('processing:complete', data);
+});
+
+ipcMain.on('processing:error', (event, error) => {
+  event.sender.send('processing:error', error);
+});
+
+ipcMain.on('processing:status-change', (event, status) => {
+  event.sender.send('processing:status-change', status);
+});
+
 const appServe = app.isPackaged ? serve({
   directory: path.join(__dirname, "../out")
 }) : null;
@@ -74,11 +96,7 @@ const createWindow = () => {
 
   if (app.isPackaged) {
     if (appServe) {
-      appServe(mainWindow).then(() => {
-        console.log('Successfully loaded packaged app');
-      }).catch(err => {
-        console.error('Error loading packaged app:', err);
-      });
+      appServe(mainWindow);
     }
   } else {
     mainWindow.loadURL("http://localhost:3000");

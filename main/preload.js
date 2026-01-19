@@ -72,3 +72,30 @@ contextBridge.exposeInMainWorld("aiAPI", {
 contextBridge.exposeInMainWorld("shellAPI", {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
 });
+
+// Processing events API for real-time status updates
+contextBridge.exposeInMainWorld("processingEvents", {
+    onStatsUpdate: (callback) => {
+        ipcRenderer.on('processing:stats-update', (event, ...args) => callback(...args));
+        return () => ipcRenderer.removeListener('processing:stats-update', callback);
+    },
+    onProgress: (callback) => {
+        ipcRenderer.on('processing:progress', (event, ...args) => callback(...args));
+        return () => ipcRenderer.removeListener('processing:progress', callback);
+    },
+    onComplete: (callback) => {
+        ipcRenderer.on('processing:complete', (event, ...args) => callback(...args));
+        return () => ipcRenderer.removeListener('processing:complete', callback);
+    },
+    onError: (callback) => {
+        ipcRenderer.on('processing:error', (event, ...args) => callback(...args));
+        return () => ipcRenderer.removeListener('processing:error', callback);
+    },
+    onStatusChange: (callback) => {
+        ipcRenderer.on('processing:status-change', (event, ...args) => callback(...args));
+        return () => ipcRenderer.removeListener('processing:status-change', callback);
+    },
+    removeAllListeners: (channel) => {
+        ipcRenderer.removeAllListeners(channel);
+    }
+});

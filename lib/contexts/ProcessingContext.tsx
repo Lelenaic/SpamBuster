@@ -55,13 +55,38 @@ export function ProcessingProvider({ children, accounts, rules, processor }: Pro
   const processingRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // Check processor state on mount and when processor changes
+  // Check processor state on mount for state recovery
   const checkProcessorState = useCallback(() => {
-    if (processor && processor.isCurrentlyProcessing()) {
-      console.log('🔄 Detected ongoing processing, restoring state...')
+    if (!processor) {
+      return
+    }
+    
+    // Check if processing is ongoing
+    const isProcessing = processor.isCurrentlyProcessing()
+    
+    if (isProcessing) {
       processingRef.current = true
       setStatus('processing')
       abortControllerRef.current = new AbortController()
+      
+      // Restore current processing state from in-memory processor state
+      const currentState = processor.getCurrentProcessingState()
+      if (currentState) {
+        setAccountStats(currentState.accountStats)
+        setOverallStats(currentState.overallStats)
+        setCurrentAccount(currentState.currentAccount)
+      }
+      return
+    }
+    
+    // Always check for completed processing state - if there are stats, restore them
+    const currentState = processor.getCurrentProcessingState()
+    
+    if (currentState && Object.keys(currentState.accountStats).length > 0) {
+      setAccountStats(currentState.accountStats)
+      setOverallStats(currentState.overallStats)
+      setCurrentAccount(undefined)
+      setStatus('completed')
     }
   }, [processor])
 
@@ -77,13 +102,92 @@ export function ProcessingProvider({ children, accounts, rules, processor }: Pro
     }
   }, [processor, checkProcessorState])
 
+  // Set up real-time event listeners for processing updates
+  useEffect(() => {
+    if (!window.processingEvents) {
+      return
+    }
+
+    const cleanupFunctions: (() => void)[] = []
+
+    // Listen for status changes
+    const unsubStatus = window.processingEvents.onStatusChange((newStatus: ProcessingStatus) => {
+      setStatus(newStatus)
+      if (newStatus === 'idle') {
+        processingRef.current = false
+      } else if (newStatus === 'processing') {
+        processingRef.current = true
+        abortControllerRef.current = new AbortController()
+      }
+    })
+    cleanupFunctions.push(unsubStatus)
+
+    // Listen for stats updates
+    const unsubStats = window.processingEvents.onStatsUpdate((data: {
+      accountId: string
+      stats: ProcessingStats
+      overallStats: ProcessingStats
+    }) => {
+      setAccountStats(prev => ({
+        ...prev,
+        [data.accountId]: data.stats
+      }))
+      setOverallStats(data.overallStats)
+    })
+    cleanupFunctions.push(unsubStats)
+
+    // Listen for progress updates
+    const unsubProgress = window.processingEvents.onProgress((data: {
+      totalEmails: number
+      processedEmails: number
+      progress: number
+      currentAccount?: string
+    }) => {
+      setOverallStats(prev => ({
+        ...prev,
+        totalEmails: data.totalEmails,
+        processedEmails: data.processedEmails
+      }))
+      if (data.currentAccount) {
+        setCurrentAccount(data.currentAccount)
+      }
+    })
+    cleanupFunctions.push(unsubProgress)
+
+    // Listen for completion
+    const unsubComplete = window.processingEvents.onComplete((data: {
+      accountStats: Record<string, ProcessingStats>
+      overallStats: ProcessingStats
+    }) => {
+      setAccountStats(data.accountStats)
+      setOverallStats(data.overallStats)
+      setCurrentAccount(undefined)
+      processingRef.current = false
+    })
+    cleanupFunctions.push(unsubComplete)
+
+    // Listen for errors
+    const unsubError = window.processingEvents.onError((error: Error) => {
+      setStatus('error')
+      processingRef.current = false
+    })
+    cleanupFunctions.push(unsubError)
+
+    // Cleanup listeners on unmount
+    return () => {
+      cleanupFunctions.forEach(fn => fn())
+    }
+  }, [])
+
   const calculateProgress = useCallback((stats: ProcessingStats): number => {
     if (stats.totalEmails === 0) return 0
     return Math.round((stats.processedEmails / stats.totalEmails) * 100)
   }, [])
 
   const startProcessing = useCallback(async () => {
-    if (!processor || processingRef.current) return
+    if (!processor || processingRef.current) {
+      return
+    }
 
     processingRef.current = true
     setStatus('processing')

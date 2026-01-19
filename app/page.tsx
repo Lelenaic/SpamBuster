@@ -36,7 +36,7 @@ export default function Home() {
   const [rules, setRules] = useState<Rule[]>([])
   const [analyzedEmails, setAnalyzedEmails] = useState<AnalyzedEmail[]>([])
 
-  // Initialize email processor with store
+  // Initialize email processor with store (using singleton pattern)
   const [processor, setProcessor] = useState<EmailProcessorService | null>(null)
 
   useEffect(() => {
@@ -46,10 +46,20 @@ export default function Home() {
           get: window.storeAPI.get,
           set: window.storeAPI.set
         }
-        const newProcessor = new EmailProcessorService(store)
+        
+        // Always get or create the singleton - this ensures we reuse the same instance
+        // even across page navigations
+        const instance = EmailProcessorService.getInstance(store)
+        
         // Ensure the processor is initialized before using it
-        await newProcessor.refreshProcessedChecksums()
-        setProcessor(newProcessor)
+        // Only refresh checksums if not already initialized
+        if (!instance) {
+          return
+        }
+        
+        // Use refreshProcessedChecksums which is safe to call multiple times
+        await instance.refreshProcessedChecksums()
+        setProcessor(instance)
       }
     }
     initializeProcessor()

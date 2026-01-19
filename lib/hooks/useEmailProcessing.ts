@@ -43,28 +43,123 @@ export function useEmailProcessing(
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // Check if processing is ongoing when processor becomes available
+  // Also restore in-memory state for state recovery (including completed processing)
   useEffect(() => {
     const checkProcessingState = async () => {
-      if (processor) {
-        try {
-          // Check both in-memory state and store state for robustness
-          const inMemoryProcessing = processor.isCurrentlyProcessing()
-          const storeProcessing = await processor.isProcessingFromStore()
+      if (!processor) return
+      
+      try {
+        // Check in-memory state only (no store-based state anymore)
+        const inMemoryProcessing = processor.isCurrentlyProcessing()
+        
+        if (inMemoryProcessing) {
+          processingRef.current = true
+          setStatus('processing')
+          abortControllerRef.current = new AbortController()
           
-          if (inMemoryProcessing || storeProcessing) {
-            console.log('🔄 Detected ongoing processing, restoring state...')
-            processingRef.current = true
-            setStatus('processing')
-            abortControllerRef.current = new AbortController()
+          // Restore current processing state from in-memory processor state
+          const currentState = processor.getCurrentProcessingState()
+          if (currentState) {
+            setAccountStats(currentState.accountStats)
+            setOverallStats(currentState.overallStats)
+            setCurrentAccount(currentState.currentAccount)
           }
-        } catch (error) {
-          console.error('Error checking processing state:', error)
+          return
         }
+        
+        // Always check for completed processing state - if there are stats, restore them
+        // regardless of isProcessing flag (in case of race conditions)
+        const currentState = processor.getCurrentProcessingState()
+        
+        if (currentState && Object.keys(currentState.accountStats).length > 0) {
+          setAccountStats(currentState.accountStats)
+          setOverallStats(currentState.overallStats)
+          setCurrentAccount(undefined)
+          setStatus('completed')
+        }
+      } catch (error) {
+        console.error('Error checking processing state:', error)
       }
     }
     
     checkProcessingState()
   }, [processor])
+
+  // Set up real-time IPC event listeners for processing updates
+  useEffect(() => {
+    if (!window.processingEvents) return
+    
+    const cleanupFunctions: (() => void)[] = []
+
+    // Listen for status changes
+    const unsubStatus = window.processingEvents.onStatusChange((newStatus: ProcessingStatus) => {
+      setStatus(newStatus)
+      if (newStatus === 'idle') {
+        processingRef.current = false
+      } else if (newStatus === 'processing') {
+        processingRef.current = true
+        abortControllerRef.current = new AbortController()
+      }
+    })
+    cleanupFunctions.push(unsubStatus)
+
+    // Listen for stats updates
+    const unsubStats = window.processingEvents.onStatsUpdate((data: {
+      accountId: string
+      stats: ProcessingStats
+      overallStats: ProcessingStats
+    }) => {
+      setAccountStats(prev => ({
+        ...prev,
+        [data.accountId]: data.stats
+      }))
+      setOverallStats(data.overallStats)
+    })
+    cleanupFunctions.push(unsubStats)
+
+    // Listen for progress updates
+    const unsubProgress = window.processingEvents.onProgress((data: {
+      totalEmails: number
+      processedEmails: number
+      progress: number
+      currentAccount?: string
+    }) => {
+      setOverallStats(prev => ({
+        ...prev,
+        totalEmails: data.totalEmails,
+        processedEmails: data.processedEmails
+      }))
+      if (data.currentAccount) {
+        setCurrentAccount(data.currentAccount)
+      }
+    })
+    cleanupFunctions.push(unsubProgress)
+
+    // Listen for completion
+    const unsubComplete = window.processingEvents.onComplete((data: {
+      accountStats: Record<string, ProcessingStats>
+      overallStats: ProcessingStats
+    }) => {
+      setAccountStats(data.accountStats)
+      setOverallStats(data.overallStats)
+      setCurrentAccount(undefined)
+      processingRef.current = false
+      setStatus('completed')
+    })
+    cleanupFunctions.push(unsubComplete)
+
+    // Listen for errors
+    const unsubError = window.processingEvents.onError((error: Error) => {
+      setStatus('error')
+      processingRef.current = false
+    })
+    cleanupFunctions.push(unsubError)
+
+    // Cleanup listeners on unmount
+    return () => {
+      cleanupFunctions.forEach(fn => fn())
+    }
+  }, [])
 
   const calculateProgress = useCallback((stats: ProcessingStats): number => {
     if (stats.totalEmails === 0) return 0
@@ -100,8 +195,6 @@ export function useEmailProcessing(
     }
   }, [accounts, rules, processor])
 
-
-
   const stopProcessing = useCallback(() => {
     if (processingRef.current) {
       setStatus('idle')
@@ -133,36 +226,6 @@ export function useEmailProcessing(
       setCurrentAccount(undefined)
       setStatus('idle')
     }
-  }, [processor])
-
-  // Poll for processing state changes to handle edge cases
-  useEffect(() => {
-    if (!processor || !processingRef.current) return
-    
-    const interval = setInterval(async () => {
-      try {
-        const storeProcessing = await processor.isProcessingFromStore()
-        const inMemoryProcessing = processor.isCurrentlyProcessing()
-        
-        if (inMemoryProcessing || storeProcessing) {
-          if (!processingRef.current) {
-            console.log('🔄 Restoring lost processing state...')
-            processingRef.current = true
-            setStatus('processing')
-          }
-        } else {
-          if (processingRef.current) {
-            console.log('🛑 Processing completed, updating state...')
-            processingRef.current = false
-            setStatus('completed')
-          }
-        }
-      } catch (error) {
-        console.error('Error polling processing state:', error)
-      }
-    }, 2000) // Check every 2 seconds
-    
-    return () => clearInterval(interval)
   }, [processor])
 
   const refreshStats = useCallback(() => {

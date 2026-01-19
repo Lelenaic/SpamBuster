@@ -32,7 +32,20 @@ export interface ProcessingState {
   accounts: Array<{ id: string; type: string; status: string }>
   rulesCount: number
   maxAgeDays: number
+  accountStats: Record<string, ProcessingStats>
+  overallStats: ProcessingStats
+  currentAccount?: string
 }
+
+// Helper function to emit IPC events from renderer process
+function emitProcessingEvent(channel: string, data: unknown): void {
+  if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.send) {
+    window.electronAPI.send(channel, data)
+  }
+}
+
+// Module-level singleton to survive page navigation
+let singletonInstance: EmailProcessorService | null = null
 
 export class EmailProcessorService {
   private processedChecksums: string[] = []
@@ -44,9 +57,38 @@ export class EmailProcessorService {
     maxAgeDays: number
     startTime: number
   } | null = null
+  
+  // In-memory state for real-time updates and state recovery
+  private currentAccountStats: Record<string, ProcessingStats> = {}
+  private currentOverallStats: ProcessingStats = {
+    totalEmails: 0,
+    spamEmails: 0,
+    processedEmails: 0,
+    skippedEmails: 0,
+    errors: 0
+  }
+  private currentAccountId?: string
 
   constructor(private store: Store) {
     // Don't initialize in constructor - use async initialization
+  }
+
+  // Get or create singleton instance
+  static getInstance(store: Store): EmailProcessorService {
+    if (!singletonInstance) {
+      singletonInstance = new EmailProcessorService(store)
+    }
+    return singletonInstance
+  }
+
+  // Check if singleton exists
+  static hasInstance(): boolean {
+    return singletonInstance !== null
+  }
+
+  // Get the singleton instance (returns null if not created yet)
+  static getExistingInstance(): EmailProcessorService | null {
+    return singletonInstance
   }
 
   private async ensureInitialized(): Promise<void> {
@@ -133,11 +175,9 @@ export class EmailProcessorService {
 
   private async saveProcessedChecksums(): Promise<void> {
     try {
-      console.log(`💾 Saving ${this.processedChecksums.length} processed email checksums...`)
       await this.store.set('processedEmailChecksums', this.processedChecksums)
-      console.log('✅ Successfully saved processed email checksums')
     } catch (error) {
-      console.error('❌ Error saving processed checksums:', error)
+      console.error('Error saving processed checksums:', error)
     }
   }
 
@@ -157,6 +197,9 @@ export class EmailProcessorService {
     try {
       // Ensure the service is initialized
       await this.ensureInitialized()
+      
+      // Set current account for progress updates
+      this.currentAccountId = account.id
       
       // Get applicable rules for this account
       const applicableRules = this.getApplicableRules(rules, account.id)
@@ -185,15 +228,12 @@ export class EmailProcessorService {
           }
           
           if (this.processedChecksums.includes(checksum)) {
-            console.log(`⏭️  Skipping already processed email: ${email.subject}`)
             stats.skippedEmails++
             continue
           }
           
-          console.log(`🆕 Processing new email: ${email.subject}`)
-
           // Analyze email with AI
-          const detector = new SpamDetectorService();
+          const detector = new SpamDetectorService()
 
           const result: SpamAnalysisResult = await detector.analyzeEmail(
             email,
@@ -232,6 +272,8 @@ export class EmailProcessorService {
           this.processedChecksums.push(checksum)
           await this.saveProcessedChecksums() // Save immediately after adding
           stats.processedEmails++
+          // Note: updateAndEmitStats is called once per account in processAllAccounts(), not per email
+          // to avoid double-counting issues
 
         } catch (error) {
           console.error(`Error processing email ${email.id}:`, error)
@@ -242,9 +284,62 @@ export class EmailProcessorService {
     } catch (error) {
       console.error(`Error processing account ${account.id}:`, error)
       stats.errors++
+    } finally {
+      this.currentAccountId = undefined
     }
 
+    // Emit stats update once per account (after all emails are processed)
+    // This avoids double-counting when combined with processAllAccounts aggregation
+    this.updateAndEmitStats(account.id, stats)
+
     return stats
+  }
+
+  // Update in-memory stats and emit real-time update via IPC
+  private updateAndEmitStats(accountId: string, accountStats: ProcessingStats): void {
+    // Check if we already have stats for this account (prevents double-counting)
+    const existingStats = this.currentAccountStats[accountId]
+    const hasExistingStats = existingStats && Object.keys(existingStats).length > 0
+    
+    if (hasExistingStats) {
+      // Skip - stats for this account were already accumulated
+      return
+    }
+    
+    // Add this account's stats to the overall stats
+    this.currentAccountStats[accountId] = accountStats
+    this.currentOverallStats = {
+      totalEmails: (this.currentOverallStats.totalEmails || 0) + accountStats.totalEmails,
+      spamEmails: (this.currentOverallStats.spamEmails || 0) + accountStats.spamEmails,
+      processedEmails: (this.currentOverallStats.processedEmails || 0) + accountStats.processedEmails,
+      skippedEmails: (this.currentOverallStats.skippedEmails || 0) + accountStats.skippedEmails,
+      errors: (this.currentOverallStats.errors || 0) + accountStats.errors
+    }
+    
+    const progress = this.currentOverallStats.totalEmails > 0
+      ? Math.round((this.currentOverallStats.processedEmails / this.currentOverallStats.totalEmails) * 100)
+      : 0
+    
+    // Emit stats update via IPC
+    emitProcessingEvent('processing:stats-update', {
+      accountId,
+      stats: accountStats,
+      overallStats: this.currentOverallStats
+    })
+    
+    // Emit progress update via IPC
+    emitProcessingEvent('processing:progress', {
+      totalEmails: this.currentOverallStats.totalEmails,
+      processedEmails: this.currentOverallStats.processedEmails,
+      progress,
+      currentAccount: this.currentAccountId
+    })
+  }
+
+  // Calculate progress percentage
+  private calculateProgress(stats: ProcessingStats): number {
+    if (stats.totalEmails === 0) return 0
+    return Math.round((stats.processedEmails / stats.totalEmails) * 100)
   }
 
   async processAllAccounts(
@@ -253,8 +348,10 @@ export class EmailProcessorService {
     maxAgeDays: number = 7
   ): Promise<{ accountStats: Record<string, ProcessingStats>; overallStats: ProcessingStats }> {
     if (this.isProcessing) {
-      console.warn('Processing is already in progress')
-      return { accountStats: {}, overallStats: { totalEmails: 0, spamEmails: 0, processedEmails: 0, skippedEmails: 0, errors: 0 } }
+      return {
+        accountStats: {},
+        overallStats: { totalEmails: 0, spamEmails: 0, processedEmails: 0, skippedEmails: 0, errors: 0 },
+      }
     }
 
     this.isProcessing = true
@@ -262,30 +359,23 @@ export class EmailProcessorService {
       accounts: [...accounts],
       rules: [...rules],
       maxAgeDays,
-      startTime: Date.now()
+      startTime: Date.now(),
     }
 
-    // Persist processing state to store for cross-navigation persistence
-    try {
-      await this.store.set('emailProcessingState', {
-        isProcessing: true,
-        startTime: Date.now(),
-        accounts: accounts.map(a => ({ id: a.id, type: a.type, status: a.status })),
-        rulesCount: rules.length,
-        maxAgeDays
-      })
-    } catch (error) {
-      console.error('Failed to persist processing state:', error)
-    }
-
-    const accountStats: Record<string, ProcessingStats> = {}
-    const overallStats: ProcessingStats = {
+    // Reset in-memory state for fresh processing
+    this.currentAccountStats = {}
+    this.currentOverallStats = {
       totalEmails: 0,
       spamEmails: 0,
       processedEmails: 0,
       skippedEmails: 0,
-      errors: 0
+      errors: 0,
     }
+
+    // Emit status change to 'processing' via IPC
+    emitProcessingEvent('processing:status-change', 'processing')
+
+    const accountStats: Record<string, ProcessingStats> = {}
 
     try {
       // Filter active accounts
@@ -295,14 +385,6 @@ export class EmailProcessorService {
         try {
           const stats = await this.processAccountEmails(account, rules, maxAgeDays)
           accountStats[account.id] = stats
-
-          // Aggregate stats
-          overallStats.totalEmails += stats.totalEmails
-          overallStats.spamEmails += stats.spamEmails
-          overallStats.processedEmails += stats.processedEmails
-          overallStats.skippedEmails += stats.skippedEmails
-          overallStats.errors += stats.errors
-
         } catch (error) {
           console.error(`Failed to process account ${account.id}:`, error)
           accountStats[account.id] = {
@@ -310,25 +392,30 @@ export class EmailProcessorService {
             spamEmails: 0,
             processedEmails: 0,
             skippedEmails: 0,
-            errors: 1
+            errors: 1,
           }
-          overallStats.errors++
+          this.currentOverallStats.errors++
         }
       }
-
+    } catch (error) {
+      console.error('Processing error:', error)
+      emitProcessingEvent('processing:error', error)
+      throw error
     } finally {
       this.isProcessing = false
       this.currentProcessingData = null
-      
-      // Clear processing state from store
-      try {
-        await this.store.set('emailProcessingState', null)
-      } catch (error) {
-        console.error('Failed to clear processing state:', error)
-      }
+      this.currentAccountId = undefined
     }
 
-    return { accountStats, overallStats }
+    // Use the accumulated in-memory stats (they're already correctly aggregated)
+    const finalAccountStats = { ...this.currentAccountStats }
+    const finalOverallStats = { ...this.currentOverallStats }
+
+    // Emit completion event via IPC
+    emitProcessingEvent('processing:complete', { accountStats: finalAccountStats, overallStats: finalOverallStats })
+    emitProcessingEvent('processing:status-change', 'completed')
+
+    return { accountStats: finalAccountStats, overallStats: finalOverallStats }
   }
 
   async clearProcessedCache(): Promise<void> {
@@ -355,7 +442,7 @@ export class EmailProcessorService {
     return this.processedChecksums.includes(checksum)
   }
 
-  // Methods for persistent state tracking
+  // Methods for processing state tracking
   isCurrentlyProcessing(): boolean {
     return this.isProcessing
   }
@@ -369,34 +456,32 @@ export class EmailProcessorService {
     return this.currentProcessingData ? { ...this.currentProcessingData } : null
   }
 
+  // Get current processing state for state recovery (real-time + in-memory, no store)
+  getCurrentProcessingState(): ProcessingState | null {
+    // Check if there's any state to restore
+    const hasActiveProcessing = this.isProcessing
+    const hasCompletedProcessing = Object.keys(this.currentAccountStats).length > 0
+    
+    if (!hasActiveProcessing && !hasCompletedProcessing) {
+      return null
+    }
+    
+    return {
+      isProcessing: this.isProcessing,
+      startTime: this.currentProcessingData?.startTime || Date.now(),
+      accounts: this.currentProcessingData?.accounts.map(a => ({ id: a.id, type: a.type, status: a.status })) || [],
+      rulesCount: this.currentProcessingData?.rules.length || 0,
+      maxAgeDays: this.currentProcessingData?.maxAgeDays || 7,
+      accountStats: { ...this.currentAccountStats },
+      overallStats: { ...this.currentOverallStats },
+      currentAccount: this.currentAccountId
+    }
+  }
+
   stopProcessing(): void {
     this.isProcessing = false
     this.currentProcessingData = null
-    
-    // Clear processing state from store
-    try {
-      this.store.set('emailProcessingState', null)
-    } catch (error) {
-      console.error('Failed to clear processing state:', error)
-    }
-  }
-
-  async isProcessingFromStore(): Promise<boolean> {
-    try {
-      const state = await this.store.get('emailProcessingState', null) as ProcessingState | null
-      return state !== null && state !== undefined && state.isProcessing === true
-    } catch (error) {
-      console.error('Failed to check processing state from store:', error)
-      return false
-    }
-  }
-
-  async getProcessingStateFromStore(): Promise<ProcessingState | null> {
-    try {
-      return await this.store.get('emailProcessingState', null) as ProcessingState | null
-    } catch (error) {
-      console.error('Failed to get processing state from store:', error)
-      return null
-    }
+    this.currentAccountId = undefined
+    emitProcessingEvent('processing:status-change', 'idle')
   }
 }

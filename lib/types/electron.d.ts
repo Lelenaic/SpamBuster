@@ -60,6 +60,50 @@ declare global {
     shellAPI: {
       openExternal: (url: string) => Promise<void>;
     };
+    processingEvents: {
+      onStatsUpdate: (callback: (data: {
+        accountId: string;
+        stats: {
+          totalEmails: number;
+          spamEmails: number;
+          processedEmails: number;
+          skippedEmails: number;
+          errors: number;
+        };
+        overallStats: {
+          totalEmails: number;
+          spamEmails: number;
+          processedEmails: number;
+          skippedEmails: number;
+          errors: number;
+        };
+      }) => void) => () => void;
+      onProgress: (callback: (data: {
+        totalEmails: number;
+        processedEmails: number;
+        progress: number;
+        currentAccount?: string;
+      }) => void) => () => void;
+      onComplete: (callback: (data: {
+        accountStats: Record<string, {
+          totalEmails: number;
+          spamEmails: number;
+          processedEmails: number;
+          skippedEmails: number;
+          errors: number;
+        }>;
+        overallStats: {
+          totalEmails: number;
+          spamEmails: number;
+          processedEmails: number;
+          skippedEmails: number;
+          errors: number;
+        };
+      }) => void) => () => void;
+      onError: (callback: (error: Error) => void) => () => void;
+      onStatusChange: (callback: (status: 'idle' | 'processing' | 'completed' | 'error') => void) => () => void;
+      removeAllListeners: (channel: string) => void;
+    };
   }
 }
 
