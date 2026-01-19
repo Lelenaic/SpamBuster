@@ -181,7 +181,7 @@ export class EmailProcessorService {
     }
   }
 
-  async processAccountEmails(
+  private async processAccountEmails(
     account: Account,
     rules: Rule[],
     maxAgeDays: number
@@ -207,6 +207,12 @@ export class EmailProcessorService {
       // Fetch unprocessed emails
       const emails = await this.fetchUnprocessedEmails(account, maxAgeDays)
       stats.totalEmails = emails.length
+
+      // Initialize account stats in currentAccountStats
+      this.currentAccountStats[account.id] = { ...stats }
+
+      // Emit initial stats update for this account
+      this.emitIncrementalStatsUpdate(account.id, stats)
 
       // Get AI service and configuration
       const sensitivity = await this.getSensitivity()
@@ -272,12 +278,15 @@ export class EmailProcessorService {
           this.processedChecksums.push(checksum)
           await this.saveProcessedChecksums() // Save immediately after adding
           stats.processedEmails++
-          // Note: updateAndEmitStats is called once per account in processAllAccounts(), not per email
-          // to avoid double-counting issues
+
+          // Emit real-time progress update after each email
+          this.emitIncrementalStatsUpdate(account.id, stats)
 
         } catch (error) {
           console.error(`Error processing email ${email.id}:`, error)
           stats.errors++
+          // Emit update even on error
+          this.emitIncrementalStatsUpdate(account.id, stats)
         }
       }
 
@@ -288,9 +297,8 @@ export class EmailProcessorService {
       this.currentAccountId = undefined
     }
 
-    // Emit stats update once per account (after all emails are processed)
-    // This avoids double-counting when combined with processAllAccounts aggregation
-    this.updateAndEmitStats(account.id, stats)
+    // Update final account stats
+    this.currentAccountStats[account.id] = stats
 
     return stats
   }
@@ -315,6 +323,43 @@ export class EmailProcessorService {
       skippedEmails: (this.currentOverallStats.skippedEmails || 0) + accountStats.skippedEmails,
       errors: (this.currentOverallStats.errors || 0) + accountStats.errors
     }
+    
+    const progress = this.currentOverallStats.totalEmails > 0
+      ? Math.round((this.currentOverallStats.processedEmails / this.currentOverallStats.totalEmails) * 100)
+      : 0
+    
+    // Emit stats update via IPC
+    emitProcessingEvent('processing:stats-update', {
+      accountId,
+      stats: accountStats,
+      overallStats: this.currentOverallStats
+    })
+    
+    // Emit progress update via IPC
+    emitProcessingEvent('processing:progress', {
+      totalEmails: this.currentOverallStats.totalEmails,
+      processedEmails: this.currentOverallStats.processedEmails,
+      progress,
+      currentAccount: this.currentAccountId
+    })
+  }
+
+  // Emit incremental stats update for real-time progress
+  private emitIncrementalStatsUpdate(accountId: string, accountStats: ProcessingStats): void {
+    // Update the account stats
+    this.currentAccountStats[accountId] = accountStats
+    
+    // Recalculate overall stats from all account stats
+    this.currentOverallStats = Object.values(this.currentAccountStats).reduce(
+      (overall, stats) => ({
+        totalEmails: overall.totalEmails + stats.totalEmails,
+        spamEmails: overall.spamEmails + stats.spamEmails,
+        processedEmails: overall.processedEmails + stats.processedEmails,
+        skippedEmails: overall.skippedEmails + stats.skippedEmails,
+        errors: overall.errors + stats.errors
+      }),
+      { totalEmails: 0, spamEmails: 0, processedEmails: 0, skippedEmails: 0, errors: 0 }
+    )
     
     const progress = this.currentOverallStats.totalEmails > 0
       ? Math.round((this.currentOverallStats.processedEmails / this.currentOverallStats.totalEmails) * 100)
