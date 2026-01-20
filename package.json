@@ -1,6 +1,6 @@
 {
   "name": "spambuster",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "private": true,
   "main": "main/main.js",
   "author": {
@@ -95,7 +95,7 @@
     },
     "snap": {
       "confinement": "strict",
-      "base": "core20",
+      "base": "core24",
       "plugs": [
         "default",
         "network-bind"
