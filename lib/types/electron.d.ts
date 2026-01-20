@@ -1,10 +1,13 @@
+import { Account, MailConnectionConfig } from '../mail/types';
+import { Rule } from './types';
+
 declare global {
   interface Window {
     electronAPI: {
-      on: (channel: string, callback: (...args: unknown[]) => void) => void;
-      send: (channel: string, args?: unknown) => void;
-      invoke: (channel: string, args?: unknown) => Promise<unknown>;
-    };
+      on: (channel: string, callback: (...args: unknown[]) => void) => void
+      send: (channel: string, ...args: unknown[]) => void
+      invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
+    }
     packageAPI: {
       getInfo: () => Promise<{
         currentVersion: string;
@@ -14,59 +17,59 @@ declare global {
       }>;
     };
     storeAPI: {
-      get: (key: string) => Promise<unknown>;
-      set: (key: string, value: unknown) => Promise<void>;
-    };
+      get: (key: string) => Promise<unknown>
+      set: (key: string, value: unknown) => Promise<void>
+    }
     rulesAPI: {
-      getAll: () => Promise<unknown[]>;
-      getById: (id: string) => Promise<unknown>;
-      create: (ruleData: unknown) => Promise<unknown>;
-      update: (id: string, updates: unknown) => Promise<unknown>;
-      delete: (id: string) => Promise<void>;
-    };
+      getAll: () => Promise<Rule[]>
+      getById: (id: string) => Promise<Rule | undefined>
+      create: (ruleData: Omit<Rule, "id">) => Promise<Rule>
+      update: (id: string, updates: Partial<Omit<Rule, "id">>) => Promise<Rule | undefined>
+      delete: (id: string) => Promise<boolean>
+    }
     accountsAPI: {
-      getAll: () => Promise<unknown[]>;
-      getById: (id: string) => Promise<unknown>;
-      create: (accountData: unknown) => Promise<unknown>;
-      update: (id: string, updates: unknown) => Promise<unknown>;
-      delete: (id: string) => Promise<void>;
-      listMailboxFolders: (config: unknown) => Promise<{ success: boolean; folders?: { name: string; path: string }[]; error?: string }>;
-    };
+      getAll: () => Promise<Account[]>
+      getById: (id: string) => Promise<Account | undefined>
+      create: (accountData: Omit<Account, "id">) => Promise<Account>
+      update: (id: string, updates: Partial<Omit<Account, "id">>) => Promise<Account | undefined>
+      delete: (id: string) => Promise<boolean>
+      listMailboxFolders: (config: MailConnectionConfig) => Promise<{ success: boolean; folders?: { name: string; path: string }[]; error?: string }>
+    }
     analyzedEmailsAPI: {
-      getAll: () => Promise<unknown[]>;
-      getById: (id: string) => Promise<unknown>;
-      create: (emailData: unknown) => Promise<unknown>;
-      update: (id: string, updates: unknown) => Promise<unknown>;
-      delete: (id: string) => Promise<void>;
-    };
+      getAll: () => Promise<unknown[]>
+      getById: (id: string) => Promise<unknown>
+      create: (emailData: unknown) => Promise<unknown>
+      update: (id: string, updates: unknown) => Promise<unknown>
+      delete: (id: string) => Promise<void>
+    }
     aiAPI: {
-      getAISource: () => Promise<string>;
-      setAISource: (value: string) => Promise<void>;
-      getOllamaBaseUrl: () => Promise<string>;
-      setOllamaBaseUrl: (value: string) => Promise<void>;
-      getOllamaApiKey: () => Promise<string>;
-      setOllamaApiKey: (value: string) => Promise<void>;
-      getOpenRouterApiKey: () => Promise<string>;
-      setOpenRouterApiKey: (value: string) => Promise<void>;
-      getSelectedModel: () => Promise<string>;
-      setSelectedModel: (value: string) => Promise<void>;
-      getSelectedEmbedModel: () => Promise<string>;
-      setSelectedEmbedModel: (value: string) => Promise<void>;
-      getAISensitivity: () => Promise<number>;
-      setAISensitivity: (value: number) => Promise<void>;
-      getEmailAgeDays: () => Promise<number>;
-      setEmailAgeDays: (value: number) => Promise<void>;
-      getSimplifyEmailContent: () => Promise<boolean>;
-      setSimplifyEmailContent: (value: boolean) => Promise<void>;
-      getEnableCron: () => Promise<boolean>;
-      setEnableCron: (value: boolean) => Promise<void>;
-      getCronExpression: () => Promise<string>;
-      setCronExpression: (value: string) => Promise<void>;
-      validateCronExpression: (expression: string) => Promise<{ valid: boolean; error?: string | Error }>;
-    };
+      getAISource: () => Promise<string>
+      setAISource: (value: string) => Promise<void>
+      getOllamaBaseUrl: () => Promise<string>
+      setOllamaBaseUrl: (value: string) => Promise<void>
+      getOllamaApiKey: () => Promise<string>
+      setOllamaApiKey: (value: string) => Promise<void>
+      getOpenRouterApiKey: () => Promise<string>
+      setOpenRouterApiKey: (value: string) => Promise<void>
+      getSelectedModel: () => Promise<string>
+      setSelectedModel: (value: string) => Promise<void>
+      getSelectedEmbedModel: () => Promise<string>
+      setSelectedEmbedModel: (value: string) => Promise<void>
+      getAISensitivity: () => Promise<number>
+      setAISensitivity: (value: number) => Promise<void>
+      getEmailAgeDays: () => Promise<number>
+      setEmailAgeDays: (value: number) => Promise<void>
+      getSimplifyEmailContent: () => Promise<boolean>
+      setSimplifyEmailContent: (value: boolean) => Promise<void>
+      getEnableCron: () => Promise<boolean>
+      setEnableCron: (value: boolean) => Promise<void>
+      getCronExpression: () => Promise<string>
+      setCronExpression: (value: string) => Promise<void>
+      validateCronExpression: (expression: string) => Promise<{ valid: boolean; error?: string | Error }>
+    }
     shellAPI: {
-      openExternal: (url: string) => Promise<void>;
-    };
+      openExternal: (url: string) => Promise<void>
+    }
     processingEvents: {
       onStatsUpdate: (callback: (data: {
         accountId: string;
@@ -110,7 +113,7 @@ declare global {
       onError: (callback: (error: Error) => void) => () => void;
       onStatusChange: (callback: (status: 'idle' | 'processing' | 'completed' | 'error') => void) => () => void;
       removeAllListeners: (channel: string) => void;
-    };
+    }
   }
 }
 
