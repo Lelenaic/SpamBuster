@@ -41,7 +41,6 @@ export function useEmailProcessing(
   const [currentAccount, setCurrentAccount] = useState<string>()
   const processingRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const accountsRef = useRef(accounts)
   const rulesRef = useRef(rules)

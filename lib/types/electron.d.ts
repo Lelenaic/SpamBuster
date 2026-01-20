@@ -62,7 +62,7 @@ declare global {
       setEnableCron: (value: boolean) => Promise<void>;
       getCronExpression: () => Promise<string>;
       setCronExpression: (value: string) => Promise<void>;
-      validateCronExpression: (expression: string) => Promise<{ valid: boolean; error?: string }>;
+      validateCronExpression: (expression: string) => Promise<{ valid: boolean; error?: string | Error }>;
     };
     shellAPI: {
       openExternal: (url: string) => Promise<void>;

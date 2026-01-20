@@ -55,13 +55,6 @@ export default function GeneralTab({
     }
   }
 
-  const handleSimplifyEmailContentChange = async (value: boolean) => {
-    setSimplifyEmailContent(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setSimplifyEmailContent(value)
-    }
-  }
-
   const handleCronExpressionChange = async (value: string) => {
     setCronInputValue(value)
     if (typeof window !== "undefined" && window.aiAPI) {
