@@ -56,6 +56,13 @@ declare global {
       setAISensitivity: (value: number) => Promise<void>;
       getEmailAgeDays: () => Promise<number>;
       setEmailAgeDays: (value: number) => Promise<void>;
+      getSimplifyEmailContent: () => Promise<boolean>;
+      setSimplifyEmailContent: (value: boolean) => Promise<void>;
+      getEnableCron: () => Promise<boolean>;
+      setEnableCron: (value: boolean) => Promise<void>;
+      getCronExpression: () => Promise<string>;
+      setCronExpression: (value: string) => Promise<void>;
+      validateCronExpression: (expression: string) => Promise<{ valid: boolean; error?: string }>;
     };
     shellAPI: {
       openExternal: (url: string) => Promise<void>;

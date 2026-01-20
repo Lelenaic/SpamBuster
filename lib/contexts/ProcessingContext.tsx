@@ -173,11 +173,26 @@ export function ProcessingProvider({ children, accounts, rules, processor }: Pro
     })
     cleanupFunctions.push(unsubError)
 
+    // Listen for cron-triggered processing
+    if (window.electronAPI) {
+      const handleCronTrigger = () => {
+        // Start processing if not already processing
+        if (!processingRef.current) {
+          startProcessing()
+        }
+      }
+      window.electronAPI.on('trigger-email-processing', handleCronTrigger)
+      cleanupFunctions.push(() => {
+        // Note: electronAPI.on doesn't provide a way to remove specific listeners
+        // This is handled by the global cleanup
+      })
+    }
+
     // Cleanup listeners on unmount
     return () => {
       cleanupFunctions.forEach(fn => fn())
     }
-  }, [])
+  }, [accounts, rules, processor])
 
   const calculateProgress = useCallback((stats: ProcessingStats): number => {
     if (stats.totalEmails === 0) return 0

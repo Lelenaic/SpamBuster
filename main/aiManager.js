@@ -75,6 +75,33 @@ class AIManager {
     this.store.set('simplifyEmailContent', value);
   }
 
+  getEnableCron() {
+    return this.store.get('enableCron', true);
+  }
+
+  setEnableCron(value) {
+    this.store.set('enableCron', value);
+  }
+
+  getCronExpression() {
+    return this.store.get('cronExpression', '* * * * *');
+  }
+
+  setCronExpression(value) {
+    this.store.set('cronExpression', value);
+  }
+
+  validateCronExpression(expression) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { validateCronExpression } = require('cron');
+      const validation = validateCronExpression(expression);
+      return validation;
+    } catch (error) {
+      return { valid: false, error: error.message };
+    }
+  }
+
   registerHandlers(ipcMain) {
     ipcMain.handle('ai:getAISource', async () => {
       return this.getAISource();
@@ -146,6 +173,26 @@ class AIManager {
 
     ipcMain.handle('ai:setSimplifyEmailContent', async (event, value) => {
       return this.setSimplifyEmailContent(value);
+    });
+
+    ipcMain.handle('ai:getEnableCron', async () => {
+      return this.getEnableCron();
+    });
+
+    ipcMain.handle('ai:setEnableCron', async (event, value) => {
+      return this.setEnableCron(value);
+    });
+
+    ipcMain.handle('ai:getCronExpression', async () => {
+      return this.getCronExpression();
+    });
+
+    ipcMain.handle('ai:setCronExpression', async (event, value) => {
+      return this.setCronExpression(value);
+    });
+
+    ipcMain.handle('ai:validateCronExpression', async (event, expression) => {
+      return this.validateCronExpression(expression);
     });
   }
 }

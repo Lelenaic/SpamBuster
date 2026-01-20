@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Trash2
 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export interface ProcessingStats {
   totalEmails: number
@@ -148,7 +149,7 @@ export default function ProcessingStatus({
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Overall Progress</span>
-            <span>{overallStats.processedEmails} / {overallStats.totalEmails} emails</span>
+            <span>{overallStats.processedEmails + overallStats.skippedEmails} / {overallStats.totalEmails} emails</span>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
@@ -237,19 +238,26 @@ export default function ProcessingStatus({
           )}
           
           {!isProcessing && ['idle', 'completed'].includes(status) && (
-            <Button 
-              onClick={handleClearChecksums}
-              disabled={isClearing}
-              variant="outline"
-              className="flex-1"
-            >
-              {isClearing ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4 mr-2" />
-              )}
-              Clear Checksums
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  onClick={handleClearChecksums}
+                  disabled={isClearing}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  {isClearing ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Clear Checksums
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                It will reanalyze all the already analyzed emails in the inbox
+              </TooltipContent>
+            </Tooltip>
           )}
           
           {(isProcessing) && (

@@ -18,6 +18,7 @@ let rulesManager;
 let accountsManager;
 let aiManager;
 let mainWindow;
+let cronJob = null;
 
 async function initStore() {
   const { default: Store } = await import('electron-store');
@@ -32,7 +33,56 @@ async function initStore() {
   aiManager.registerHandlers(ipcMain);
 }
 
-initStore();
+async function setupCronJob() {
+  // Destroy existing cron job if it exists
+  if (cronJob && typeof cronJob.destroy === 'function') {
+    cronJob.destroy();
+    cronJob = null;
+  }
+
+  if (!aiManager) {
+    return;
+  }
+
+  const enableCron = aiManager.getEnableCron();
+  const cronExpression = aiManager.getCronExpression();
+  
+  if (enableCron && cronExpression) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { CronJob } = require('cron');
+      cronJob = new CronJob(cronExpression, () => {
+        // Trigger email processing
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send('trigger-email-processing');
+        }
+      });
+      cronJob.start();
+    } catch (error) {
+      console.error('❌ Failed to setup cron job:', error);
+    }
+  }
+}
+
+async function initializeApp() {
+  await initStore();
+  await setupCronJob();
+
+  // Override the ai manager handlers to also update cron job
+  const originalSetEnableCron = aiManager.setEnableCron.bind(aiManager);
+  aiManager.setEnableCron = (value) => {
+    originalSetEnableCron(value);
+    setupCronJob();
+  };
+
+  const originalSetCronExpression = aiManager.setCronExpression.bind(aiManager);
+  aiManager.setCronExpression = (value) => {
+    originalSetCronExpression(value);
+    setupCronJob();
+  };
+}
+
+initializeApp();
 
 ipcMain.handle('store:get', async (event, key) => {
   if (!store) throw new Error('Store not initialized');
@@ -52,6 +102,14 @@ ipcMain.handle('package:get-info', async () => {
 // Handle opening external URLs in the default browser
 ipcMain.handle('shell:openExternal', async (event, url) => {
   return shell.openExternal(url);
+});
+
+ipcMain.handle('trigger-email-processing', async () => {
+  // This will be called by the cron job to trigger processing
+  // We need to send a message to the renderer to start processing
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('trigger-email-processing');
+  }
 });
 
 ipcMain.on('open-wizard-window', () => {

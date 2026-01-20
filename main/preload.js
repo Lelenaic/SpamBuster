@@ -1,4 +1,3 @@
- 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { contextBridge, ipcRenderer } = require("electron");
 
@@ -67,6 +66,11 @@ contextBridge.exposeInMainWorld("aiAPI", {
     setEmailAgeDays: (value) => ipcRenderer.invoke('ai:setEmailAgeDays', value),
     getSimplifyEmailContent: () => ipcRenderer.invoke('ai:getSimplifyEmailContent'),
     setSimplifyEmailContent: (value) => ipcRenderer.invoke('ai:setSimplifyEmailContent', value),
+    getEnableCron: () => ipcRenderer.invoke('ai:getEnableCron'),
+    setEnableCron: (value) => ipcRenderer.invoke('ai:setEnableCron', value),
+    getCronExpression: () => ipcRenderer.invoke('ai:getCronExpression'),
+    setCronExpression: (value) => ipcRenderer.invoke('ai:setCronExpression', value),
+    validateCronExpression: (expression) => ipcRenderer.invoke('ai:validateCronExpression', expression),
 });
 
 contextBridge.exposeInMainWorld("shellAPI", {

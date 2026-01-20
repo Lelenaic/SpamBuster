@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { EmailProcessorService, ProcessingStats } from '@/lib/ai/emailProcessor'
 import type { AccountProcessingStats } from '@/components/ProcessingStatus'
 import { Account } from '@/lib/mail/types'
@@ -41,6 +41,29 @@ export function useEmailProcessing(
   const [currentAccount, setCurrentAccount] = useState<string>()
   const processingRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const accountsRef = useRef(accounts)
+  const rulesRef = useRef(rules)
+  const processorRef = useRef(processor)
+
+  // Update refs whenever props change
+  useEffect(() => {
+    accountsRef.current = accounts
+    rulesRef.current = rules
+    processorRef.current = processor
+  }, [accounts, rules, processor])
+
+  // Track pending cron triggers
+  const pendingCronTriggerRef = useRef(false)
+
+  // Effect to handle pending cron triggers when data becomes available
+  useEffect(() => {
+    if (pendingCronTriggerRef.current && processor && accounts.length > 0 && rules.length > 0 && !processingRef.current) {
+      pendingCronTriggerRef.current = false
+      startProcessing()
+    }
+  }, [processor, accounts.length, rules.length])
 
   // Check if processing is ongoing when processor becomes available
   // Also restore in-memory state for state recovery (including completed processing)
@@ -87,8 +110,6 @@ export function useEmailProcessing(
 
   // Set up real-time IPC event listeners for processing updates
   useEffect(() => {
-    if (!window.processingEvents) return
-    
     const cleanupFunctions: (() => void)[] = []
 
     // Listen for status changes
@@ -155,19 +176,57 @@ export function useEmailProcessing(
     })
     cleanupFunctions.push(unsubError)
 
+    const handleCronTrigger = () => {
+
+      const currentAccounts = accountsRef.current
+      const currentRules = rulesRef.current
+      const currentProcessor = processorRef.current
+
+      const hasProcessor = !!currentProcessor
+      const hasAccounts = currentAccounts && currentAccounts.length > 0
+      const hasRules = currentRules && currentRules.length > 0
+
+      if (!hasProcessor || !hasAccounts || !hasRules) {
+        pendingCronTriggerRef.current = true
+        return
+      }
+
+      // Data is ready, check if we can start processing
+      if (processingRef.current) {
+        return
+      }
+
+      startProcessing()
+    }
+
+    // Listen for cron-triggered processing
+    if (window.electronAPI) {
+      if (window.electronAPI.on) {
+        window.electronAPI.on('trigger-email-processing', handleCronTrigger)
+      }
+    } else {
+    }
+
     // Cleanup listeners on unmount
     return () => {
       cleanupFunctions.forEach(fn => fn())
     }
   }, [])
 
-  const calculateProgress = useCallback((stats: ProcessingStats): number => {
+  const calculateProgress = (stats: ProcessingStats): number => {
     if (stats.totalEmails === 0) return 0
-    return Math.round((stats.processedEmails / stats.totalEmails) * 100)
-  }, [])
+    return Math.round(((stats.processedEmails + stats.skippedEmails) / stats.totalEmails) * 100)
+  }
 
-  const startProcessing = useCallback(async () => {
-    if (!processor || processingRef.current) return
+  const startProcessing = async () => {
+    
+    const currentAccounts = accountsRef.current
+    const currentRules = rulesRef.current
+    const currentProcessor = processorRef.current
+    
+    if (!currentProcessor || processingRef.current) {
+      return
+    }
 
     processingRef.current = true
     setStatus('processing')
@@ -189,24 +248,23 @@ export function useEmailProcessing(
       const emailAgeDays = await window.aiAPI.getEmailAgeDays()
       
       const { accountStats: newAccountStats, overallStats: newOverallStats } = 
-        await processor.processAllAccounts(accounts, rules, emailAgeDays)
+        await currentProcessor.processAllAccounts(currentAccounts || [], currentRules || [], emailAgeDays)
 
       setAccountStats(newAccountStats)
       setOverallStats(newOverallStats)
       setStatus('completed')
     } catch (error) {
-      console.error('Processing failed:', error)
       setStatus('error')
     } finally {
       processingRef.current = false
       // Also ensure processor state is consistent
-      if (processor) {
-        processor.stopProcessing()
+      if (currentProcessor) {
+        currentProcessor.stopProcessing()
       }
     }
-  }, [accounts, rules, processor])
+  }
 
-  const stopProcessing = useCallback(() => {
+  const stopProcessing = () => {
     if (processingRef.current) {
       setStatus('idle')
       processingRef.current = false
@@ -220,9 +278,9 @@ export function useEmailProcessing(
         processor.stopProcessing()
       }
     }
-  }, [processor])
+  }
 
-  const clearChecksums = useCallback(async () => {
+  const clearChecksums = async () => {
     if (processor) {
       await processor.clearProcessedCache()
       // Reset stats since we're clearing the cache
@@ -237,14 +295,14 @@ export function useEmailProcessing(
       setCurrentAccount(undefined)
       setStatus('idle')
     }
-  }, [processor])
+  }
 
-  const refreshStats = useCallback(() => {
+  const refreshStats = () => {
     // This would refresh the current processing stats
     // For now, we'll just recalculate the progress
     calculateProgress(overallStats)
     // setProgress(newProgress) - we could add this to state if needed
-  }, [overallStats, calculateProgress])
+  }
 
   const progress = calculateProgress(overallStats)
   const isProcessing = status === 'processing'

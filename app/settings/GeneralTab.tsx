@@ -5,6 +5,8 @@ import { TabsContent } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useState } from "react"
+import { useEffect } from "react"
 
 interface GeneralTabProps {
   aiSensitivity: number
@@ -13,6 +15,10 @@ interface GeneralTabProps {
   setEmailAgeDays: (value: number) => void
   simplifyEmailContent: boolean
   setSimplifyEmailContent: (value: boolean) => void
+  enableCron: boolean
+  setEnableCron: (value: boolean) => void
+  cronExpression: string
+  setCronExpression: (value: string) => void
 }
 
 export default function GeneralTab({
@@ -22,7 +28,19 @@ export default function GeneralTab({
   setEmailAgeDays,
   simplifyEmailContent,
   setSimplifyEmailContent,
+  enableCron,
+  setEnableCron,
+  cronExpression,
+  setCronExpression,
 }: GeneralTabProps) {
+  const [cronValidationError, setCronValidationError] = useState<string>("")
+  const [cronInputValue, setCronInputValue] = useState<string>(cronExpression)
+
+  // Sync input value with prop changes
+  useEffect(() => {
+    setCronInputValue(cronExpression)
+  }, [cronExpression])
+
   const handleSensitivityChange = (value: string) => {
     const numValue = parseInt(value)
     if (!isNaN(numValue) && numValue >= 1 && numValue <= 10) {
@@ -34,6 +52,29 @@ export default function GeneralTab({
     const numValue = parseInt(value)
     if (!isNaN(numValue) && numValue >= 1 && numValue <= 365) {
       setEmailAgeDays(numValue)
+    }
+  }
+
+  const handleSimplifyEmailContentChange = async (value: boolean) => {
+    setSimplifyEmailContent(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setSimplifyEmailContent(value)
+    }
+  }
+
+  const handleCronExpressionChange = async (value: string) => {
+    setCronInputValue(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      // Validate the cron expression
+      const validation = await window.aiAPI.validateCronExpression(value)
+      if (!validation.valid) {
+        const errorMessage = validation.error instanceof Error ? validation.error.message : (validation.error || "Invalid cron expression")
+        setCronValidationError(errorMessage)
+      } else {
+        setCronValidationError("")
+        setCronExpression(value)
+        await window.aiAPI.setCronExpression(value)
+      }
     }
   }
 
@@ -117,6 +158,44 @@ export default function GeneralTab({
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="space-y-4 mt-10">
+          <h3 className="text-lg font-semibold">Scheduled Processing</h3>
+          <div className="flex flex-row items-start space-x-3 space-y-0">
+            <Checkbox
+              id="enable-cron"
+              checked={enableCron}
+              onCheckedChange={(checked) => setEnableCron(checked === true)}
+            />
+            <div className="space-y-1 leading-none">
+              <Label htmlFor="enable-cron">
+                Enable Scheduled Email Analysis
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically run email analysis at scheduled intervals. Prevents duplicate processing if manual analysis is already running.
+              </p>
+            </div>
+          </div>
+          {enableCron && (
+            <div className="space-y-2 ml-6">
+              <Label htmlFor="cron-expression">Cron Expression</Label>
+              <Input
+                id="cron-expression"
+                type="text"
+                value={cronInputValue}
+                onChange={(e) => handleCronExpressionChange(e.target.value)}
+                placeholder="*/5 * * * *"
+                className={cronValidationError ? "border-red-500" : ""}
+              />
+              <p className="text-sm text-muted-foreground">
+                Cron expression for scheduling (default: every 5 minutes). Use standard cron syntax.
+              </p>
+              {cronValidationError && (
+                <p className="text-sm text-red-500">{cronValidationError}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </TabsContent>

@@ -61,6 +61,8 @@ function SettingsContent() {
   const [aiSensitivity, setAiSensitivity] = useState<number>(7)
   const [emailAgeDays, setEmailAgeDays] = useState<number>(7)
   const [simplifyEmailContent, setSimplifyEmailContent] = useState<boolean>(true)
+  const [enableCron, setEnableCron] = useState<boolean>(true)
+  const [cronExpression, setCronExpression] = useState<string>("* * * * *")
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -74,6 +76,8 @@ function SettingsContent() {
         setAiSensitivity(await window.aiAPI.getAISensitivity())
         setEmailAgeDays(await window.aiAPI.getEmailAgeDays())
         setSimplifyEmailContent(await window.aiAPI.getSimplifyEmailContent())
+        setEnableCron(await window.aiAPI.getEnableCron())
+        setCronExpression(await window.aiAPI.getCronExpression())
 
         const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
@@ -336,6 +340,20 @@ function SettingsContent() {
     }
   }
 
+  const handleEnableCronChange = async (value: boolean) => {
+    setEnableCron(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setEnableCron(value)
+    }
+  }
+
+  const handleCronExpressionChange = async (value: string) => {
+    setCronExpression(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setCronExpression(value)
+    }
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -354,6 +372,10 @@ function SettingsContent() {
               setEmailAgeDays={handleEmailAgeDaysChange}
               simplifyEmailContent={simplifyEmailContent}
               setSimplifyEmailContent={handleSimplifyEmailContentChange}
+              enableCron={enableCron}
+              setEnableCron={handleEnableCronChange}
+              cronExpression={cronExpression}
+              setCronExpression={handleCronExpressionChange}
             />
           </TabsContent>
           <TabsContent value="ai">
