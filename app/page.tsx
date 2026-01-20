@@ -93,6 +93,16 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
+  // Listen for real-time analyzed email creation
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.processingEvents) {
+      const unsub = window.processingEvents.onAnalyzedEmailCreated((email: AnalyzedEmail) => {
+        setAnalyzedEmails(prev => [email, ...prev])
+      })
+      return unsub
+    }
+  }, [])
+
   const handleDelete = async (id: string) => {
     await AlertsManager.delete(id)
     setAlerts(prev => prev.filter(a => a.id !== id))

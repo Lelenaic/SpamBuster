@@ -112,6 +112,19 @@ declare global {
       }) => void) => () => void;
       onError: (callback: (error: Error) => void) => () => void;
       onStatusChange: (callback: (status: 'idle' | 'processing' | 'completed' | 'error') => void) => () => void;
+      onAnalyzedEmailCreated: (callback: (email: {
+        id: string;
+        emailId: string;
+        subject: string;
+        sender: string;
+        score: number;
+        reasoning: string;
+        analyzedAt: string;
+        accountId: string;
+        isSpam: boolean;
+        manualOverride?: boolean;
+        manualIsSpam?: boolean;
+      }) => void) => () => void;
       removeAllListeners: (channel: string) => void;
     }
   }

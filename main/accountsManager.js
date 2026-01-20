@@ -196,7 +196,9 @@ class AccountsManager {
     });
 
     ipcMain.handle('analyzedEmails:create', async (event, emailData) => {
-      return this.createAnalyzedEmail(emailData);
+      const result = this.createAnalyzedEmail(emailData);
+      event.sender.send('analyzed-email-created', result);
+      return result;
     });
 
     ipcMain.handle('analyzedEmails:update', async (event, id, updates) => {

@@ -99,6 +99,10 @@ contextBridge.exposeInMainWorld("processingEvents", {
         ipcRenderer.on('processing:status-change', (event, ...args) => callback(...args));
         return () => ipcRenderer.removeListener('processing:status-change', callback);
     },
+    onAnalyzedEmailCreated: (callback) => {
+        ipcRenderer.on('analyzed-email-created', (event, ...args) => callback(...args));
+        return () => ipcRenderer.removeListener('analyzed-email-created', callback);
+    },
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);
     }
