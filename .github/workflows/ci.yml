@@ -26,7 +26,7 @@ jobs:
       run: npm ci
 
     - name: Install snapcraft (Ubuntu only)
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-24.04-arm'
       run: sudo snap install snapcraft --classic
 
     - name: Build Next.js
