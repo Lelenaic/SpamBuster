@@ -152,6 +152,12 @@ const createWindow = () => {
     }
   });
 
+  // Hide the window instead of closing when clicking the close button
+  mainWindow.on('close', (event) => {
+    event.preventDefault();
+    mainWindow.hide();
+  });
+
   if (app.isPackaged) {
     if (appServe) {
       appServe(mainWindow);
@@ -196,13 +202,13 @@ app.on("ready", () => {
 });
 
 app.on("window-all-closed", () => {
-    if(process.platform !== "darwin"){
-        app.quit();
-    }
+    // Prevent quitting on all platforms since we hide windows instead of closing
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  if (mainWindow) {
+    mainWindow.show();
+  } else {
     createWindow();
   }
 });
