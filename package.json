@@ -1,6 +1,6 @@
 {
   "name": "spambuster",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "main": "main/main.js",
   "author": {
@@ -91,11 +91,6 @@
       "target": [
         "AppImage",
         "snap"
-      ],
-      "publish": [
-        {
-          "provider": "snapStore"
-        }
       ]
     },
     "snap": {
@@ -108,7 +103,12 @@
       "title": "SpamBuster",
       "summary": "AI-powered spam email cleaner",
       "description": "SpamBuster is an AI anti-spam application that helps you clean your inbox from unwanted emails.",
-      "grade": "stable"
+      "grade": "stable",
+      "publish": [
+        {
+          "provider": "snapStore"
+        }
+      ]
     },
     "publish": [
       {
