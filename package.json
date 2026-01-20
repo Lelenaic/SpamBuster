@@ -95,7 +95,7 @@
     },
     "snap": {
       "confinement": "strict",
-      "base": "core24",
+      "base": "core20",
       "plugs": [
         "default",
         "network-bind"
