@@ -19,6 +19,7 @@ let accountsManager;
 let aiManager;
 let mainWindow;
 let cronJob = null;
+let isQuitting = false;
 
 async function initStore() {
   const { default: Store } = await import('electron-store');
@@ -154,8 +155,11 @@ const createWindow = () => {
 
   // Hide the window instead of closing when clicking the close button
   mainWindow.on('close', (event) => {
-    event.preventDefault();
-    mainWindow.hide();
+    console.log('Window close event triggered, isQuitting:', isQuitting);
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
   });
 
   if (app.isPackaged) {
@@ -197,12 +201,18 @@ const createWizardWindow = () => {
   }
 }
 
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
 app.on("ready", () => {
     createWindow();
 });
 
 app.on("window-all-closed", () => {
-    // Prevent quitting on all platforms since we hide windows instead of closing
+    if (isQuitting) {
+      app.quit();
+    }
 });
 
 app.on('activate', () => {
