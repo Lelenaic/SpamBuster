@@ -13,8 +13,6 @@ interface GitHubRelease {
 interface PackageInfo {
   currentVersion: string;
   repository: string;
-  name: string;
-  error?: string;
 }
 
 export interface VersionCheckResult {
@@ -69,22 +67,17 @@ async function getPackageInfo(): Promise<PackageInfo> {
     try {
       return await window.packageAPI.getInfo();
     } catch (error) {
-      console.error('Error getting package info via IPC:', error);
       return {
         currentVersion: '0.0.0',
         repository: '',
-        name: '',
-        error: error instanceof Error ? error.message : 'IPC error'
       };
     }
   }
-  
+
   // Fallback for non-Electron environments (development)
   return {
     currentVersion: '0.0.0',
     repository: 'github:Lelenaic/SpamBuster',
-    name: 'spambuster',
-    error: 'Not running in Electron environment'
   };
 }
 
@@ -95,17 +88,9 @@ export async function checkForNewerVersion(): Promise<VersionCheckResult> {
   try {
     // Get package information via IPC
     const packageInfo = await getPackageInfo();
-    
-    if (packageInfo.error) {
-      return {
-        hasUpdate: false,
-        currentVersion: packageInfo.currentVersion,
-        error: packageInfo.error
-      };
-    }
-    
+
     const { currentVersion, repository } = packageInfo;
-    
+
     // Parse GitHub repository URL
     const parsedRepo = parseGitHubUrl(repository);
     if (!parsedRepo) {
@@ -115,9 +100,9 @@ export async function checkForNewerVersion(): Promise<VersionCheckResult> {
         error: 'Invalid repository URL format'
       };
     }
-    
+
     const { owner, repo } = parsedRepo;
-    
+
     // Fetch latest release from GitHub API
     const apiUrl = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
     const githubResponse = await fetch(apiUrl, {
@@ -125,7 +110,7 @@ export async function checkForNewerVersion(): Promise<VersionCheckResult> {
         'Accept': 'application/vnd.github.v3+json'
       }
     });
-    
+
     if (!githubResponse.ok) {
       if (githubResponse.status === 404) {
         // No releases found
@@ -137,13 +122,13 @@ export async function checkForNewerVersion(): Promise<VersionCheckResult> {
       }
       throw new Error(`GitHub API error: ${githubResponse.status}`);
     }
-    
+
     const release: GitHubRelease = await githubResponse.json();
     const latestVersion = release.tag_name;
-    
+
     // Compare versions
     const hasUpdate = isVersionOlder(currentVersion, latestVersion);
-    
+
     return {
       hasUpdate,
       currentVersion,
@@ -151,7 +136,7 @@ export async function checkForNewerVersion(): Promise<VersionCheckResult> {
       releaseUrl: release.html_url,
       releaseName: release.name
     };
-    
+
   } catch (error) {
     return {
       hasUpdate: false,
