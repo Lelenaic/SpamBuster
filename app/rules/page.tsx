@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -31,7 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit3, Trash2, Power, Copy, Check, BadgeCheck, RefreshCw } from 'lucide-react';
 import { Rule } from '@/lib/types';
 import { Account } from '@/lib/mail/types';
-import { apiClient, CommunityRule } from '@/lib/api';
+import { apiClient, CommunityRule, PaginatedResponse } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function RulesPage() {
@@ -49,27 +49,96 @@ export default function RulesPage() {
     applyToAll: true,
     selectedAccounts: [] as string[],
   });
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const loadMoreRules = useCallback(async () => {
+    if (isLoadingMore || currentPage >= totalPages) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      let newRules: PaginatedResponse<CommunityRule>;
+
+      if (searchQuery.trim()) {
+        newRules = await apiClient.searchCommunityRulesPaginated(searchQuery, nextPage);
+      } else {
+        newRules = await apiClient.getCommunityRulesPaginated(nextPage);
+      }
+
+      setCommunityRules(prev => [...prev, ...newRules.data]);
+      setCurrentPage(newRules.current_page);
+      setTotalPages(newRules.last_page);
+    } catch (error) {
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [currentPage, totalPages, isLoadingMore, searchQuery]);
+
+  // Callback ref to set up observer when element is attached
+  const setLoadMoreRef = useCallback((node: HTMLDivElement | null) => {
+    loadMoreRef.current = node;
+    
+    // Disconnect existing observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    
+    if (node) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const target = entries[0];
+          if (target.isIntersecting && !isLoadingMore && currentPage < totalPages) {
+            loadMoreRules();
+          }
+        },
+        { threshold: 0.1, rootMargin: '100px' }
+      );
+      
+      observer.observe(node);
+      observerRef.current = observer;
+    }
+  }, [currentPage, totalPages, isLoadingMore, loadMoreRules]);
+
+  // Re-observe when community rules change (to re-setup observer with fresh closures)
+  useEffect(() => {
+    // Trigger ref callback to re-setup observer with fresh closures
+    if (loadMoreRef.current) {
+      setLoadMoreRef(loadMoreRef.current);
+    }
+  }, [communityRules, setLoadMoreRef]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [fetchedRules, fetchedAccounts, fetchedCommunityRules] = await Promise.all([
+        const [fetchedRules, fetchedAccounts] = await Promise.all([
           window.rulesAPI.getAll(),
           window.accountsAPI.getAll(),
-          apiClient.getCommunityRules().catch(() => []), // Fallback to empty array if API fails
         ]);
         setRules(fetchedRules);
         setAccounts(fetchedAccounts);
-        setCommunityRules(fetchedCommunityRules || []);
+        
+        // Fetch community rules with pagination
+        const fetchedCommunityRules = await apiClient.getCommunityRulesPaginated(1);
+        setCommunityRules(fetchedCommunityRules.data);
+        setCurrentPage(fetchedCommunityRules.current_page);
+        setTotalPages(fetchedCommunityRules.last_page);
       } catch (error) {
-        console.error('Failed to fetch data:', error);
+      } finally {
+        setIsInitialLoading(false);
       }
     };
 
     fetchData();
   }, []);
-
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +168,6 @@ export default function RulesPage() {
       setEditingRule(null);
       setIsModalOpen(false);
     } catch (error) {
-      console.error('Failed to save rule:', error);
       toast.error('Failed to save rule');
     }
   };
@@ -123,7 +191,6 @@ export default function RulesPage() {
         setRules(prev => prev.filter(r => r.id !== ruleId));
         toast.success('Rule deleted successfully');
       } catch (error) {
-        console.error('Failed to delete rule:', error);
         toast.error('Failed to delete rule');
       }
     }
@@ -137,7 +204,6 @@ export default function RulesPage() {
         toast.success(`Rule ${!rule.enabled ? 'enabled' : 'disabled'} successfully`);
       }
     } catch (error) {
-      console.error('Failed to toggle rule:', error);
       toast.error('Failed to toggle rule');
     }
   };
@@ -165,7 +231,6 @@ export default function RulesPage() {
         });
       }, 5000);
     } catch (error) {
-      console.error('Failed to add community rule:', error);
       toast.error('Failed to add rule');
     }
   };
@@ -174,35 +239,41 @@ export default function RulesPage() {
     setSearchQuery(query);
     if (query.trim()) {
       try {
-        const results = await apiClient.searchCommunityRules(query);
-        setCommunityRules(results || []);
+        const results = await apiClient.searchCommunityRulesPaginated(query, 1);
+        setCommunityRules(results.data);
+        setCurrentPage(results.current_page);
+        setTotalPages(results.last_page);
       } catch (error) {
-        console.error('Search failed:', error);
         toast.error('Search failed');
         setCommunityRules([]);
+        setTotalPages(1);
       }
     } else {
       // Reload all rules
       try {
-        const rules = await apiClient.getCommunityRules().catch(() => []);
-        setCommunityRules(rules || []);
+        const rules = await apiClient.getCommunityRulesPaginated(1);
+        setCommunityRules(rules.data);
+        setCurrentPage(rules.current_page);
+        setTotalPages(rules.last_page);
       } catch (error) {
-        console.error('Failed to reload rules:', error);
         setCommunityRules([]);
+        setTotalPages(1);
       }
     }
   };
 
   const handleRefresh = async () => {
     try {
-      const rules = await apiClient.getCommunityRules().catch(() => []);
-      setCommunityRules(rules || []);
+      const rules = await apiClient.getCommunityRulesPaginated(1);
+      setCommunityRules(rules.data);
+      setCurrentPage(rules.current_page);
+      setTotalPages(rules.last_page);
       setSearchQuery('');
       toast.success('Community rules refreshed successfully');
     } catch (error) {
-      console.error('Refresh failed:', error);
       toast.error('Failed to refresh rules');
       setCommunityRules([]);
+      setTotalPages(1);
     }
   };
 
@@ -384,65 +455,83 @@ export default function RulesPage() {
                 <RefreshCw className="w-4 h-4" />
               </Button>
             </div>
-            {communityRules.length === 0 ? (
+            {isInitialLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : communityRules.length === 0 ? (
               <p className="text-muted-foreground">No community rules available.</p>
             ) : (
-              <TooltipProvider>
-                <Accordion type="single" collapsible className="w-full">
-                  {communityRules.map((rule) => (
-                    <AccordionItem key={rule.id} value={rule.id}>
-                      <AccordionTrigger className="flex items-center gap-2 justify-start">
-                        <span className="text-left">{rule.name}</span>
-                        {rule.is_official ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="default">
-                                <BadgeCheck className="w-5 h-5 mr-1" />
-                                Official
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>An official rule is published by the admins and trustworthy</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : null}
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="p-4">
-                          <p className="text-sm text-muted-foreground mb-4">{rule.description}</p>
-                          <Separator className="my-4" />
-                          <div className="text-xs text-muted-foreground mb-4">
-                            <span className="text-sm font-bold">Prompt:</span>
-                            <div className="mt-1 p-2 bg-muted rounded text-xs whitespace-pre-wrap">
-                              {rule.prompt || 'No prompt'}
+              <>
+                <TooltipProvider>
+                  <Accordion type="single" collapsible className="w-full">
+                    {communityRules.map((rule) => (
+                      <AccordionItem key={rule.id} value={rule.id}>
+                        <AccordionTrigger className="flex items-center gap-2 justify-start">
+                          <span className="text-left">{rule.name}</span>
+                          {rule.is_official ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="default">
+                                  <BadgeCheck className="w-5 h-5 mr-1" />
+                                  Official
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>An official rule is published by the admins and trustworthy</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : null}
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="p-4">
+                            <p className="text-sm text-muted-foreground mb-4">{rule.description}</p>
+                            <Separator className="my-4" />
+                            <div className="text-xs text-muted-foreground mb-4">
+                              <span className="text-sm font-bold">Prompt:</span>
+                              <div className="mt-1 p-2 bg-muted rounded text-xs whitespace-pre-wrap">
+                                {rule.prompt || 'No prompt'}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleAddCommunityRule(rule)}
+                                disabled={addedRules.has(rule.id)}
+                              >
+                                {addedRules.has(rule.id) ? (
+                                  <>
+                                    <Check className="w-4 h-4 mr-1" />
+                                    Added
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-4 h-4 mr-1" />
+                                    Add to My Rules
+                                  </>
+                                )}
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAddCommunityRule(rule)}
-                              disabled={addedRules.has(rule.id)}
-                            >
-                              {addedRules.has(rule.id) ? (
-                                <>
-                                  <Check className="w-4 h-4 mr-1" />
-                                  Added
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-4 h-4 mr-1" />
-                                  Add to My Rules
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </TooltipProvider>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </TooltipProvider>
+                {/* Infinite scroll trigger - use callback ref */}
+                <div ref={setLoadMoreRef} className="py-4 text-center min-h-[60px]">
+                  {isLoadingMore && (
+                    <div className="flex justify-center items-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                      <span className="text-sm text-muted-foreground">Loading more...</span>
+                    </div>
+                  )}
+                  {!isLoadingMore && currentPage >= totalPages && communityRules.length > 0 && (
+                    <p className="text-sm text-muted-foreground">No more rules to load</p>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </TabsContent>

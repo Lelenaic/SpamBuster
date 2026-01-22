@@ -71,10 +71,7 @@ export class AlertsManager {
     
     // Emit event for real-time updates (skip if we're about to create a new alert)
     if (!skipEvent) {
-      console.log(`[DEBUG] Emitting alerts-deleted event for: ${accountName}`);
       emitAlertsDeleted(accountName);
-    } else {
-      console.log(`[DEBUG] Skipping alerts-deleted event for: ${accountName} (alert replacement)`);
     }
   }
 

@@ -22,6 +22,27 @@ interface CommunityRule {
   is_official: boolean;
 }
 
+export interface PaginatedResponse<T> {
+  current_page: number;
+  data: T[];
+  first_page_url: string;
+  from: number | null;
+  last_page: number;
+  last_page_url: string;
+  links: Array<{
+    url: string | null;
+    label: string;
+    page: number | null;
+    active: boolean;
+  }>;
+  next_page_url: string | null;
+  path: string;
+  per_page: number;
+  prev_page_url: string | null;
+  to: number | null;
+  total: number;
+}
+
 class ApiClient {
   private token: string | null = null;
 
@@ -113,7 +134,7 @@ class ApiClient {
     }
   }
 
-  async searchCommunityRules(query: string): Promise<CommunityRule[]> {
+  async searchCommunityRules(query: string): Promise<PaginatedResponse<CommunityRule>> {
     try {
       const response = await fetch(`${API_BASE_URL}/rules/search/${encodeURIComponent(query)}`, {
         method: 'GET',
@@ -124,8 +145,46 @@ class ApiClient {
         throw new Error(`Failed to search community rules: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return Array.isArray(data) ? data : data.rules || data.data || [];
+      const data: PaginatedResponse<CommunityRule> = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Search community rules error:', error);
+      throw error;
+    }
+  }
+
+  async getCommunityRulesPaginated(page: number = 1): Promise<PaginatedResponse<CommunityRule>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rules?page=${page}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch community rules: ${response.statusText}`);
+      }
+
+      const data: PaginatedResponse<CommunityRule> = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Get community rules error:', error);
+      throw error;
+    }
+  }
+
+  async searchCommunityRulesPaginated(query: string, page: number = 1): Promise<PaginatedResponse<CommunityRule>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rules/search/${encodeURIComponent(query)}?page=${page}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to search community rules: ${response.statusText}`);
+      }
+
+      const data: PaginatedResponse<CommunityRule> = await response.json();
+      return data;
     } catch (error) {
       console.error('Search community rules error:', error);
       throw error;
