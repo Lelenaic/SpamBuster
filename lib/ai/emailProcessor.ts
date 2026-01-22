@@ -238,8 +238,8 @@ export class EmailProcessorService {
       // If there's a connection error, create an alert and set status to trouble
       if (fetchResult.isConnectionError && fetchResult.error) {
         await this.createConnectionErrorAlert(account, fetchResult.error)
-      } else if (fetchResult.emails && fetchResult.emails.length > 0) {
-        // If fetch succeeded and we have emails, clear any existing alerts and set status to working
+      } else if (!fetchResult.error) {
+        // If fetch succeeded (even with no emails), clear any existing alerts and set status to working
         await this.clearConnectionAlerts(account)
       }
       
@@ -476,10 +476,10 @@ export class EmailProcessorService {
     const accountStats: Record<string, ProcessingStats> = {}
 
     try {
-      // Filter active accounts
-      const activeAccounts = accounts.filter(account => account.status === 'working')
+      // Process all accounts except disabled ones (trouble accounts will be retested)
+      const accountsToProcess = accounts.filter(account => account.status !== 'disabled')
 
-      for (const account of activeAccounts) {
+      for (const account of accountsToProcess) {
         try {
           const stats = await this.processAccountEmails(account, rules, maxAgeDays)
           accountStats[account.id] = stats
