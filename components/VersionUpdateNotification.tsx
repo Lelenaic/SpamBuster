@@ -58,7 +58,7 @@ export function VersionUpdateNotification() {
             </p>
             <p className="text-sm text-gray-700">
               SpamBuster {updateInfo.latestVersion} is now available
-              (you have {updateInfo.currentVersion})
+              (you have v{updateInfo.currentVersion})
             </p>
           </div>
           <div className="flex items-center gap-2">
