@@ -60,7 +60,7 @@ class AIManager {
   }
 
   getEmailAgeDays() {
-    return this.store.get('emailAgeDays', 7);
+    return this.store.get('emailAgeDays', 1);
   }
 
   setEmailAgeDays(value) {

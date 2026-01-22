@@ -302,7 +302,7 @@ class AccountsManager {
     ipcMain.handle('fetch-emails', async (event, config, maxAgeDays) => {
       try {
         // Safety fallback for undefined maxAgeDays
-        const safeMaxAgeDays = maxAgeDays || 7;
+        const safeMaxAgeDays = maxAgeDays || 1;
         
         const ImapFlowClass = await this.getImapFlow();
         const clientOptions = {

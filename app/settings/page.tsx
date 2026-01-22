@@ -61,7 +61,7 @@ function SettingsContent() {
   const [modifyFolders, setModifyFolders] = useState<{ name: string; path: string }[]>([])
   const [loadingModifyFolders, setLoadingModifyFolders] = useState(false)
   const [aiSensitivity, setAiSensitivity] = useState<number>(7)
-  const [emailAgeDays, setEmailAgeDays] = useState<number>(7)
+  const [emailAgeDays, setEmailAgeDays] = useState<number>(1)
   const [simplifyEmailContent, setSimplifyEmailContent] = useState<boolean>(true)
   const [enableCron, setEnableCron] = useState<boolean>(true)
   const [cronExpression, setCronExpression] = useState<string>("* * * * *")

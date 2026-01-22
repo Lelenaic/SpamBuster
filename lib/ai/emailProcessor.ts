@@ -117,13 +117,6 @@ export class EmailProcessorService {
     return await window.aiAPI.getAISensitivity()
   }
 
-  private async getSelectedModel(): Promise<string> {
-    if (typeof window === 'undefined' || !window.aiAPI) {
-      return ''
-    }
-    return await window.aiAPI.getSelectedModel()
-  }
-
   private generateChecksum(subject: string, body: string): string {
     const content = `${subject}|${body}`
     return createHash('sha256').update(content).digest('hex')
@@ -443,7 +436,7 @@ export class EmailProcessorService {
   async processAllAccounts(
     accounts: Account[],
     rules: Rule[],
-    maxAgeDays: number = 7
+    maxAgeDays: number = 1
   ): Promise<{ accountStats: Record<string, ProcessingStats>; overallStats: ProcessingStats }> {
     if (this.isProcessing) {
       return {
@@ -569,7 +562,7 @@ export class EmailProcessorService {
       startTime: this.currentProcessingData?.startTime || Date.now(),
       accounts: this.currentProcessingData?.accounts.map(a => ({ id: a.id, type: a.type, status: a.status })) || [],
       rulesCount: this.currentProcessingData?.rules.length || 0,
-      maxAgeDays: this.currentProcessingData?.maxAgeDays || 7,
+      maxAgeDays: this.currentProcessingData?.maxAgeDays || 1,
       accountStats: { ...this.currentAccountStats },
       overallStats: { ...this.currentOverallStats },
       currentAccount: this.currentAccountId
