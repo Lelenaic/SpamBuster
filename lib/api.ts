@@ -153,9 +153,13 @@ class ApiClient {
     }
   }
 
-  async getCommunityRulesPaginated(page: number = 1): Promise<PaginatedResponse<CommunityRule>> {
+  async getCommunityRulesPaginated(page: number = 1, officialOnly: boolean = false): Promise<PaginatedResponse<CommunityRule>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/rules?page=${page}`, {
+      const params = new URLSearchParams({ page: page.toString() });
+      if (officialOnly) {
+        params.append('officialOnly', 'true');
+      }
+      const response = await fetch(`${API_BASE_URL}/rules?${params.toString()}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -172,9 +176,13 @@ class ApiClient {
     }
   }
 
-  async searchCommunityRulesPaginated(query: string, page: number = 1): Promise<PaginatedResponse<CommunityRule>> {
+  async searchCommunityRulesPaginated(query: string, page: number = 1, officialOnly: boolean = false): Promise<PaginatedResponse<CommunityRule>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/rules/search/${encodeURIComponent(query)}?page=${page}`, {
+      const params = new URLSearchParams({ page: page.toString() });
+      if (officialOnly) {
+        params.append('officialOnly', 'true');
+      }
+      const response = await fetch(`${API_BASE_URL}/rules/search/${encodeURIComponent(query)}?${params.toString()}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });

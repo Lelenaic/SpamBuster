@@ -42,6 +42,7 @@ export default function RulesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [officialOnly, setOfficialOnly] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     text: '',
@@ -54,6 +55,7 @@ export default function RulesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isFilteringOfficial, setIsFilteringOfficial] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -68,9 +70,9 @@ export default function RulesPage() {
       let newRules: PaginatedResponse<CommunityRule>;
 
       if (searchQuery.trim()) {
-        newRules = await apiClient.searchCommunityRulesPaginated(searchQuery, nextPage);
+        newRules = await apiClient.searchCommunityRulesPaginated(searchQuery, nextPage, officialOnly);
       } else {
-        newRules = await apiClient.getCommunityRulesPaginated(nextPage);
+        newRules = await apiClient.getCommunityRulesPaginated(nextPage, officialOnly);
       }
 
       setCommunityRules(prev => [...prev, ...newRules.data]);
@@ -80,7 +82,7 @@ export default function RulesPage() {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [currentPage, totalPages, isLoadingMore, searchQuery]);
+  }, [currentPage, totalPages, isLoadingMore, searchQuery, officialOnly]);
 
   // Callback ref to set up observer when element is attached
   const setLoadMoreRef = useCallback((node: HTMLDivElement | null) => {
@@ -125,20 +127,31 @@ export default function RulesPage() {
         ]);
         setRules(fetchedRules);
         setAccounts(fetchedAccounts);
-        
+      } catch (error) {
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchCommunityRules = async () => {
+      setIsFilteringOfficial(true);
+      try {
         // Fetch community rules with pagination
-        const fetchedCommunityRules = await apiClient.getCommunityRulesPaginated(1);
+        const fetchedCommunityRules = await apiClient.getCommunityRulesPaginated(1, officialOnly);
         setCommunityRules(fetchedCommunityRules.data);
         setCurrentPage(fetchedCommunityRules.current_page);
         setTotalPages(fetchedCommunityRules.last_page);
       } catch (error) {
       } finally {
         setIsInitialLoading(false);
+        setIsFilteringOfficial(false);
       }
     };
 
-    fetchData();
-  }, []);
+    fetchCommunityRules();
+  }, [officialOnly]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +252,7 @@ export default function RulesPage() {
     setSearchQuery(query);
     if (query.trim()) {
       try {
-        const results = await apiClient.searchCommunityRulesPaginated(query, 1);
+        const results = await apiClient.searchCommunityRulesPaginated(query, 1, officialOnly);
         setCommunityRules(results.data);
         setCurrentPage(results.current_page);
         setTotalPages(results.last_page);
@@ -251,7 +264,7 @@ export default function RulesPage() {
     } else {
       // Reload all rules
       try {
-        const rules = await apiClient.getCommunityRulesPaginated(1);
+        const rules = await apiClient.getCommunityRulesPaginated(1, officialOnly);
         setCommunityRules(rules.data);
         setCurrentPage(rules.current_page);
         setTotalPages(rules.last_page);
@@ -264,7 +277,7 @@ export default function RulesPage() {
 
   const handleRefresh = async () => {
     try {
-      const rules = await apiClient.getCommunityRulesPaginated(1);
+      const rules = await apiClient.getCommunityRulesPaginated(1, officialOnly);
       setCommunityRules(rules.data);
       setCurrentPage(rules.current_page);
       setTotalPages(rules.last_page);
@@ -445,17 +458,26 @@ export default function RulesPage() {
         </TabsContent>
         <TabsContent value="community-rules">
           <div className="bg-card rounded-lg shadow p-6">
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-4 items-center flex-nowrap">
+              <Button variant="outline" onClick={handleRefresh}>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
               <Input
                 placeholder="Search community rules..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
+                className="flex-1"
               />
-              <Button variant="outline" onClick={handleRefresh}>
-                <RefreshCw className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Checkbox
+                  id="official-only"
+                  checked={officialOnly}
+                  onCheckedChange={(checked) => setOfficialOnly(!!checked)}
+                />
+                <Label htmlFor="official-only" className="text-sm whitespace-nowrap">Official only</Label>
+              </div>
             </div>
-            {isInitialLoading ? (
+            {isInitialLoading || isFilteringOfficial ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
