@@ -130,37 +130,28 @@ Do not include any other text or formatting.`
   }
 
   async analyzeEmail(email: EmailData, rules: Rule[] = []): Promise<SpamAnalysisResult> {
-    try {
-      const aiService = await this.getAIService()
-      const simplifyEmailContent = await this.getSimplifyEmailContent()
-      const prompt = this.buildPrompt(email, rules, simplifyEmailContent)
+    const aiService = await this.getAIService()
+    const simplifyEmailContent = await this.getSimplifyEmailContent()
+    const prompt = this.buildPrompt(email, rules, simplifyEmailContent)
 
-      const selectedModel = await this.getSelectedModel()
-      const response = await aiService.sendMessage(prompt, selectedModel)
+    const selectedModel = await this.getSelectedModel()
+    const response = await aiService.sendMessage(prompt, selectedModel)
 
-      // Extract JSON from response using regex (handles AI models that add comments)
-      const jsonMatch = response.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) {
-        throw new Error('No valid JSON found in AI response')
-      }
-      const result = JSON.parse(jsonMatch[0])
+    // Extract JSON from response using regex (handles AI models that add comments)
+    const jsonMatch = response.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      throw new Error('No valid JSON found in AI response')
+    }
+    const result = JSON.parse(jsonMatch[0])
 
-      // Validate the response structure
-      if (typeof result.score !== 'number' || result.score < 0 || result.score > 10) {
-        throw new Error('Invalid spam score in AI response')
-      }
+    // Validate the response structure
+    if (typeof result.score !== 'number' || result.score < 0 || result.score > 10) {
+      throw new Error('Invalid spam score in AI response')
+    }
 
-      return {
-        score: Math.round(result.score), // Ensure it's an integer
-        reasoning: result.reasoning || 'No reasoning provided'
-      }
-    } catch (error) {
-      console.error('Error analyzing email for spam:', error)
-      // Return a neutral score if analysis fails
-      return {
-        score: 5,
-        reasoning: 'Analysis failed, defaulting to neutral score'
-      }
+    return {
+      score: Math.round(result.score), // Ensure it's an integer
+      reasoning: result.reasoning || 'No reasoning provided'
     }
   }
 }

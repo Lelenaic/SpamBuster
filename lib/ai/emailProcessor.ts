@@ -287,10 +287,24 @@ export class EmailProcessorService {
           // Analyze email with AI
           const detector = new SpamDetectorService()
 
-          const result: SpamAnalysisResult = await detector.analyzeEmail(
-            email,
-            applicableRules
-          )
+          let result: SpamAnalysisResult
+          try {
+            result = await detector.analyzeEmail(
+              email,
+              applicableRules
+            )
+            // Clear any existing AI alerts since analysis succeeded
+            await AlertsManager.deleteAIAlerts()
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            console.error(`AI analysis error for email ${email.id}:`, error)
+            // Create alert for AI provider issue
+            await AlertsManager.createAIErrorAlert(errorMessage)
+            stats.errors++
+            // Emit update even on error
+            this.emitIncrementalStatsUpdate(account.id, stats)
+            continue // Skip this email
+          }
 
           // Check if email should be moved to spam
           const isSpam = result.score >= sensitivity

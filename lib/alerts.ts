@@ -3,6 +3,7 @@ import { Alert } from './types';
 // CustomEvent type for real-time alerts within the renderer process
 const ALERT_CREATED_EVENT = 'spambuster:alert-created';
 const ALERTS_DELETED_EVENT = 'spambuster:alerts-deleted';
+const AI_ALERTS_DELETED_EVENT = 'spambuster:ai-alerts-deleted';
 
 // Helper function to emit event for real-time alert updates
 function emitAlertCreated(alert: Alert): void {
@@ -15,6 +16,13 @@ function emitAlertCreated(alert: Alert): void {
 function emitAlertsDeleted(accountName: string): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(ALERTS_DELETED_EVENT, { detail: accountName }));
+  }
+}
+
+// Helper function to emit event when AI alerts are deleted
+function emitAIAlertsDeleted(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(AI_ALERTS_DELETED_EVENT));
   }
 }
 
@@ -53,10 +61,18 @@ export class AlertsManager {
    */
   static async existsForAccount(accountName: string): Promise<boolean> {
     const alerts = await this.list();
-    return alerts.some(alert => 
-      alert.context === 'mail account' && 
+    return alerts.some(alert =>
+      alert.context === 'mail account' &&
       alert.user === accountName
     );
+  }
+
+  /**
+   * Check if an AI alert already exists
+   */
+  static async existsForAI(): Promise<boolean> {
+    const alerts = await this.list();
+    return alerts.some(alert => alert.context === 'AI');
   }
 
   /**
@@ -64,15 +80,27 @@ export class AlertsManager {
    */
   static async deleteByAccount(accountName: string, skipEvent = false): Promise<void> {
     const alerts = await this.list();
-    const filtered = alerts.filter(alert => 
+    const filtered = alerts.filter(alert =>
       !(alert.context === 'mail account' && alert.user === accountName)
     );
     await window.storeAPI.set(this.STORAGE_KEY, filtered);
-    
+
     // Emit event for real-time updates (skip if we're about to create a new alert)
     if (!skipEvent) {
       emitAlertsDeleted(accountName);
     }
+  }
+
+  /**
+   * Delete all AI alerts
+   */
+  static async deleteAIAlerts(): Promise<void> {
+    const alerts = await this.list();
+    const filtered = alerts.filter(alert => alert.context !== 'AI');
+    await window.storeAPI.set(this.STORAGE_KEY, filtered);
+
+    // Emit event for real-time updates
+    emitAIAlertsDeleted();
   }
 
   /**
@@ -102,6 +130,27 @@ export class AlertsManager {
       context: 'mail account',
       message: `Connection error: ${errorMessage}`,
       goto: '/settings?tab=mail'
+    });
+  }
+
+  /**
+   * Create an alert for AI provider error
+   */
+  static async createAIErrorAlert(errorMessage: string): Promise<Alert | null> {
+    // Check if AI alert already exists
+    const existing = await this.existsForAI();
+    if (existing) {
+      console.log(`[DEBUG] AI alert already exists, skipping creation`);
+      return null;
+    }
+
+    console.log(`[DEBUG] Creating new AI error alert`);
+    return this.create({
+      type: 'error',
+      user: 'AI Provider',
+      context: 'AI',
+      message: `AI analysis error: ${errorMessage}`,
+      goto: '/settings?tab=ai'
     });
   }
 }
