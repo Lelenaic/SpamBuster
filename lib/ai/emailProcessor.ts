@@ -2,6 +2,7 @@ import { SpamDetectorService, SpamAnalysisResult } from './spamDetector'
 import { Account, EmailData } from '../mail/types'
 import { MailProviderFactory } from '../mail/factory'
 import { Rule } from '../types'
+import { AlertsManager } from '../alerts'
 import { createHash } from 'crypto'
 
 // Define Store interface for electron-store
@@ -144,21 +145,49 @@ export class EmailProcessorService {
     )
   }
 
-  private async fetchUnprocessedEmails(account: Account, maxAgeDays: number): Promise<EmailData[]> {
+  private async fetchUnprocessedEmails(account: Account, maxAgeDays: number): Promise<{ emails: EmailData[]; error?: string; isConnectionError: boolean }> {
     try {
       const provider = MailProviderFactory.createProvider(account.type)
       const result = await provider.fetchEmails(account.config, maxAgeDays)
       
       if (result.success && result.emails) {
-        return result.emails
+        return { emails: result.emails, isConnectionError: false }
       } else {
-        console.error(`Failed to fetch emails for account ${account.id}:`, result.error)
-        return []
+        // Check if this is likely a connection error
+        const errorMessage = result.error || 'Unknown error'
+        const isConnectionError = this.isConnectionError(errorMessage)
+        return { emails: [], error: errorMessage, isConnectionError }
       }
     } catch (error) {
-      console.error(`Error fetching emails for account ${account.id}:`, error)
-      return []
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const isConnectionError = this.isConnectionError(errorMessage)
+      return { emails: [], error: errorMessage, isConnectionError }
     }
+  }
+
+  /**
+   * Check if an error message indicates a connection problem
+   */
+  private isConnectionError(errorMessage: string): boolean {
+    const connectionErrorKeywords = [
+      'connection',
+      'timeout',
+      'econnrefused',
+      'enetunreach',
+      'ehostunreach',
+      'enotfound',
+      'socket',
+      'network',
+      'disconnected',
+      'failed to fetch',
+      'unable to connect',
+      'cannot connect',
+      'login failed',
+      'authentication failed',
+      'invalid credentials'
+    ]
+    const lowerMessage = errorMessage.toLowerCase()
+    return connectionErrorKeywords.some(keyword => lowerMessage.includes(keyword))
   }
 
   private async moveEmailToSpam(account: Account, emailId: string): Promise<boolean> {
@@ -204,8 +233,17 @@ export class EmailProcessorService {
       // Get applicable rules for this account
       const applicableRules = this.getApplicableRules(rules, account.id)
       
-      // Fetch unprocessed emails
-      const emails = await this.fetchUnprocessedEmails(account, maxAgeDays)
+      const fetchResult = await this.fetchUnprocessedEmails(account, maxAgeDays)
+      
+      // If there's a connection error, create an alert and set status to trouble
+      if (fetchResult.isConnectionError && fetchResult.error) {
+        await this.createConnectionErrorAlert(account, fetchResult.error)
+      } else if (fetchResult.emails && fetchResult.emails.length > 0) {
+        // If fetch succeeded and we have emails, clear any existing alerts and set status to working
+        await this.clearConnectionAlerts(account)
+      }
+      
+      const emails = fetchResult.emails
       stats.totalEmails = emails.length
 
       // Count emails that will be skipped upfront
@@ -535,6 +573,40 @@ export class EmailProcessorService {
       accountStats: { ...this.currentAccountStats },
       overallStats: { ...this.currentOverallStats },
       currentAccount: this.currentAccountId
+    }
+  }
+
+  /**
+   * Create an alert for a mail account connection error and update account status to 'trouble'
+   */
+  private async createConnectionErrorAlert(account: Account, errorMessage: string): Promise<void> {
+    try {
+      const accountName = account.name || account.config.username || account.id
+      await AlertsManager.createConnectionErrorAlert(account.id, accountName, errorMessage)
+      
+      // Update account status to 'trouble'
+      if (typeof window !== 'undefined' && window.accountsAPI) {
+        await window.accountsAPI.update(account.id, { status: 'trouble' })
+      }
+    } catch (error) {
+      console.error('Failed to create connection error alert:', error)
+    }
+  }
+
+  /**
+   * Clear alerts for a mail account and update account status to 'working'
+   */
+  private async clearConnectionAlerts(account: Account): Promise<void> {
+    try {
+      const accountName = account.name || account.config.username || account.id
+      await AlertsManager.deleteByAccount(accountName)
+      
+      // Update account status to 'working'
+      if (typeof window !== 'undefined' && window.accountsAPI) {
+        await window.accountsAPI.update(account.id, { status: 'working' })
+      }
+    } catch (error) {
+      console.error('Failed to clear connection alerts:', error)
     }
   }
 

@@ -51,6 +51,40 @@ class AccountsManager {
     return this.ImapFlow;
   }
 
+  // Create a logger that silences network-related errors (ETIMEDOUT, etc.)
+  // These are expected when there's no internet connection
+  createSilentLogger() {
+    const networkErrorCodes = [
+      'ETIMEDOUT',
+      'ECONNRESET',
+      'ENOTFOUND',
+      'EAI_AGAIN',
+      'ECONNREFUSED',
+      'EHOSTUNREACH',
+      'ENETUNREACH',
+      'EPIPE',
+      'socket hang up',
+      'Connection closed',
+      'read ETIMEDOUT',
+    ];
+    
+    return {
+      info: () => {},
+      debug: () => {},
+      warn: () => {},
+      error: (msg, err) => {
+        // Silently ignore network-related errors that are expected when offline
+        // Handle cases where msg or err might not be strings
+        const errorMessage = String(msg || '') + String(err?.message || '');
+        const isNetworkError = networkErrorCodes.some(code => errorMessage.includes(code));
+        
+        if (!isNetworkError) {
+          console.error('[IMAP]', msg, err);
+        }
+      },
+    };
+  }
+
   async parseEmail(message) {
     try {
       // Convert buffer to string for parsing
@@ -230,13 +264,26 @@ class AccountsManager {
           clientOptions.ignoreTLS = true;
         }
 
-        const client = new ImapFlowClass(clientOptions);
+        const client = new ImapFlowClass({
+          ...clientOptions,
+          logger: this.createSilentLogger(),
+        });
 
         await client.connect();
         await client.logout();
         return { success: true };
       } catch (error) {
-        console.error('IMAP connection test failed:', error);
+        // Only log non-network errors
+        const errorMsg = String(error?.message || '');
+        const isNetworkError = [
+          'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN',
+          'ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH', 'EPIPE',
+          'socket hang up', 'Connection closed', 'read ETIMEDOUT'
+        ].some(code => errorMsg.includes(code) || error?.code === code);
+        
+        if (!isNetworkError) {
+          console.error('IMAP connection test failed:', error);
+        }
 
         // Extract meaningful error message from ImapFlow error
         let errorMessage = 'Connection failed';
@@ -276,7 +323,10 @@ class AccountsManager {
           clientOptions.ignoreTLS = true;
         }
 
-        const client = new ImapFlowClass(clientOptions);
+        const client = new ImapFlowClass({
+          ...clientOptions,
+          logger: this.createSilentLogger(),
+        });
         await client.connect();
 
         // Calculate date range
@@ -309,7 +359,17 @@ class AccountsManager {
         await client.logout();
         return { success: true, emails: messages };
       } catch (error) {
-        console.error('Failed to fetch emails:', error);
+        // Only log non-network errors
+        const errorMsg = String(error?.message || '');
+        const isNetworkError = [
+          'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN',
+          'ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH', 'EPIPE',
+          'socket hang up', 'Connection closed', 'read ETIMEDOUT'
+        ].some(code => errorMsg.includes(code) || error?.code === code);
+        
+        if (!isNetworkError) {
+          console.error('Failed to fetch emails:', error);
+        }
         let errorMessage = 'Failed to fetch emails';
         if (error.response) {
           errorMessage = error.response;
@@ -341,7 +401,10 @@ class AccountsManager {
           clientOptions.ignoreTLS = true;
         }
 
-        const client = new ImapFlowClass(clientOptions);
+        const client = new ImapFlowClass({
+          ...clientOptions,
+          logger: this.createSilentLogger(),
+        });
         await client.connect();
 
         const mailboxList = await client.list();
@@ -353,7 +416,17 @@ class AccountsManager {
         await client.logout();
         return { success: true, folders: mailboxes };
       } catch (error) {
-        console.error('Failed to list mailboxes:', error);
+        // Only log non-network errors
+        const errorMsg = String(error?.message || '');
+        const isNetworkError = [
+          'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN',
+          'ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH', 'EPIPE',
+          'socket hang up', 'Connection closed', 'read ETIMEDOUT'
+        ].some(code => errorMsg.includes(code) || error?.code === code);
+        
+        if (!isNetworkError) {
+          console.error('Failed to list mailboxes:', error);
+        }
         let errorMessage = 'Failed to list mailboxes';
         if (error.response) {
           errorMessage = error.response;
@@ -385,7 +458,10 @@ class AccountsManager {
           clientOptions.ignoreTLS = true;
         }
 
-        const client = new ImapFlowClass(clientOptions);
+        const client = new ImapFlowClass({
+          ...clientOptions,
+          logger: this.createSilentLogger(),
+        });
         await client.connect();
 
         // Select INBOX first (required for moving messages)
@@ -425,7 +501,17 @@ class AccountsManager {
         await client.logout();
         return { success: moved };
       } catch (error) {
-        console.error('Failed to move email to spam:', error);
+        // Only log non-network errors
+        const errorMsg = String(error?.message || '');
+        const isNetworkError = [
+          'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN',
+          'ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH', 'EPIPE',
+          'socket hang up', 'Connection closed', 'read ETIMEDOUT'
+        ].some(code => errorMsg.includes(code) || error?.code === code);
+        
+        if (!isNetworkError) {
+          console.error('Failed to move email to spam:', error);
+        }
         let errorMessage = 'Failed to move email to spam';
         if (error.response) {
           errorMessage = error.response;

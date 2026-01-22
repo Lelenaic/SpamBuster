@@ -103,6 +103,38 @@ export default function Home() {
     }
   }, [])
 
+  // Listen for real-time alert creation
+  useEffect(() => {
+    const handleAlertCreated = (event: Event) => {
+      const customEvent = event as CustomEvent<AlertType>
+      const alert = customEvent.detail
+      setAlerts(prev => {
+        // Avoid duplicates
+        if (prev.some(a => a.id === alert.id)) {
+          return prev
+        }
+        return [alert, ...prev]
+      })
+      toast.error(`Connection error: ${alert.user} - ${alert.message}`)
+    }
+    
+    window.addEventListener('spambuster:alert-created', handleAlertCreated)
+    return () => window.removeEventListener('spambuster:alert-created', handleAlertCreated)
+  }, [])
+
+  // Listen for real-time alert deletion
+  useEffect(() => {
+    const handleAlertsDeleted = (event: Event) => {
+      const customEvent = event as CustomEvent<string>
+      const accountName = customEvent.detail
+      setAlerts(prev => prev.filter(alert => !(alert.context === 'mail account' && alert.user === accountName)))
+      toast.success(`Connection restored for ${accountName}`)
+    }
+    
+    window.addEventListener('spambuster:alerts-deleted', handleAlertsDeleted)
+    return () => window.removeEventListener('spambuster:alerts-deleted', handleAlertsDeleted)
+  }, [])
+
   const handleDelete = async (id: string) => {
     await AlertsManager.delete(id)
     setAlerts(prev => prev.filter(a => a.id !== id))
@@ -172,31 +204,27 @@ export default function Home() {
       )}
       
       <div className="bg-card rounded-lg shadow p-6">
-        <p className="text-muted-foreground">Welcome to SpamBuster! This is your dashboard where you can monitor and manage your email anti-spam settings.</p>
-        <hr className="mt-6" />
-        <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-4">Alerts</h2>
-          {alerts.length === 0 ? (
-            <p className="text-muted-foreground">No alerts at the moment.</p>
-          ) : (
-            alerts.map(alert => (
-              <Alert key={alert.id} variant={alert.type === 'error' ? 'destructive' : 'default'} className="mb-4">
-                <AlertTitle>{alert.user} - {alert.context}: {alert.type}</AlertTitle>
-                <AlertDescription className="flex justify-between items-center">
-                  {alert.message}
-                  <div className="flex gap-2">
-                    {alert.goto && <Link href={alert.goto}>
-                      <Button size="sm">Go to Fix</Button>
-                    </Link>}
-                    <Button size="sm" variant="outline" onClick={() => handleDelete(alert.id)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            ))
-          )}
-        </div>
+        <h2 className="text-xl font-semibold mb-4">Alerts</h2>
+        {alerts.length === 0 ? (
+          <p className="text-muted-foreground">No alerts at the moment.</p>
+        ) : (
+          alerts.map(alert => (
+            <Alert key={alert.id} variant={alert.type === 'error' ? 'destructive' : 'default'} className="mb-4">
+              <AlertTitle>{alert.user} - {alert.context}: {alert.type}</AlertTitle>
+              <AlertDescription className="flex justify-between items-center">
+                {alert.message}
+                <div className="flex gap-2">
+                  {alert.goto && <Link href={alert.goto}>
+                    <Button size="sm">Go to Fix</Button>
+                  </Link>}
+                  <Button size="sm" variant="outline" onClick={() => handleDelete(alert.id)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          ))
+        )}
         <hr className="mt-6" />
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-4">Analyzed Emails</h2>

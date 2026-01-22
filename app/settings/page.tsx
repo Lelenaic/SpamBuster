@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { createAIService } from "@/lib/ai"
 import { Account, AccountStatus, MailProviderFactory } from "@/lib/mail"
+import { AlertsManager } from "@/lib/alerts"
+import { toast } from "sonner"
 import "@/lib/types"
 import GeneralTab from "./GeneralTab"
 import AIAccountTab from "./AIAccountTab"
@@ -244,9 +246,21 @@ function SettingsContent() {
     setTestingAccountId(account.id)
     try {
       const provider = MailProviderFactory.createProvider(account.type)
-      await provider.testConnection(account.config)
-    } catch {
-      // Error handled in component
+      const result = await provider.testConnection(account.config)
+      
+      if (result.success) {
+        toast.success(`Connection successful for ${account.config.username}`)
+        
+        // Clear alerts and set status back to working
+        await AlertsManager.deleteByAccount(account.name || account.config.username)
+        await window.accountsAPI.update(account.id, { status: 'working' as const })
+        const updatedAccounts = await window.accountsAPI.getAll()
+        setMailAccounts(updatedAccounts)
+      } else {
+        toast.error(`Connection failed: ${result.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      toast.error(`Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setTestingAccountId(null)
     }
@@ -277,6 +291,8 @@ function SettingsContent() {
         const result = await provider.testConnection(newConfig)
         
         if (result.success) {
+          // Clear alerts and set status back to working
+          await AlertsManager.deleteByAccount(modifyFormData.username)
           await window.accountsAPI.update(accountToModify.id, {
             config: newConfig,
             name: modifyFormData.username,
@@ -284,11 +300,14 @@ function SettingsContent() {
           })
           const updatedAccounts = await window.accountsAPI.getAll()
           setMailAccounts(updatedAccounts)
+          toast.success('Account updated successfully')
           setModifyDialogOpen(false)
           setAccountToModify(null)
+        } else {
+          toast.error(`Connection failed: ${result.error || 'Unknown error'}`)
         }
-      } catch {
-        // Error handled in component
+      } catch (error) {
+        toast.error(`Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
       } finally {
         setTestingModify(false)
       }
@@ -297,6 +316,12 @@ function SettingsContent() {
 
   const handleToggleAccount = async (account: Account) => {
     const newStatus: AccountStatus = account.status === 'disabled' ? 'working' : 'disabled'
+    
+    // If enabling the account, delete all alerts for this account
+    if (newStatus === 'working') {
+      await AlertsManager.deleteByAccount(account.name || account.config.username)
+    }
+    
     await window.accountsAPI.update(account.id, { status: newStatus })
     const updatedAccounts = await window.accountsAPI.getAll()
     setMailAccounts(updatedAccounts)

@@ -6,67 +6,25 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
-import { Mail, ChevronDown, Settings, Plus, Shield, RefreshCw } from "lucide-react";
+import { Mail, Settings, Plus, Shield, RefreshCw } from "lucide-react";
 import { checkForNewerVersion } from "@/lib/versionChecker";
 import { toast } from "sonner";
-import { Account, AccountStatus } from "@/lib/mail";
 
-const getStatusColor = (status: AccountStatus) => {
-  switch (status) {
-    case 'working':
-      return 'bg-green-500';
-    case 'trouble':
-      return 'bg-red-500';
-    case 'disabled':
-      return 'bg-gray-400';
-    default:
-      return 'bg-gray-400';
-  }
-};
 
 export default function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
   const [version, setVersion] = useState<string>('0.0.0');
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
-    const loadAccounts = async () => {
-      if (typeof window !== "undefined" && window.accountsAPI) {
-        const storedAccounts = await window.accountsAPI.getAll();
-        setAccounts(storedAccounts);
-        if (storedAccounts.length > 0 && !currentAccount) {
-          setCurrentAccount(storedAccounts[0]);
-        }
-
-        // Update current account if it exists in the new accounts list
-        if (currentAccount) {
-          const updatedCurrentAccount = storedAccounts.find(acc => acc.id === currentAccount.id);
-          if (updatedCurrentAccount) {
-            setCurrentAccount(updatedCurrentAccount);
-          } else {
-            // Current account was deleted, select the first available account or null
-            const newCurrentAccount = storedAccounts.length > 0 ? storedAccounts[0] : null;
-            setCurrentAccount(newCurrentAccount);
-            // Close the dropdown if no accounts remain
-            if (!newCurrentAccount) {
-              setIsOpen(false);
-            }
-          }
-        }
-      }
-    };
     const loadVersion = async () => {
       if (typeof window !== "undefined" && window.packageAPI) {
         const packageInfo = await window.packageAPI.getInfo();
         setVersion(packageInfo.currentVersion || '0.0.0');
       }
     };
-    loadAccounts();
     loadVersion();
-  }, [currentAccount]);
+  }, []);
 
   const handleCheckUpdate = async () => {
     setIsCheckingUpdate(true);
@@ -96,74 +54,15 @@ export default function Sidebar() {
   return (
     <TooltipProvider>
       <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-sidebar-border text-card-foreground flex flex-col">
-      {/* Account Selector */}
+      {/* Add Account Button */}
       <div className="p-4 border-b border-sidebar-border">
-        {currentAccount ? (
-          <div className="cursor-pointer hover:bg-sidebar-accent p-2 rounded mb-2" onClick={() => { setIsOpen(!isOpen); }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Mail className="w-6 h-6" />
-                <span className="text-sm text-sidebar-foreground">{currentAccount.name || currentAccount.config.username}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span 
-                      className={`w-2 h-2 rounded-full ${getStatusColor(currentAccount.status)} hover:opacity-80 cursor-pointer`}
-                      onClick={(e) => e.stopPropagation()}
-                    ></span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Status: {currentAccount.status}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <ChevronDown className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="cursor-pointer hover:bg-sidebar-accent p-2 rounded mb-2" onClick={() => { if (typeof window !== 'undefined' && window.electronAPI) window.electronAPI.send('open-wizard-window'); }}>
-            <div className="flex items-center space-x-3">
-              <Plus className="w-6 h-6" />
-              <span className="text-sm text-sidebar-foreground">Add an account</span>
-            </div>
-          </div>
-        )}
-        {/* Dropdown content */}
-        {isOpen && (
-        <div className="space-y-1 border border-sidebar-border rounded p-2">
-          {accounts.map((account) => (
-            <div
-              key={account.id}
-              className={`flex items-center space-x-3 p-2 hover:bg-sidebar-accent rounded cursor-pointer ${
-                currentAccount?.id === account.id ? 'bg-sidebar-primary/10 border border-sidebar-primary/20' : ''
-              }`}
-              onClick={() => {
-                setCurrentAccount(account);
-                setIsOpen(false);
-              }}
-            >
-              <Mail className="w-5 h-5" />
-              <span className="text-sm text-sidebar-foreground">{account.name || account.config.username}</span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span 
-                    className={`w-2 h-2 rounded-full ml-auto ${getStatusColor(account.status)} hover:opacity-80 cursor-pointer`}
-                    onClick={(e) => e.stopPropagation()}
-                  ></span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Status: {account.status}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          ))}
-          <div className="flex items-center space-x-3 p-2 hover:bg-sidebar-accent rounded cursor-pointer bg-sidebar-primary/10 border border-sidebar-primary/20" onClick={() => { if (typeof window !== 'undefined' && window.electronAPI) window.electronAPI.send('open-wizard-window'); }}>
-            <Plus className="w-5 h-5" />
-            <span className="text-sm text-sidebar-foreground">Add an account</span>
-          </div>
+        <div
+          className="cursor-pointer hover:bg-sidebar-accent p-2 rounded flex items-center space-x-3"
+          onClick={() => { if (typeof window !== 'undefined' && window.electronAPI) window.electronAPI.send('open-wizard-window'); }}
+        >
+          <Plus className="w-6 h-6" />
+          <span className="text-sm text-sidebar-foreground">Add an account</span>
         </div>
-        )}
       </div>
 
       {/* Navigation */}
