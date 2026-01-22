@@ -127,13 +127,21 @@ export default function Home() {
     const handleAlertsDeleted = (event: Event) => {
       const customEvent = event as CustomEvent<string>
       const accountName = customEvent.detail
+      
+      // Check if there was actually a mail account alert for this account before showing toast
+      const hadAlert = alerts.some(alert => alert.context === 'mail account' && alert.user === accountName)
+      
       setAlerts(prev => prev.filter(alert => !(alert.context === 'mail account' && alert.user === accountName)))
-      toast.success(`Connection restored for ${accountName}`)
+      
+      // Only show toast if there was actually an alert being cleared (account recovering from trouble)
+      if (hadAlert) {
+        toast.success(`Connection restored for ${accountName}`)
+      }
     }
     
     window.addEventListener('spambuster:alerts-deleted', handleAlertsDeleted)
     return () => window.removeEventListener('spambuster:alerts-deleted', handleAlertsDeleted)
-  }, [])
+  }, [alerts])
 
   const handleDelete = async (id: string) => {
     await AlertsManager.delete(id)
