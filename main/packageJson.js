@@ -1,3 +1,5 @@
+import { app } from 'electron';
+
 /**
  * IPC handler to read package.json information
  */
@@ -6,7 +8,7 @@ export function getPackageInfo() {
     // Read package.json from the app root directory
 
     const result = {
-      currentVersion: process.env.npm_package_version,
+      currentVersion: app.getVersion(),
       repository: 'github:Lelenaic/SpamBuster',
     };
     return result;
