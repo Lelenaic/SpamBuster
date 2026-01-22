@@ -26,15 +26,22 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit3, Trash2, Power } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Edit3, Trash2, Power, Copy, Check, BadgeCheck, RefreshCw } from 'lucide-react';
 import { Rule } from '@/lib/types';
 import { Account } from '@/lib/mail/types';
+import { apiClient, CommunityRule } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
+  const [communityRules, setCommunityRules] = useState<CommunityRule[]>([]);
+  const [addedRules, setAddedRules] = useState<Set<string>>(new Set());
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     text: '',
@@ -46,12 +53,14 @@ export default function RulesPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [fetchedRules, fetchedAccounts] = await Promise.all([
+        const [fetchedRules, fetchedAccounts, fetchedCommunityRules] = await Promise.all([
           window.rulesAPI.getAll(),
           window.accountsAPI.getAll(),
+          apiClient.getCommunityRules().catch(() => []), // Fallback to empty array if API fails
         ]);
         setRules(fetchedRules);
         setAccounts(fetchedAccounts);
+        setCommunityRules(fetchedCommunityRules || []);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       }
@@ -74,6 +83,7 @@ export default function RulesPage() {
         });
         if (updatedRule) {
           setRules(prev => prev.map(r => r.id === editingRule.id ? updatedRule : r));
+          toast.success('Rule updated successfully');
         }
       } else {
         const newRule = await window.rulesAPI.create({
@@ -83,12 +93,14 @@ export default function RulesPage() {
           emailAccounts: formData.applyToAll ? null : formData.selectedAccounts,
         });
         setRules(prev => [...prev, newRule]);
+        toast.success('Rule created successfully');
       }
       setFormData({ name: '', text: '', enabled: true, applyToAll: true, selectedAccounts: [] });
       setEditingRule(null);
       setIsModalOpen(false);
     } catch (error) {
       console.error('Failed to save rule:', error);
+      toast.error('Failed to save rule');
     }
   };
 
@@ -109,8 +121,10 @@ export default function RulesPage() {
       try {
         await window.rulesAPI.delete(ruleId);
         setRules(prev => prev.filter(r => r.id !== ruleId));
+        toast.success('Rule deleted successfully');
       } catch (error) {
         console.error('Failed to delete rule:', error);
+        toast.error('Failed to delete rule');
       }
     }
   };
@@ -120,9 +134,75 @@ export default function RulesPage() {
       const updatedRule = await window.rulesAPI.update(rule.id, { enabled: !rule.enabled });
       if (updatedRule) {
         setRules(prev => prev.map(r => r.id === rule.id ? updatedRule : r));
+        toast.success(`Rule ${!rule.enabled ? 'enabled' : 'disabled'} successfully`);
       }
     } catch (error) {
       console.error('Failed to toggle rule:', error);
+      toast.error('Failed to toggle rule');
+    }
+  };
+
+  const handleAddCommunityRule = async (communityRule: CommunityRule) => {
+    try {
+      // Use the prompt as the rule text
+      const ruleText = communityRule.prompt;
+
+      const newRule = await window.rulesAPI.create({
+        name: `${communityRule.name} (Community)`,
+        text: ruleText,
+        enabled: true,
+        emailAccounts: null, // Apply to all accounts by default
+      });
+      setRules(prev => [...prev, newRule]);
+      toast.success('Rule added successfully');
+
+      setAddedRules(prev => new Set(prev).add(communityRule.id));
+      setTimeout(() => {
+        setAddedRules(prev => {
+          const next = new Set(prev);
+          next.delete(communityRule.id);
+          return next;
+        });
+      }, 5000);
+    } catch (error) {
+      console.error('Failed to add community rule:', error);
+      toast.error('Failed to add rule');
+    }
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      try {
+        const results = await apiClient.searchCommunityRules(query);
+        setCommunityRules(results || []);
+      } catch (error) {
+        console.error('Search failed:', error);
+        toast.error('Search failed');
+        setCommunityRules([]);
+      }
+    } else {
+      // Reload all rules
+      try {
+        const rules = await apiClient.getCommunityRules().catch(() => []);
+        setCommunityRules(rules || []);
+      } catch (error) {
+        console.error('Failed to reload rules:', error);
+        setCommunityRules([]);
+      }
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      const rules = await apiClient.getCommunityRules().catch(() => []);
+      setCommunityRules(rules || []);
+      setSearchQuery('');
+      toast.success('Community rules refreshed successfully');
+    } catch (error) {
+      console.error('Refresh failed:', error);
+      toast.error('Failed to refresh rules');
+      setCommunityRules([]);
     }
   };
 
@@ -210,7 +290,7 @@ export default function RulesPage() {
                                 {account.name || account.config.username}
                               </Label>
                             </div>
-                          ))}
+                          )) }
                         </div>
                       </div>
                     )}
@@ -294,7 +374,76 @@ export default function RulesPage() {
         </TabsContent>
         <TabsContent value="community-rules">
           <div className="bg-card rounded-lg shadow p-6">
-            <p className="text-muted-foreground">Coming soon...</p>
+            <div className="flex gap-2 mb-4">
+              <Input
+                placeholder="Search community rules..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+              <Button variant="outline" onClick={handleRefresh}>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
+            {communityRules.length === 0 ? (
+              <p className="text-muted-foreground">No community rules available.</p>
+            ) : (
+              <TooltipProvider>
+                <Accordion type="single" collapsible className="w-full">
+                  {communityRules.map((rule) => (
+                    <AccordionItem key={rule.id} value={rule.id}>
+                      <AccordionTrigger className="flex items-center gap-2 justify-start">
+                        <span className="text-left">{rule.name}</span>
+                        {rule.is_official ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="default">
+                                <BadgeCheck className="w-5 h-5 mr-1" />
+                                Official
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>An official rule is published by the admins and trustworthy</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : null}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="p-4">
+                          <p className="text-sm text-muted-foreground mb-4">{rule.description}</p>
+                          <Separator className="my-4" />
+                          <div className="text-xs text-muted-foreground mb-4">
+                            <span className="text-sm font-bold">Prompt:</span>
+                            <div className="mt-1 p-2 bg-muted rounded text-xs whitespace-pre-wrap">
+                              {rule.prompt || 'No prompt'}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleAddCommunityRule(rule)}
+                              disabled={addedRules.has(rule.id)}
+                            >
+                              {addedRules.has(rule.id) ? (
+                                <>
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Added
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-4 h-4 mr-1" />
+                                  Add to My Rules
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </TooltipProvider>
+            )}
           </div>
         </TabsContent>
       </Tabs>
