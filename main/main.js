@@ -186,11 +186,10 @@ const createWizardWindow = () => {
 
   if (app.isPackaged) {
     if (appServe) {
-      appServe(win).then(() => {
-        console.log('Successfully loaded packaged wizard app');
-      }).catch(err => {
-        console.error('Error loading packaged wizard app:', err);
-      });
+      // Set up the protocol handler first
+      appServe(win);
+      // Then load the wizard page using the app:// protocol
+      win.loadURL('app://-/wizard.html');
     }
   } else {
     win.loadURL("http://localhost:3000/wizard");
