@@ -14,10 +14,8 @@ import {
   ShieldCheck,
   Clock,
   CheckCircle,
-  AlertTriangle,
-  Trash2
+  AlertTriangle
 } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export interface ProcessingStats {
   totalEmails: number
@@ -36,7 +34,6 @@ export type ProcessingStatus = 'idle' | 'processing' | 'completed' | 'error'
 interface ProcessingStatusProps {
   onStartProcessing: () => Promise<void>
   onStopProcessing: () => void
-  onClearChecksums: () => Promise<void>
   isProcessing: boolean
   status: ProcessingStatus
   overallStats: ProcessingStats
@@ -48,7 +45,6 @@ interface ProcessingStatusProps {
 export default function ProcessingStatus({
   onStartProcessing,
   onStopProcessing,
-  onClearChecksums,
   isProcessing,
   status,
   overallStats,
@@ -57,16 +53,6 @@ export default function ProcessingStatus({
   progress
 }: ProcessingStatusProps) {
   const [isStarting, setIsStarting] = useState(false)
-  const [isClearing, setIsClearing] = useState(false)
-
-  const handleClearChecksums = async () => {
-    setIsClearing(true)
-    try {
-      await onClearChecksums()
-    } finally {
-      setIsClearing(false)
-    }
-  }
 
   const handleStart = async () => {
     setIsStarting(true)
@@ -235,29 +221,6 @@ export default function ProcessingStatus({
               )}
               Start Processing
             </Button>
-          )}
-          
-          {!isProcessing && ['idle', 'completed'].includes(status) && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  onClick={handleClearChecksums}
-                  disabled={isClearing}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  {isClearing ? (
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-2" />
-                  )}
-                  Clear Checksums
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                It will reanalyze all the already analyzed emails in the inbox
-              </TooltipContent>
-            </Tooltip>
           )}
           
           {(isProcessing) && (

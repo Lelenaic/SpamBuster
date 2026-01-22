@@ -160,8 +160,9 @@ function SettingsContent() {
     try {
       const service = await createAIService()
       await service.testConnection()
-    } catch {
-      // Error handled in component
+      toast.success('AI connection successful')
+    } catch (error) {
+      toast.error(`AI connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setTestingConnection(false)
     }
@@ -198,8 +199,9 @@ function SettingsContent() {
     try {
       const service = await createAIService()
       await service.testConnection()
-    } catch {
-      // Error handled in component
+      toast.success('Embedding connection successful')
+    } catch (error) {
+      toast.error(`Embedding connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setTestingEmbedConnection(false)
     }

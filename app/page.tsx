@@ -201,7 +201,6 @@ export default function Home() {
         <ProcessingStatus
           onStartProcessing={processing.startProcessing}
           onStopProcessing={processing.stopProcessing}
-          onClearChecksums={processing.clearChecksums}
           isProcessing={processing.isProcessing}
           status={processing.status}
           overallStats={processing.overallStats}

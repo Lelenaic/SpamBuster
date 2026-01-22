@@ -72,11 +72,11 @@ export default function GeneralTab({
   }
 
   const getSensitivityDescription = (value: number) => {
-    if (value <= 1) return "Everything is spam"
+    if (value <= 1) return "Almost everything is spam"
     if (value <= 4) return "Aggressive - Catches more spam but may have more false positives"
     if (value <= 7) return "Balanced - Good balance between false positives and spam detection"
     if (value <= 8) return "Conservative - Only flags obvious spam"
-    return "Very Conservative - Almost no false positives, will miss many spams"
+    return "Very Conservative - Almost no false positives, may miss some spams"
   }
 
   return (
@@ -93,7 +93,7 @@ export default function GeneralTab({
           <div className="space-y-2">
             <Label htmlFor="ai-sensitivity">AI Filtering Sensitivity</Label>
             <p className="text-sm text-muted-foreground">
-              The threshold of sensitivity for AI spam detection. Higher values make the AI more aggressive in flagging emails as spam (default: 7).
+              The threshold of sensitivity for AI spam detection. Lower values make the AI more aggressive in flagging emails as spam (default: 7). For example with 7, it means any email with a spam score of 7/10 or higher will be marked as spam.
             </p>
             <div className="px-3">
               <Slider
