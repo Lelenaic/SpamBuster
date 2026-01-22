@@ -49,15 +49,15 @@ export function VersionUpdateNotification() {
 
   return (
     <div className="fixed top-4 right-4 z-50 max-w-md">
-      <Alert className="border-blue-200 bg-blue-50 shadow-lg">
-        <Download className="h-4 w-4 text-blue-600" />
+      <Alert className="border border-gray-200 bg-white shadow-lg">
+        <Download className="h-4 w-4 text-black" />
         <AlertDescription className="flex items-center justify-between gap-3">
           <div className="flex-1">
-            <p className="font-medium text-blue-900">
+            <p className="font-medium text-black">
               New version available!
             </p>
-            <p className="text-sm text-blue-700">
-              SpamBuster {updateInfo.latestVersion} is now available 
+            <p className="text-sm text-gray-700">
+              SpamBuster {updateInfo.latestVersion} is now available
               (you have {updateInfo.currentVersion})
             </p>
           </div>
@@ -66,7 +66,7 @@ export function VersionUpdateNotification() {
               size="sm"
               variant="default"
               onClick={handleUpdateClick}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-black hover:bg-gray-800 text-white"
             >
               Update
             </Button>
@@ -74,7 +74,7 @@ export function VersionUpdateNotification() {
               size="sm"
               variant="ghost"
               onClick={handleClose}
-              className="text-blue-600 hover:text-blue-800 p-1"
+              className="text-black hover:text-gray-800 p-1"
             >
               <X className="h-4 w-4" />
             </Button>

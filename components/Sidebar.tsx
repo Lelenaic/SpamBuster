@@ -5,7 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Mail, ChevronDown, Settings, Plus, Shield } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Mail, ChevronDown, Settings, Plus, Shield, RefreshCw } from "lucide-react";
+import { checkForNewerVersion } from "@/lib/versionChecker";
+import { toast } from "sonner";
 import { Account, AccountStatus } from "@/lib/mail";
 
 const getStatusColor = (status: AccountStatus) => {
@@ -25,6 +28,8 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
+  const [version, setVersion] = useState<string>('0.0.0');
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -35,7 +40,7 @@ export default function Sidebar() {
         if (storedAccounts.length > 0 && !currentAccount) {
           setCurrentAccount(storedAccounts[0]);
         }
-        
+
         // Update current account if it exists in the new accounts list
         if (currentAccount) {
           const updatedCurrentAccount = storedAccounts.find(acc => acc.id === currentAccount.id);
@@ -53,8 +58,38 @@ export default function Sidebar() {
         }
       }
     };
+    const loadVersion = async () => {
+      if (typeof window !== "undefined" && window.packageAPI) {
+        const packageInfo = await window.packageAPI.getInfo();
+        setVersion(packageInfo.currentVersion || '0.0.0');
+      }
+    };
     loadAccounts();
+    loadVersion();
   }, [currentAccount]);
+
+  const handleCheckUpdate = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const result = await checkForNewerVersion();
+      if (result.hasUpdate) {
+        toast.success(`New version ${result.latestVersion} available!`, {
+          action: result.releaseUrl ? {
+            label: "Update",
+            onClick: () => window.shellAPI.openExternal(result.releaseUrl!),
+          } : undefined,
+        });
+      } else if (result.error) {
+        toast.error(`Failed to check for updates: ${result.error}`);
+      } else {
+        toast.success("You're running the latest version!");
+      }
+    } catch (error) {
+      toast.error("Failed to check for updates");
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
 
   if (pathname.startsWith('/wizard')) return null;
 
@@ -178,6 +213,26 @@ export default function Sidebar() {
               Settings
             </Button>
           </Link>
+          <Separator className="my-2" />
+          <div className="flex items-center justify-center gap-2 text-xs text-sidebar-foreground/70">
+            <span>SpamBuster v{version}</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-sidebar-accent"
+                  onClick={handleCheckUpdate}
+                  disabled={isCheckingUpdate}
+                >
+                  <RefreshCw className={`h-3 w-3 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Check for updates</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </div>
     </div>

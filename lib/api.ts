@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost/api/v1';
+// This gets replaced at build time by Next.js with the actual value
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost/api/v1';
 
 interface LoginCredentials {
   email: string;
