@@ -85,6 +85,15 @@ async function initializeApp() {
     originalSetCronExpression(value);
     setupCronJob();
   };
+
+  // Override setSelectedEmbedModel to also update vector DB dimension
+  const originalSetSelectedEmbedModel = aiManager.setSelectedEmbedModel.bind(aiManager);
+  aiManager.setSelectedEmbedModel = async (value) => {
+    originalSetSelectedEmbedModel(value);
+    if (vectorDBManager) {
+      await vectorDBManager.updateEmbeddingModel(value);
+    }
+  };
 }
 
 initializeApp();

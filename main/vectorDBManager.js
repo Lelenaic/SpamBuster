@@ -39,10 +39,24 @@ class VectorDBManager {
 
       // Create new table with schema
       const { Schema, Field, Float32, Utf8, Bool, FixedSizeList, Int8 } = await import("apache-arrow");
-
+      
+      // Get the embedding model dimension from store or fetch from Ollama API
+      const embedModel = this.store.get('selectedEmbedModel', '');
+      let vectorDimension = this.store.get('embedModelDimension', null);
+      
+      // If no dimension stored, fetch it from Ollama API
+      if (!vectorDimension && embedModel) {
+        vectorDimension = await this.getModelDimension(embedModel);
+        this.store.set('embedModelDimension', vectorDimension);
+      }
+      
+      // Fallback to default if no embed model selected
+      if (!vectorDimension) {
+        vectorDimension = 1024;
+      }
+      
       // Use FixedSizeList for vector field to enable indexing
-      // Dimension 1024 for Ollama embedding models like mxbai-embed-large
-      const VECTOR_DIMENSION = 1024;
+      // Dynamic dimension based on the embedding model
       const schema = new Schema([
         new Field("id", new Utf8(), false),
         new Field("emailId", new Utf8(), false),
@@ -55,13 +69,56 @@ class VectorDBManager {
         new Field("isSpam", new Bool(), false),
         new Field("analyzedAt", new Utf8(), false),
         new Field("userValidated", new Int8(), false), // 1 = spam, 0 = ham, -1 = not validated
-        new Field("vector", new FixedSizeList(VECTOR_DIMENSION, new Field("item", new Float32(), false)), false)
+        new Field("vector", new FixedSizeList(vectorDimension, new Field("item", new Float32(), false)), false)
       ]);
 
       this.table = await this.db.createTable("emails", [], { schema });
     } catch (error) {
       console.error("Failed to create table:", error);
       throw error;
+    }
+  }
+
+  async getModelDimension(model) {
+    const baseUrl = this.store.get('ollamaBaseUrl', 'http://localhost:11434');
+    
+    try {
+      const response = await fetch(`${baseUrl}/api/show`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: model }),
+      });
+
+      if (!response.ok) {
+        return 1024; // Default dimension
+      }
+
+      const data = await response.json();
+      
+      // Look for embedding dimension in model_info
+      // The key pattern is {family}.embedding_length (e.g., "gemma3.embedding_length": 2560)
+      if (data.model_info) {
+        const modelInfoKeys = Object.keys(data.model_info);
+        
+        // First, look for exact embedding_length key (most specific)
+        const embeddingLengthKey = modelInfoKeys.find(k => k.endsWith('.embedding_length'));
+        if (embeddingLengthKey && data.model_info[embeddingLengthKey]) {
+          return data.model_info[embeddingLengthKey];
+        }
+        
+        // Fallback: look for any key containing 'embedding'
+        const embeddingKey = modelInfoKeys.find(k => 
+          k.includes('embedding_dim') || k.includes('embedding_size') || k.includes('embedding')
+        );
+        if (embeddingKey && data.model_info[embeddingKey]) {
+          return data.model_info[embeddingKey];
+        }
+      }
+      
+      // Default fallback
+      return 1024;
+    } catch (error) {
+      return 1024; // Default dimension on error
     }
   }
 
@@ -72,6 +129,13 @@ class VectorDBManager {
 
       if (!embedModel) {
         throw new Error('No embedding model configured');
+      }
+
+      // Ensure the model dimension is stored
+      let storedDimension = this.store.get('embedModelDimension', null);
+      if (!storedDimension) {
+        storedDimension = await this.getModelDimension(embedModel);
+        this.store.set('embedModelDimension', storedDimension);
       }
 
       const vector = await this.generateOllamaEmbedding(text, embedModel);
@@ -312,6 +376,9 @@ class VectorDBManager {
       // Drop the table and recreate it
       await this.db.dropTable("emails");
       await this.createTableIfNotExists();
+      
+      // Also clear the stored embedding dimension so it's recalculated on next use
+      this.store.delete('embedModelDimension');
     } catch (error) {
       throw error;
     }
@@ -323,6 +390,28 @@ class VectorDBManager {
       this.db = null;
       this.table = null;
       this.isInitialized = false;
+    }
+  }
+
+  async updateEmbeddingModel(newModel) {
+    // Get the dimension for the new model
+    const newDimension = await this.getModelDimension(newModel);
+    const oldDimension = this.store.get('embedModelDimension', 1024);
+    
+    // Store the new dimension
+    this.store.set('embedModelDimension', newDimension);
+    
+    // If dimension changed, we need to recreate the table
+    if (oldDimension !== newDimension && this.table) {
+      try {
+        await this.db.dropTable("emails");
+        this.table = null;
+        this.isInitialized = false;
+        await this.initialize();
+      } catch (error) {
+        console.error("Failed to recreate table with new dimension:", error);
+        throw error;
+      }
     }
   }
 }
