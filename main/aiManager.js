@@ -99,6 +99,22 @@ class AIManager {
     this.store.set('enableVectorDB', value);
   }
 
+  getCustomizeSpamGuidelines() {
+    return this.store.get('customizeSpamGuidelines', false);
+  }
+
+  setCustomizeSpamGuidelines(value) {
+    this.store.set('customizeSpamGuidelines', value);
+  }
+
+  getCustomSpamGuidelines() {
+    return this.store.get('customSpamGuidelines', '');
+  }
+
+  setCustomSpamGuidelines(value) {
+    this.store.set('customSpamGuidelines', value);
+  }
+
   validateCronExpression(expression) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -209,6 +225,22 @@ class AIManager {
 
     ipcMain.handle('ai:setEnableVectorDB', async (event, value) => {
       return this.setEnableVectorDB(value);
+    });
+
+    ipcMain.handle('ai:getCustomizeSpamGuidelines', async () => {
+      return this.getCustomizeSpamGuidelines();
+    });
+
+    ipcMain.handle('ai:setCustomizeSpamGuidelines', async (event, value) => {
+      return this.setCustomizeSpamGuidelines(value);
+    });
+
+    ipcMain.handle('ai:getCustomSpamGuidelines', async () => {
+      return this.getCustomSpamGuidelines();
+    });
+
+    ipcMain.handle('ai:setCustomSpamGuidelines', async (event, value) => {
+      return this.setCustomSpamGuidelines(value);
     });
   }
 }

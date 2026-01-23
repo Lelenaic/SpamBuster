@@ -4,6 +4,57 @@ import { Rule } from '../types'
 import { EmailData } from '../mail/types'
 import TurndownService from 'turndown'
 
+export const DEFAULT_SPAM_GUIDELINES = `SPAM SCORE GUIDELINES:
+- 0-2 = Definitely not spam (legitimate email)
+- 3-4 = Probably not spam (minor concerns)
+- 5-6 = Unsure, could be either
+- 7-8 = Probably spam (matches user rules OR multiple strong indicators)
+- 9-10 = Definitely spam (matches user rules OR 100% fraud/phishing)
+
+DEFAULT SPAM INDICATORS (only apply when NO user rules match):
+- Unsolicited commercial promotions or ads
+- High urgency/scarcity tactics (e.g., "act now or lose!")
+- Poor grammar, all caps, excessive punctuation (!!!)
+- Suspicious/masked links or attachments
+- Generic greetings (e.g., "Dear User")
+- Requests for personal/financial info
+- Unrealistic offers (free money, prizes)
+- Phishing (fake login pages, urgent account issues)
+
+HAM SIGNALS (only apply when NO user rules match):
+- Personalized greetings or references
+- Legitimate business/receipt confirmations
+- Expected from known contacts
+- Normal grammar and professional tone
+- No suspicious links/attachments
+
+ADDITIONAL GUIDELINES FOR DEFAULT BEHAVIOR:
+- When in doubt and no rules match, classify as legitimate (ham)
+- Single weak indicators alone should not raise spam score above 3/10
+- Large brands sending legitimate communications are not spam UNLESS user rules say otherwise
+- Encoding issues alone are not a reason to mark as spam
+- Urgency combined with suspicious links/requests = high spam score
+
+EXAMPLES:
+
+Example 1 - User Rule Match:
+Email: Professional newsletter from "Zoho France <newsletter@zoho.com>" with unsubscribe link
+User Rule: "I don't want any newsletters, they're all spam"
+Score: 9/10 (spam)
+Reasoning: User explicitly defined newsletters as spam. This rule overrides the fact that it's from a legitimate company with proper formatting.
+
+Example 2 - No Rules, Legitimate:
+Email: "Hi John, meeting rescheduled to Friday due to my family emergency. Best, Sarah."
+User Rules: None match
+Score: 0/10 (ham)
+Reasoning: Personalized greeting, legitimate request, no spam indicators present.
+
+Example 3 - No Rules, Clear Spam:
+Email: "URGENT! Your account expires! Click here NOW to verify: bit.ly/fake!!!"
+User Rules: None match
+Score: 9/10 (spam)
+Reasoning: Generic urgency, suspicious shortened link, all caps, pressure tactics.`
+
 export interface SpamAnalysisResult {
   score: number // 0-10, where 0 = not spam, 10 = definitely spam
   reasoning?: string
@@ -38,7 +89,7 @@ export class SpamDetectorService {
     return await window.aiAPI.getSimplifyEmailContent()
   }
 
-  private buildPrompt(email: EmailData, rules: Rule[], shouldSimplify: boolean, similarEmails: Array<{
+  private async buildPrompt(email: EmailData, rules: Rule[], shouldSimplify: boolean, similarEmails: Array<{
     id: string;
     emailId: string;
     subject: string;
@@ -51,7 +102,7 @@ export class SpamDetectorService {
     analyzedAt: string;
     userValidated?: boolean | null;
     similarity: number;
-  }> = []): string {
+  }> = [], customizeSpamGuidelines: boolean = false, customSpamGuidelines: string = ''): Promise<string> {
     // Parse sender name and email from the 'from' field
     const nameEmailMatch = email.from.match(/^([^<]+)<([^>]+)>$/)
     let senderName: string
@@ -69,7 +120,7 @@ export class SpamDetectorService {
     // Simplify email content if enabled
     const simplifiedBody = shouldSimplify ? this.turndownService.turndown(email.body) : email.body
 
-    const basePrompt = `You are a spam email detection expert. Analyze the following email content and determine if it's spam.
+    const basePromptStart = `You are a spam email detection expert. Analyze the following email content and determine if it's spam.
 
     ═══════════════════════════════════════════════════════════════════════════════════
     🚨 CRITICAL: USER-DEFINED RULES ARE ABSOLUTE LAW 🚨
@@ -90,58 +141,13 @@ export class SpamDetectorService {
        Only if no user-defined rules apply to this email, then analyze it using standard spam detection criteria below.
     
     ═══════════════════════════════════════════════════════════════════════════════════
-    
-    SPAM SCORE GUIDELINES:
-    - 0-2 = Definitely not spam (legitimate email)
-    - 3-4 = Probably not spam (minor concerns)
-    - 5-6 = Unsure, could be either
-    - 7-8 = Probably spam (matches user rules OR multiple strong indicators)
-    - 9-10 = Definitely spam (matches user rules OR 100% fraud/phishing)
-    
-    DEFAULT SPAM INDICATORS (only apply when NO user rules match):
-    - Unsolicited commercial promotions or ads
-    - High urgency/scarcity tactics (e.g., "act now or lose!")
-    - Poor grammar, all caps, excessive punctuation (!!!)
-    - Suspicious/masked links or attachments
-    - Generic greetings (e.g., "Dear User")
-    - Requests for personal/financial info
-    - Unrealistic offers (free money, prizes)
-    - Phishing (fake login pages, urgent account issues)
-    
-    HAM SIGNALS (only apply when NO user rules match):
-    - Personalized greetings or references
-    - Legitimate business/receipt confirmations
-    - Expected from known contacts
-    - Normal grammar and professional tone
-    - No suspicious links/attachments
-    
-    ADDITIONAL GUIDELINES FOR DEFAULT BEHAVIOR:
-    - When in doubt and no rules match, classify as legitimate (ham)
-    - Single weak indicators alone should not raise spam score above 3/10
-    - Large brands sending legitimate communications are not spam UNLESS user rules say otherwise
-    - Encoding issues alone are not a reason to mark as spam
-    - Urgency combined with suspicious links/requests = high spam score
-    
-    EXAMPLES:
-    
-    Example 1 - User Rule Match:
-    Email: Professional newsletter from "Zoho France <newsletter@zoho.com>" with unsubscribe link
-    User Rule: "I don't want any newsletters, they're all spam"
-    Score: 9/10 (spam)
-    Reasoning: User explicitly defined newsletters as spam. This rule overrides the fact that it's from a legitimate company with proper formatting.
-    
-    Example 2 - No Rules, Legitimate:
-    Email: "Hi John, meeting rescheduled to Friday due to my family emergency. Best, Sarah."
-    User Rules: None match
-    Score: 0/10 (ham)
-    Reasoning: Personalized greeting, legitimate request, no spam indicators present.
-    
-    Example 3 - No Rules, Clear Spam:
-    Email: "URGENT! Your account expires! Click here NOW to verify: bit.ly/fake!!!"
-    User Rules: None match
-    Score: 9/10 (spam)
-    Reasoning: Generic urgency, suspicious shortened link, all caps, pressure tactics.
-    
+    `
+
+    const basePromptMiddle = customizeSpamGuidelines
+      ? customSpamGuidelines
+      : DEFAULT_SPAM_GUIDELINES
+
+    const basePromptEnd = `
     ═══════════════════════════════════════════════════════════════════════════════════
     USER-DEFINED RULES (check FIRST, these override everything):`
 
@@ -202,12 +208,22 @@ Respond ONLY with a valid JSON object in this exact format:
 
 Do not include any other text or formatting.`
 
-    return basePrompt + '\n' + rulesText + similarEmailsText + emailSection
+    return basePromptStart + basePromptMiddle + basePromptEnd + '\n' + rulesText + similarEmailsText + emailSection
   }
 
   async analyzeEmail(email: EmailData, rules: Rule[] = []): Promise<SpamAnalysisResult> {
     const aiService = await this.getAIService()
     const simplifyEmailContent = await this.getSimplifyEmailContent()
+
+    // Get custom spam guidelines if enabled
+    let customizeSpamGuidelines = false
+    let customSpamGuidelines = ''
+    if (typeof window !== 'undefined' && window.aiAPI) {
+      customizeSpamGuidelines = await window.aiAPI.getCustomizeSpamGuidelines()
+      if (customizeSpamGuidelines) {
+        customSpamGuidelines = await window.aiAPI.getCustomSpamGuidelines()
+      }
+    }
 
     // Get similar emails for context (if VectorDB is enabled)
     let similarEmails: Array<{
@@ -236,7 +252,7 @@ Do not include any other text or formatting.`
       }
     }
 
-    const prompt = this.buildPrompt(email, rules, simplifyEmailContent, similarEmails)
+    const prompt = await this.buildPrompt(email, rules, simplifyEmailContent, similarEmails, customizeSpamGuidelines, customSpamGuidelines)
 
     const selectedModel = await this.getSelectedModel()
     const response = await aiService.sendMessage(prompt, selectedModel)

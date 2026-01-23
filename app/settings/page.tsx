@@ -69,6 +69,8 @@ function SettingsContent() {
   const [enableVectorDB, setEnableVectorDB] = useState<boolean>(false)
   const [embedModelChangeDialogOpen, setEmbedModelChangeDialogOpen] = useState(false)
   const [pendingEmbedModel, setPendingEmbedModel] = useState<string>("")
+  const [customizeSpamGuidelines, setCustomizeSpamGuidelines] = useState<boolean>(false)
+  const [customSpamGuidelines, setCustomSpamGuidelines] = useState<string>("")
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -85,6 +87,8 @@ function SettingsContent() {
         setEnableCron(await window.aiAPI.getEnableCron())
         setCronExpression(await window.aiAPI.getCronExpression())
         setEnableVectorDB(await window.aiAPI.getEnableVectorDB())
+        setCustomizeSpamGuidelines(await window.aiAPI.getCustomizeSpamGuidelines())
+        setCustomSpamGuidelines(await window.aiAPI.getCustomSpamGuidelines())
 
         const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
@@ -464,6 +468,20 @@ function SettingsContent() {
     }
   }
 
+  const handleCustomizeSpamGuidelinesChange = async (value: boolean) => {
+    setCustomizeSpamGuidelines(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setCustomizeSpamGuidelines(value)
+    }
+  }
+
+  const handleCustomSpamGuidelinesChange = async (value: string) => {
+    setCustomSpamGuidelines(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setCustomSpamGuidelines(value)
+    }
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -531,6 +549,11 @@ function SettingsContent() {
               enableVectorDB={enableVectorDB}
               setEnableVectorDB={setEnableVectorDB}
               handleEnableVectorDBChange={handleEnableVectorDBChange}
+              customizeSpamGuidelines={customizeSpamGuidelines}
+              setCustomizeSpamGuidelines={setCustomizeSpamGuidelines}
+              customSpamGuidelines={customSpamGuidelines}
+              setCustomSpamGuidelines={setCustomSpamGuidelines}
+              handleCustomSpamGuidelinesChange={handleCustomSpamGuidelinesChange}
             />
           </TabsContent>
           <TabsContent value="mail">

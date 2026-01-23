@@ -68,6 +68,10 @@ declare global {
       validateCronExpression: (expression: string) => Promise<{ valid: boolean; error?: string | Error }>
       getEnableVectorDB: () => Promise<boolean>
       setEnableVectorDB: (value: boolean) => Promise<void>
+      getCustomizeSpamGuidelines: () => Promise<boolean>
+      setCustomizeSpamGuidelines: (value: boolean) => Promise<void>
+      getCustomSpamGuidelines: () => Promise<string>
+      setCustomSpamGuidelines: (value: string) => Promise<void>
     }
     vectorDBAPI: {
       findSimilarEmails: (queryText: string, limit?: number, accountId?: string) => Promise<Array<{

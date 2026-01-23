@@ -73,6 +73,10 @@ contextBridge.exposeInMainWorld("aiAPI", {
     validateCronExpression: (expression) => ipcRenderer.invoke('ai:validateCronExpression', expression),
     getEnableVectorDB: () => ipcRenderer.invoke('ai:getEnableVectorDB'),
     setEnableVectorDB: (value) => ipcRenderer.invoke('ai:setEnableVectorDB', value),
+    getCustomizeSpamGuidelines: () => ipcRenderer.invoke('ai:getCustomizeSpamGuidelines'),
+    setCustomizeSpamGuidelines: (value) => ipcRenderer.invoke('ai:setCustomizeSpamGuidelines', value),
+    getCustomSpamGuidelines: () => ipcRenderer.invoke('ai:getCustomSpamGuidelines'),
+    setCustomSpamGuidelines: (value) => ipcRenderer.invoke('ai:setCustomSpamGuidelines', value),
 });
 
 contextBridge.exposeInMainWorld("vectorDBAPI", {

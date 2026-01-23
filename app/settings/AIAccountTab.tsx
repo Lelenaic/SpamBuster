@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button"
 import { TabsContent } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { RefreshCw, Check, ChevronDown } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { RefreshCw, Check, ChevronDown, FileInput } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { cn } from "@/lib/utils"
+import { DEFAULT_SPAM_GUIDELINES } from "@/lib/ai/spamDetector"
 import {
   Command,
   CommandEmpty,
@@ -65,6 +69,11 @@ interface AIAccountTabProps {
   enableVectorDB: boolean
   setEnableVectorDB: (value: boolean) => void
   handleEnableVectorDBChange: (value: boolean) => Promise<void>
+  customizeSpamGuidelines: boolean
+  setCustomizeSpamGuidelines: (value: boolean) => void
+  customSpamGuidelines: string
+  setCustomSpamGuidelines: (value: string) => void
+  handleCustomSpamGuidelinesChange: (value: string) => Promise<void>
 }
 
 export default function AIAccountTab({
@@ -97,7 +106,18 @@ export default function AIAccountTab({
   enableVectorDB,
   setEnableVectorDB,
   handleEnableVectorDBChange,
+  customizeSpamGuidelines,
+  setCustomizeSpamGuidelines,
+  customSpamGuidelines,
+  setCustomSpamGuidelines,
+  handleCustomSpamGuidelinesChange,
 }: AIAccountTabProps) {
+  const handleCustomizeSpamGuidelinesChange = async (checked: boolean) => {
+    setCustomizeSpamGuidelines(checked)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setCustomizeSpamGuidelines(checked)
+    }
+  }
   return (
     <TabsContent value="ai" className="space-y-8">
       <div className="space-y-2">
@@ -224,6 +244,76 @@ export default function AIAccountTab({
           </Button>
         </div>
       )}
+      <Separator />
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold">Default AI prompt</h2>
+          <p className="text-sm text-muted-foreground">Configure how the AI evaluates emails for spam. This is the prompt sent with any email along the user-defined rules to the model. It aims to provide context and instructions for the AI to make accurate spam classifications when no user rules apply to an email in particular.</p>
+        </div>
+        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-md border border-amber-200 dark:border-amber-800">
+          <strong>Warning:</strong> Customizing spam guidelines may lead to unexpected results if not done carefully. Ensure that your guidelines are clear and comprehensive to maintain effective spam detection.
+        </p>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="customize-spam-guidelines"
+            checked={customizeSpamGuidelines}
+            onCheckedChange={(checked) => handleCustomizeSpamGuidelinesChange(checked as boolean)}
+          />
+          <Label htmlFor="customize-spam-guidelines" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Customize spam guidelines
+          </Label>
+        </div>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="default-prompt">
+            <AccordionTrigger className="text-sm">View default prompt</AccordionTrigger>
+            <AccordionContent>
+              <pre className="bg-muted p-4 rounded-md text-xs overflow-auto max-h-[400px] whitespace-pre-wrap font-mono">
+                {DEFAULT_SPAM_GUIDELINES}
+              </pre>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn(!customizeSpamGuidelines && "cursor-not-allowed")}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCustomSpamGuidelines(DEFAULT_SPAM_GUIDELINES)}
+                        className="mt-3"
+                        disabled={!customizeSpamGuidelines}
+                      >
+                        <FileInput className="h-4 w-4 mr-2" />
+                        Insert default prompt
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!customizeSpamGuidelines && (
+                    <TooltipContent>
+                      <p>Check &quot;Customize spam guidelines&quot; to insert the default prompt</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+        <div className="space-y-2">
+          <Label htmlFor="spam-guidelines">Spam Guidelines</Label>
+          <Textarea
+            id="spam-guidelines"
+            value={customSpamGuidelines}
+            onChange={(e) => setCustomSpamGuidelines(e.target.value)}
+            onBlur={() => handleCustomSpamGuidelinesChange(customSpamGuidelines)}
+            placeholder="Enter custom spam guidelines..."
+            className="min-h-[300px] font-mono text-sm"
+            disabled={!customizeSpamGuidelines}
+          />
+          <p className="text-xs text-muted-foreground">
+            {customizeSpamGuidelines
+              ? "You are now editing the spam guidelines. These will be used when analyzing emails."
+              : "Enable customization to edit the spam guidelines. Currently using default guidelines."}
+          </p>
+        </div>
+      </div>
       <Separator />
       <div className="space-y-2">
         <h2 className="text-2xl font-bold">Embedding Model Configuration</h2>
