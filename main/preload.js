@@ -71,6 +71,16 @@ contextBridge.exposeInMainWorld("aiAPI", {
     getCronExpression: () => ipcRenderer.invoke('ai:getCronExpression'),
     setCronExpression: (value) => ipcRenderer.invoke('ai:setCronExpression', value),
     validateCronExpression: (expression) => ipcRenderer.invoke('ai:validateCronExpression', expression),
+    getEnableVectorDB: () => ipcRenderer.invoke('ai:getEnableVectorDB'),
+    setEnableVectorDB: (value) => ipcRenderer.invoke('ai:setEnableVectorDB', value),
+});
+
+contextBridge.exposeInMainWorld("vectorDBAPI", {
+    findSimilarEmails: (queryText, limit, accountId) => ipcRenderer.invoke('vectorDB:findSimilarEmails', queryText, limit, accountId),
+    storeAnalyzedEmail: (emailData) => ipcRenderer.invoke('vectorDB:storeAnalyzedEmail', emailData),
+    updateUserValidation: (emailId, userValidated) => ipcRenderer.invoke('vectorDB:updateUserValidation', emailId, userValidated),
+    getEmailCount: () => ipcRenderer.invoke('vectorDB:getEmailCount'),
+    clearAllEmails: () => ipcRenderer.invoke('vectorDB:clearAllEmails'),
 });
 
 contextBridge.exposeInMainWorld("shellAPI", {

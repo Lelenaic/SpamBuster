@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { TabsContent } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
+import { Checkbox } from "@/components/ui/checkbox"
 import { RefreshCw, Check, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -61,6 +62,9 @@ interface AIAccountTabProps {
   fetchEmbedModels: () => Promise<void>
   handleEmbedModelChange: (value: string) => Promise<void>
   handleTestEmbedConnection: () => Promise<void>
+  enableVectorDB: boolean
+  setEnableVectorDB: (value: boolean) => void
+  handleEnableVectorDBChange: (value: boolean) => Promise<void>
 }
 
 export default function AIAccountTab({
@@ -90,6 +94,9 @@ export default function AIAccountTab({
   fetchEmbedModels,
   handleEmbedModelChange,
   handleTestEmbedConnection,
+  enableVectorDB,
+  setEnableVectorDB,
+  handleEnableVectorDBChange,
 }: AIAccountTabProps) {
   return (
     <TabsContent value="ai" className="space-y-8">
@@ -220,16 +227,25 @@ export default function AIAccountTab({
       <Separator />
       <div className="space-y-2">
         <h2 className="text-2xl font-bold">Embedding Model Configuration</h2>
-        <p className="text-muted-foreground">Select the embedding model that will be used to insert emails into the vector database. If you select none, the feature will be disabled.
-          <br />
-          If you&apos;re on Ollama, we recommend using the &quot;mxbai-embed-large&quot; model for best results.
-          <br />
-          If you&apos;re on OpenRouter, we recommand using the &quot;openai/text-embedding-3-large&quot; model for best results. If you prefer a cheaper model, you can use &quot;openai/text-embedding-3-small&quot; instead.
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="enable-vector-db"
+            checked={enableVectorDB}
+            onCheckedChange={handleEnableVectorDBChange}
+          />
+          <Label htmlFor="enable-vector-db" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            Enable Vector Database for improved spam detection
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          When enabled, analyzed emails are stored in a local vector database to provide contextual examples to the AI for better spam detection accuracy. Requires an embedding model to be configured.
         </p>
       </div>
-      {(aiSource === 'ollama' || aiSource === 'openrouter') && (
+      {enableVectorDB && (
         <div className="space-y-2">
-          <Label htmlFor="embed-model">Embedding Model</Label>
+          <Label htmlFor="embed-model">Embedding Model (Ollama)</Label>
           <div className="flex gap-2">
             <Popover open={embedModelComboboxOpen} onOpenChange={setEmbedModelComboboxOpen}>
               <PopoverTrigger asChild>
@@ -238,7 +254,7 @@ export default function AIAccountTab({
                   role="combobox"
                   aria-expanded={embedModelComboboxOpen}
                   className="flex-1 justify-between"
-                  disabled={loadingEmbedModels || (aiSource === 'ollama' && !ollamaBaseUrl) || (aiSource === 'openrouter' && !openRouterApiKey)}
+                  disabled={loadingEmbedModels || !ollamaBaseUrl}
                 >
                   {selectedEmbedModel
                     ? embedModels.find((model) => model === selectedEmbedModel)
@@ -277,7 +293,7 @@ export default function AIAccountTab({
             </Popover>
             <Button
               onClick={fetchEmbedModels}
-              disabled={loadingEmbedModels || (aiSource === 'ollama' && !ollamaBaseUrl) || (aiSource === 'openrouter' && !openRouterApiKey)}
+              disabled={loadingEmbedModels || !ollamaBaseUrl}
               variant="outline"
               size="icon"
             >
@@ -286,11 +302,11 @@ export default function AIAccountTab({
           </div>
         </div>
       )}
-      {(aiSource === 'ollama' || aiSource === 'openrouter') && (
+      {enableVectorDB && (
         <div className="space-y-2">
           <Button
             onClick={handleTestEmbedConnection}
-            disabled={testingEmbedConnection || (aiSource === 'ollama' && !ollamaBaseUrl) || (aiSource === 'openrouter' && !openRouterApiKey)}
+            disabled={testingEmbedConnection || !ollamaBaseUrl}
             variant="outline"
           >
             {testingEmbedConnection ? "Testing..." : "Test Embed Connection"}

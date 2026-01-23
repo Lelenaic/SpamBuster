@@ -38,7 +38,20 @@ export class SpamDetectorService {
     return await window.aiAPI.getSimplifyEmailContent()
   }
 
-  private buildPrompt(email: EmailData, rules: Rule[], shouldSimplify: boolean): string {
+  private buildPrompt(email: EmailData, rules: Rule[], shouldSimplify: boolean, similarEmails: Array<{
+    id: string;
+    emailId: string;
+    subject: string;
+    sender: string;
+    body: string;
+    score: number;
+    reasoning: string;
+    accountId: string;
+    isSpam: boolean;
+    analyzedAt: string;
+    userValidated?: boolean | null;
+    similarity: number;
+  }> = []): string {
     // Parse sender name and email from the 'from' field
     const nameEmailMatch = email.from.match(/^([^<]+)<([^>]+)>$/)
     let senderName: string
@@ -107,6 +120,26 @@ export class SpamDetectorService {
       ? rules.map(rule => `- ${rule.text}`).join('\n')
       : 'No additional rules defined.'
 
+    const similarEmailsText = similarEmails.length > 0
+      ? `\n\nFor additional context, here are some similar emails that were previously analyzed:\n\n${similarEmails.map((similar, index) => {
+
+        // Use user validation if available, otherwise use AI classification
+        const finalClassification = similar.userValidated !== undefined && similar.userValidated !== null
+          ? (similar.userValidated ? 'Spam' : 'Legitimate')
+          : (similar.isSpam ? 'Spam' : 'Legitimate');
+        const validationNote = similar.userValidated !== undefined && similar.userValidated !== null
+          ? ' (User Validated)'
+          : ' (AI Classified)';
+
+        return `Similar Email ${index + 1}:
+Subject: ${similar.subject}
+Sender: ${similar.sender}
+Spam Score: ${similar.score}/10
+Classification: ${finalClassification}${validationNote}
+Reasoning: ${similar.reasoning}`;
+      }).join('\n---\n\n')}`
+      : ''
+
     const emailSection = `\n\nEmail details:
 Sender Name: ${senderName}
 Sender Email: ${senderEmail}
@@ -126,13 +159,41 @@ Respond ONLY with a valid JSON object in this exact format:
 
 Do not include any other text or formatting.`
 
-    return basePrompt + '\n' + rulesText + emailSection
+    return basePrompt + '\n' + rulesText + similarEmailsText + emailSection
   }
 
   async analyzeEmail(email: EmailData, rules: Rule[] = []): Promise<SpamAnalysisResult> {
     const aiService = await this.getAIService()
     const simplifyEmailContent = await this.getSimplifyEmailContent()
-    const prompt = this.buildPrompt(email, rules, simplifyEmailContent)
+
+    // Get similar emails for context (if VectorDB is enabled)
+    let similarEmails: Array<{
+      id: string;
+      emailId: string;
+      subject: string;
+      sender: string;
+      body: string;
+      score: number;
+      reasoning: string;
+      accountId: string;
+      isSpam: boolean;
+      analyzedAt: string;
+      userValidated?: boolean | null;
+      similarity: number;
+    }> = []
+    if (typeof window !== 'undefined' && window.aiAPI && window.vectorDBAPI) {
+      try {
+        const enableVectorDB = await window.aiAPI.getEnableVectorDB();
+        if (enableVectorDB) {
+          const queryText = `${email.subject} ${email.body || ''}`.substring(0, 1000) // Limit query length
+          similarEmails = await window.vectorDBAPI.findSimilarEmails(queryText, 3) // Get top 3 similar emails
+        }
+      } catch (error) {
+        console.error('Failed to get similar emails:', error)
+      }
+    }
+
+    const prompt = this.buildPrompt(email, rules, simplifyEmailContent, similarEmails)
 
     const selectedModel = await this.getSelectedModel()
     const response = await aiService.sendMessage(prompt, selectedModel)

@@ -139,10 +139,18 @@ export default function Home() {
       }
     }
 
-    const handleAIAlertsDeleted = () => {
+    const handleAIAlertsDeleted = async () => {
+      // Check if there were actually AI alerts before showing toast
+      const allAlerts = await AlertsManager.list()
+      const hadAIAlderts = allAlerts.some(alert => alert.context === 'AI')
+      
       // Refresh alerts list when AI alerts are deleted
       AlertsManager.list().then(setAlerts)
-      toast.success('AI connection restored')
+      
+      // Only show toast if there were actually AI alerts being cleared
+      if (hadAIAlderts) {
+        toast.success('AI connection restored')
+      }
     }
 
     window.addEventListener('spambuster:alerts-deleted', handleAlertsDeleted)
@@ -164,6 +172,15 @@ export default function Home() {
       // Refresh the list
       const emails = await window.analyzedEmailsAPI.getAll()
       setAnalyzedEmails(emails as AnalyzedEmail[])
+
+      // Update vector database with user validation
+      if (window.vectorDBAPI) {
+        try {
+          await window.vectorDBAPI.updateUserValidation(email.emailId, true) // true = spam
+        } catch (error) {
+          console.error('Failed to update vector DB validation:', error)
+        }
+      }
 
       // Move email to spam folder
       const account = accounts.find(acc => acc.id === email.accountId)
@@ -189,6 +206,15 @@ export default function Home() {
       // Refresh the list
       const emails = await window.analyzedEmailsAPI.getAll()
       setAnalyzedEmails(emails as AnalyzedEmail[])
+
+      // Update vector database with user validation
+      if (window.vectorDBAPI) {
+        try {
+          await window.vectorDBAPI.updateUserValidation(emailId, false) // false = ham
+        } catch (error) {
+          console.error('Failed to update vector DB validation:', error)
+        }
+      }
     }
   }
 
@@ -198,6 +224,15 @@ export default function Home() {
       // Refresh the list
       const emails = await window.analyzedEmailsAPI.getAll()
       setAnalyzedEmails(emails as AnalyzedEmail[])
+
+      // Clear user validation in vector database
+      if (window.vectorDBAPI) {
+        try {
+          await window.vectorDBAPI.updateUserValidation(emailId, null) // null = clear validation
+        } catch (error) {
+          console.error('Failed to clear vector DB validation:', error)
+        }
+      }
     }
   }
 

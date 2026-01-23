@@ -312,7 +312,7 @@ export class EmailProcessorService {
           // Save analysis result
           if (typeof window !== 'undefined' && window.analyzedEmailsAPI) {
             try {
-              await window.analyzedEmailsAPI.create({
+              const analyzedEmailData = {
                 emailId: email.id,
                 subject: email.subject,
                 sender: email.from,
@@ -320,7 +320,31 @@ export class EmailProcessorService {
                 reasoning: result.reasoning,
                 accountId: account.id,
                 isSpam: isSpam
-              })
+              };
+
+              const savedEmail = await window.analyzedEmailsAPI.create(analyzedEmailData) as { id: string };
+
+              // Store in VectorDB for similarity search (if enabled)
+              if (window.aiAPI && window.vectorDBAPI && savedEmail) {
+                try {
+                  const enableVectorDB = await window.aiAPI.getEnableVectorDB();
+                  if (enableVectorDB) {
+                    await window.vectorDBAPI.storeAnalyzedEmail({
+                      id: savedEmail.id,
+                      emailId: email.id,
+                      subject: email.subject,
+                      sender: email.from,
+                      body: email.body,
+                      score: result.score,
+                      reasoning: result.reasoning || 'No reasoning provided',
+                      accountId: account.id,
+                      isSpam: isSpam
+                    });
+                  }
+                } catch (error) {
+                  console.error('Failed to store email in VectorDB:', error);
+                }
+              }
             } catch (error) {
               console.error('Failed to save analyzed email:', error)
             }

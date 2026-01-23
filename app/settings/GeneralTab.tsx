@@ -5,8 +5,13 @@ import { TabsContent } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useState } from "react"
 import { useEffect } from "react"
+import { toast } from "sonner"
+import { Trash2 } from "lucide-react"
+import { EmailProcessorService } from "@/lib/ai/emailProcessor"
 
 interface GeneralTabProps {
   aiSensitivity: number
@@ -35,6 +40,8 @@ export default function GeneralTab({
 }: GeneralTabProps) {
   const [cronValidationError, setCronValidationError] = useState<string>("")
   const [cronInputValue, setCronInputValue] = useState<string>(cronExpression)
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false)
+  const [clearVectorDB, setClearVectorDB] = useState(false)
 
   // Sync input value with prop changes
   useEffect(() => {
@@ -77,6 +84,29 @@ export default function GeneralTab({
     if (value <= 7) return "Balanced - Good balance between false positives and spam detection"
     if (value <= 8) return "Conservative - Only flags obvious spam"
     return "Very Conservative - Almost no false positives, may miss some spams"
+  }
+
+  const handleClearChecksums = async () => {
+    try {
+      if (clearVectorDB) {
+        // Clear vector database
+        await window.vectorDBAPI.clearAllEmails()
+      }
+
+      // Clear processed checksums from electron-store
+      const processor = EmailProcessorService.getExistingInstance()
+      if (processor) {
+        await processor.clearProcessedCache()
+      }
+
+      const message = clearVectorDB ? "Checksums and vector database cleared successfully" : "Checksums cleared successfully"
+      toast.success(message)
+    } catch (error) {
+      console.error("Failed to clear checksums:", error)
+      toast.error("Failed to clear checksums")
+    }
+    setIsClearDialogOpen(false)
+    setClearVectorDB(false)
   }
 
   return (
@@ -189,6 +219,45 @@ export default function GeneralTab({
               )}
             </div>
           )}
+        </div>
+
+        <div className="space-y-4 mt-10">
+          <h3 className="text-lg font-semibold">Data Management</h3>
+          <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="w-full">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear Checksums
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear Checksums</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all stored checksums of analyzed emails. You can optionally also clear the vector database to remove all stored email embeddings and analysis data. This action cannot be undone. Are you sure you want to proceed?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="flex items-center space-x-2 py-4">
+                <Checkbox
+                  id="clear-vector-db"
+                  checked={clearVectorDB}
+                  onCheckedChange={(checked) => setClearVectorDB(checked === true)}
+                />
+                <Label htmlFor="clear-vector-db" className="text-sm">
+                  Also clear vector database (removes all stored email embeddings and analysis data)
+                </Label>
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearChecksums} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Clear
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <p className="text-sm text-muted-foreground">
+            Clear all checksums of analyzed emails. This will reset the analysis history and allow re-analysis of previously processed emails.
+          </p>
         </div>
       </div>
     </TabsContent>

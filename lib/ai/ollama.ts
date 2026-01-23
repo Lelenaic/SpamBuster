@@ -30,4 +30,25 @@ export class OllamaService implements AIService {
     const response = await fetch(`${this.baseUrl}/api/version`)
     if (!response.ok) throw new Error('Failed to connect to Ollama')
   }
+
+  async generateEmbedding(text: string, model?: string): Promise<number[]> {
+    if (!model) {
+      throw new Error('Model required for embedding generation');
+    }
+    const response = await fetch(`${this.baseUrl}/api/embeddings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model,
+        prompt: text,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.embedding;
+  }
 }

@@ -11,12 +11,15 @@ const { AccountsManager } = require("./accountsManager");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { AIManager } = require("./aiManager");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+const { VectorDBManager } = require("./vectorDBManager");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getPackageInfo } = require("./packageJson");
 
 let store;
 let rulesManager;
 let accountsManager;
 let aiManager;
+let vectorDBManager;
 let mainWindow;
 let cronJob = null;
 let isQuitting = false;
@@ -27,6 +30,7 @@ async function initStore() {
   rulesManager = new RulesManager(store);
   accountsManager = new AccountsManager(store);
   aiManager = new AIManager(store);
+  vectorDBManager = new VectorDBManager(store);
 
   // Register IPC handlers
   rulesManager.registerHandlers(ipcMain);
@@ -111,6 +115,32 @@ ipcMain.handle('trigger-email-processing', async () => {
   if (mainWindow && mainWindow.webContents) {
     mainWindow.webContents.send('trigger-email-processing');
   }
+});
+
+// VectorDB handlers
+ipcMain.handle('vectorDB:findSimilarEmails', async (event, queryText, limit, accountId) => {
+  if (!vectorDBManager) throw new Error('VectorDB not initialized');
+  return await vectorDBManager.findSimilarEmails(queryText, limit, accountId);
+});
+
+ipcMain.handle('vectorDB:storeAnalyzedEmail', async (event, emailData) => {
+  if (!vectorDBManager) throw new Error('VectorDB not initialized');
+  return await vectorDBManager.storeAnalyzedEmail(emailData);
+});
+
+ipcMain.handle('vectorDB:getEmailCount', async () => {
+  if (!vectorDBManager) throw new Error('VectorDB not initialized');
+  return await vectorDBManager.getEmailCount();
+});
+
+ipcMain.handle('vectorDB:updateUserValidation', async (event, emailId, userValidated) => {
+  if (!vectorDBManager) throw new Error('VectorDB not initialized');
+  return await vectorDBManager.updateUserValidation(emailId, userValidated);
+});
+
+ipcMain.handle('vectorDB:clearAllEmails', async () => {
+  if (!vectorDBManager) throw new Error('VectorDB not initialized');
+  return await vectorDBManager.clearAllEmails();
 });
 
 ipcMain.on('open-wizard-window', () => {

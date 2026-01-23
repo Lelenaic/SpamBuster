@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { createAIService } from "@/lib/ai"
 import { Account, AccountStatus, MailProviderFactory } from "@/lib/mail"
 import { AlertsManager } from "@/lib/alerts"
@@ -65,6 +66,9 @@ function SettingsContent() {
   const [simplifyEmailContent, setSimplifyEmailContent] = useState<boolean>(true)
   const [enableCron, setEnableCron] = useState<boolean>(true)
   const [cronExpression, setCronExpression] = useState<string>("* * * * *")
+  const [enableVectorDB, setEnableVectorDB] = useState<boolean>(false)
+  const [embedModelChangeDialogOpen, setEmbedModelChangeDialogOpen] = useState(false)
+  const [pendingEmbedModel, setPendingEmbedModel] = useState<string>("")
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -80,6 +84,7 @@ function SettingsContent() {
         setSimplifyEmailContent(await window.aiAPI.getSimplifyEmailContent())
         setEnableCron(await window.aiAPI.getEnableCron())
         setCronExpression(await window.aiAPI.getCronExpression())
+        setEnableVectorDB(await window.aiAPI.getEnableVectorDB())
 
         const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
@@ -169,15 +174,17 @@ function SettingsContent() {
   }
 
   useEffect(() => {
-    if ((aiSource === 'ollama' && ollamaBaseUrl) || (aiSource === 'openrouter' && openRouterApiKey)) {
+    if (ollamaBaseUrl) {
       fetchEmbedModels()
     }
-  }, [aiSource, ollamaBaseUrl, openRouterApiKey])
+  }, [ollamaBaseUrl])
 
   const fetchEmbedModels = async () => {
     setLoadingEmbedModels(true)
     try {
-      const service = await createAIService()
+      // Always use Ollama for embeddings regardless of main AI provider
+      const { OllamaService } = await import("@/lib/ai/ollama")
+      const service = new OllamaService(ollamaBaseUrl || 'http://localhost:11434', ollamaApiKey)
       const modelNames = await service.listEmbeddingModels()
       setEmbedModels(modelNames.sort((a: string, b: string) => a.localeCompare(b)))
     } catch {
@@ -188,16 +195,67 @@ function SettingsContent() {
   }
 
   const handleEmbedModelChange = async (value: string) => {
+    // Check if VectorDB has existing data
+    if (typeof window !== "undefined" && window.vectorDBAPI && enableVectorDB) {
+      try {
+        const emailCount = await window.vectorDBAPI.getEmailCount()
+        if (emailCount > 0) {
+          // Show confirmation dialog
+          setPendingEmbedModel(value)
+          setEmbedModelChangeDialogOpen(true)
+          return
+        }
+      } catch (error) {
+        console.error('Failed to check vector DB count:', error)
+      }
+    }
+
+    // No existing data or error, proceed normally
+    await applyEmbedModelChange(value)
+  }
+
+  const applyEmbedModelChange = async (value: string) => {
     setSelectedEmbedModel(value)
     if (typeof window !== "undefined" && window.aiAPI) {
       await window.aiAPI.setSelectedEmbedModel(value)
     }
   }
 
+  const confirmEmbedModelChange = async () => {
+    if (pendingEmbedModel) {
+      // Clear the vector database
+      if (typeof window !== "undefined" && window.vectorDBAPI) {
+        try {
+          await window.vectorDBAPI.clearAllEmails()
+          toast.success('Vector database cleared successfully')
+        } catch (error) {
+          console.error('Failed to clear vector database:', error)
+          toast.error('Failed to clear vector database')
+          setEmbedModelChangeDialogOpen(false)
+          setPendingEmbedModel("")
+          return
+        }
+      }
+
+      // Apply the model change
+      await applyEmbedModelChange(pendingEmbedModel)
+      toast.success('Embedding model changed successfully')
+    }
+    setEmbedModelChangeDialogOpen(false)
+    setPendingEmbedModel("")
+  }
+
+  const cancelEmbedModelChange = () => {
+    setEmbedModelChangeDialogOpen(false)
+    setPendingEmbedModel("")
+  }
+
   const handleTestEmbedConnection = async () => {
     setTestingEmbedConnection(true)
     try {
-      const service = await createAIService()
+      // Always test Ollama connection for embeddings
+      const { OllamaService } = await import("@/lib/ai/ollama")
+      const service = new OllamaService(ollamaBaseUrl || 'http://localhost:11434', ollamaApiKey)
       await service.testConnection()
       toast.success('Embedding connection successful')
     } catch (error) {
@@ -381,6 +439,13 @@ function SettingsContent() {
     }
   }
 
+  const handleEnableVectorDBChange = async (value: boolean) => {
+    setEnableVectorDB(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setEnableVectorDB(value)
+    }
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -445,6 +510,9 @@ function SettingsContent() {
               fetchEmbedModels={fetchEmbedModels}
               handleEmbedModelChange={handleEmbedModelChange}
               handleTestEmbedConnection={handleTestEmbedConnection}
+              enableVectorDB={enableVectorDB}
+              setEnableVectorDB={setEnableVectorDB}
+              handleEnableVectorDBChange={handleEnableVectorDBChange}
             />
           </TabsContent>
           <TabsContent value="mail">
@@ -481,6 +549,24 @@ function SettingsContent() {
           </TabsContent>
         </div>
       </Tabs>
+
+      <AlertDialog open={embedModelChangeDialogOpen} onOpenChange={setEmbedModelChangeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Embedding Model</AlertDialogTitle>
+            <AlertDialogDescription>
+              Changing the embedding model will reset your vector database because different models produce vectors with different dimensions.
+              This will clear all previously analyzed emails from the database, and you will need to analyze new emails to rebuild the knowledge base.
+              <br /><br />
+              Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelEmbedModelChange}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmEmbedModelChange}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

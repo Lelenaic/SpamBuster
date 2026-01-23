@@ -91,6 +91,14 @@ class AIManager {
     this.store.set('cronExpression', value);
   }
 
+  getEnableVectorDB() {
+    return this.store.get('enableVectorDB', false);
+  }
+
+  setEnableVectorDB(value) {
+    this.store.set('enableVectorDB', value);
+  }
+
   validateCronExpression(expression) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -193,6 +201,14 @@ class AIManager {
 
     ipcMain.handle('ai:validateCronExpression', async (event, expression) => {
       return this.validateCronExpression(expression);
+    });
+
+    ipcMain.handle('ai:getEnableVectorDB', async () => {
+      return this.getEnableVectorDB();
+    });
+
+    ipcMain.handle('ai:setEnableVectorDB', async (event, value) => {
+      return this.setEnableVectorDB(value);
     });
   }
 }

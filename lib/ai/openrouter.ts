@@ -44,6 +44,35 @@ export class OpenRouterService implements AIService {
     return data.choices[0].message.content
   }
 
+  async generateEmbedding(text: string, model?: string): Promise<number[]> {
+    if (!model) {
+      throw new Error('Model required for embedding generation');
+    }
+    const response = await fetch(`${this.baseUrl}/embeddings`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model,
+        input: text,
+      }),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenRouter API error response:', errorText);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+    }
+    const data = await response.json();
+    console.log('OpenRouter API response:', JSON.stringify(data, null, 2));
+    if (!data.data || !data.data[0] || !data.data[0].embedding) {
+      console.error('Unexpected OpenRouter API response structure:', data);
+      throw new Error('Invalid response structure from OpenRouter API');
+    }
+    return data.data[0].embedding;
+  }
+
   async testConnection(): Promise<void> {
     const response = await fetch(`${this.baseUrl}/key`, {
       headers: {

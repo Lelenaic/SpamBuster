@@ -114,16 +114,13 @@ export class AlertsManager {
     // Check if alert already exists for this account
     const existing = await this.existsForAccount(accountName);
     if (existing) {
-      console.log(`[DEBUG] Alert already exists for ${accountName}, skipping creation`);
       return null;
     }
 
     // Delete any existing alerts for this account first (cleanup)
     // Pass skipEvent=true to prevent "Connection restored" toast when we're about to create a new error
-    console.log(`[DEBUG] Deleting alerts for ${accountName} (skipping event)`);
     await this.deleteByAccount(accountName, true);
 
-    console.log(`[DEBUG] Creating new connection error alert for: ${accountName}`);
     return this.create({
       type: 'error',
       user: accountName,
@@ -140,11 +137,9 @@ export class AlertsManager {
     // Check if AI alert already exists
     const existing = await this.existsForAI();
     if (existing) {
-      console.log(`[DEBUG] AI alert already exists, skipping creation`);
       return null;
     }
 
-    console.log(`[DEBUG] Creating new AI error alert`);
     return this.create({
       type: 'error',
       user: 'AI Provider',

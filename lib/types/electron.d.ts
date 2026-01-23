@@ -66,6 +66,38 @@ declare global {
       getCronExpression: () => Promise<string>
       setCronExpression: (value: string) => Promise<void>
       validateCronExpression: (expression: string) => Promise<{ valid: boolean; error?: string | Error }>
+      getEnableVectorDB: () => Promise<boolean>
+      setEnableVectorDB: (value: boolean) => Promise<void>
+    }
+    vectorDBAPI: {
+      findSimilarEmails: (queryText: string, limit?: number, accountId?: string) => Promise<Array<{
+        id: string;
+        emailId: string;
+        subject: string;
+        sender: string;
+        body: string;
+        score: number;
+        reasoning: string;
+        accountId: string;
+        isSpam: boolean;
+        analyzedAt: string;
+        userValidated?: boolean | null;
+        similarity: number;
+      }>>;
+      storeAnalyzedEmail: (emailData: {
+        id: string;
+        emailId: string;
+        subject: string;
+        sender: string;
+        body: string;
+        score: number;
+        reasoning: string;
+        accountId: string;
+        isSpam: boolean;
+      }) => Promise<void>;
+      updateUserValidation: (emailId: string, userValidated: boolean | null) => Promise<void>;
+      getEmailCount: () => Promise<number>;
+      clearAllEmails: () => Promise<void>;
     }
     shellAPI: {
       openExternal: (url: string) => Promise<void>
