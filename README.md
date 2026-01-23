@@ -19,6 +19,7 @@ Uses OpenRouter or Ollama to classify emails based on your custom anti-spam rule
 - **Custom Rules**: Configure rules sent to AI for intelligent spam filtering.
 - **Cross-Platform**: Electron builds for macOS (DMG), Windows (NSIS), Linux (AppImage, Snap).
 - **Modern UI**: Shadcn UI components, Tailwind CSS, Lucide React icons, Sonner toasts.
+- **Vector database**: LanceDB included to match with previous analyzed emails for a better analyzis
 
 ## 🚀 Installation
 
