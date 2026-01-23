@@ -70,16 +70,35 @@ export class SpamDetectorService {
     const simplifiedBody = shouldSimplify ? this.turndownService.turndown(email.body) : email.body
 
     const basePrompt = `You are a spam email detection expert. Analyze the following email content and determine if it's spam.
-    Only classify as spam if the main intent is unwanted commercial promotion, fraud, or phishing. Messages that are informal, have typos, or mention typical spam topics are not spam if they look like normal human conversation.
-    When in doubt, classify as legitimate (ham). Avoid calling a message spam unless there are multiple strong indicators.
-    Single weak indicators like minor grammar mistakes or a generic greeting alone should not raise the spam score above 3/10.
 
-    Your task is to provide a spam score from 0 to 10, where:
-    - 0 = Definitely not spam (legitimate email)
-    - 5 = Unsure, could be either
-    - 10 = Definitely spam (100% sure it's spam)
-
-    Spam indicators (check ALL, but weigh context):
+    ═══════════════════════════════════════════════════════════════════════════════════
+    🚨 CRITICAL: USER-DEFINED RULES ARE ABSOLUTE LAW 🚨
+    ═══════════════════════════════════════════════════════════════════════════════════
+    
+    MANDATORY RULE HIERARCHY:
+    
+    1. **USER-DEFINED RULES OVERRIDE EVERYTHING** - If a user rule matches the email, that rule determines the classification. Period. No exceptions.
+       - If a rule says "newsletters are spam", then ALL newsletters are spam with score 8-10/10
+       - If a rule says "emails from domain X are spam", then they are spam with score 8-10/10
+       - If a rule says "emails containing keyword Y are spam", then they are spam with score 8-10/10
+       - It does NOT matter if the email is from a legitimate company
+       - It does NOT matter if the email has proper unsubscribe links
+       - It does NOT matter if the email is professionally formatted
+       - USER RULES = ABSOLUTE TRUTH
+    
+    2. **DEFAULT BEHAVIOR (only when NO user rules match):**
+       Only if no user-defined rules apply to this email, then analyze it using standard spam detection criteria below.
+    
+    ═══════════════════════════════════════════════════════════════════════════════════
+    
+    SPAM SCORE GUIDELINES:
+    - 0-2 = Definitely not spam (legitimate email)
+    - 3-4 = Probably not spam (minor concerns)
+    - 5-6 = Unsure, could be either
+    - 7-8 = Probably spam (matches user rules OR multiple strong indicators)
+    - 9-10 = Definitely spam (matches user rules OR 100% fraud/phishing)
+    
+    DEFAULT SPAM INDICATORS (only apply when NO user rules match):
     - Unsolicited commercial promotions or ads
     - High urgency/scarcity tactics (e.g., "act now or lose!")
     - Poor grammar, all caps, excessive punctuation (!!!)
@@ -88,54 +107,78 @@ export class SpamDetectorService {
     - Requests for personal/financial info
     - Unrealistic offers (free money, prizes)
     - Phishing (fake login pages, urgent account issues)
-
-    ALSO consider ham signals:
+    
+    HAM SIGNALS (only apply when NO user rules match):
     - Personalized greetings or references
     - Legitimate business/receipt confirmations
     - Expected from known contacts
     - Normal grammar and professional tone
     - No suspicious links/attachments
-
-    Urgency alone is not enough; combine urgency with suspicious links or sensitive data requests to consider high spam.
-
-    Large brands (e.g., banks, SaaS tools) sending password-reset or invoice emails are often legitimate; only score high if the email requests credentials on an external/non-brand domain.
-
-    If the email contains realistic order numbers, invoice IDs, and consistent branding, treat it as more likely legitimate unless links look deceptive.
-
-    Take into account that encoding issues can happend, this must not be a sole reason to consider an email as spam.
-
-    Examples:
-
-    Email 1: "Hi John, meeting rescheduled to Friday due to my family emergency. Best, Sarah."
-    Reasoning: Personalized greeting, legitimate request, no indicators present.
-    Score: 0 (ham)
-
-    Email 2: "URGENT! Your account expires! Click here NOW to verify: bit.ly/fake!!!"
+    
+    ADDITIONAL GUIDELINES FOR DEFAULT BEHAVIOR:
+    - When in doubt and no rules match, classify as legitimate (ham)
+    - Single weak indicators alone should not raise spam score above 3/10
+    - Large brands sending legitimate communications are not spam UNLESS user rules say otherwise
+    - Encoding issues alone are not a reason to mark as spam
+    - Urgency combined with suspicious links/requests = high spam score
+    
+    EXAMPLES:
+    
+    Example 1 - User Rule Match:
+    Email: Professional newsletter from "Zoho France <newsletter@zoho.com>" with unsubscribe link
+    User Rule: "I don't want any newsletters, they're all spam"
+    Score: 9/10 (spam)
+    Reasoning: User explicitly defined newsletters as spam. This rule overrides the fact that it's from a legitimate company with proper formatting.
+    
+    Example 2 - No Rules, Legitimate:
+    Email: "Hi John, meeting rescheduled to Friday due to my family emergency. Best, Sarah."
+    User Rules: None match
+    Score: 0/10 (ham)
+    Reasoning: Personalized greeting, legitimate request, no spam indicators present.
+    
+    Example 3 - No Rules, Clear Spam:
+    Email: "URGENT! Your account expires! Click here NOW to verify: bit.ly/fake!!!"
+    User Rules: None match
+    Score: 9/10 (spam)
     Reasoning: Generic urgency, suspicious shortened link, all caps, pressure tactics.
-    Score: 9 (spam)
-
-    Additional user-defined rules that are an absolute priority above all the other criteria:`
+    
+    ═══════════════════════════════════════════════════════════════════════════════════
+    USER-DEFINED RULES (check FIRST, these override everything):`
 
     const rulesText = rules.length > 0
       ? rules.map(rule => `- ${rule.text}`).join('\n')
       : 'No additional rules defined.'
 
     const similarEmailsText = similarEmails.length > 0
-      ? `\n\nFor additional context, here are some similar emails that were previously analyzed:\n\n${similarEmails.map((similar, index) => {
+      ? `\n\nFor additional context, here are some similar emails that were previously analyzed, less important than the user-defined rules:\n\n${similarEmails.map((similar, index) => {
 
-        // Use user validation if available, otherwise use AI classification
-        const finalClassification = similar.userValidated !== undefined && similar.userValidated !== null
-          ? (similar.userValidated ? 'Spam' : 'Legitimate')
-          : (similar.isSpam ? 'Spam' : 'Legitimate');
-        const validationNote = similar.userValidated !== undefined && similar.userValidated !== null
-          ? ' (User Validated)'
-          : ' (AI Classified)';
+        // Determine if user confirmed or corrected the AI's classification
+        let userValidationNote = '';
+        let confirmationStatus = '';
+        
+        if (similar.userValidated !== undefined && similar.userValidated !== null) {
+          const aiClassification = similar.isSpam ? 'spam' : 'legitimate';
+          const userClassification = similar.userValidated ? 'spam' : 'legitimate';
+          
+          if (similar.isSpam === similar.userValidated) {
+            // User confirmed the AI's classification
+            confirmationStatus = 'CONFIRMED';
+            userValidationNote = ` (User CONFIRMED: AI classified as ${aiClassification}, user agreed with this classification. The AI score is VALID and can be trusted.)`;
+          } else {
+            // User corrected the AI's classification
+            confirmationStatus = 'CORRECTED';
+            userValidationNote = ` (User CORRECTED: AI classified as ${aiClassification}, but user marked it as ${userClassification}. The AI score is INVALID and should be considered incorrect.)`;
+          }
+        } else {
+          confirmationStatus = 'AI_ONLY';
+          userValidationNote = ' (No user validation: Only AI classified this email)';
+        }
 
         return `Similar Email ${index + 1}:
 Subject: ${similar.subject}
 Sender: ${similar.sender}
 Spam Score: ${similar.score}/10
-Classification: ${finalClassification}${validationNote}
+Classification: ${similar.isSpam ? 'Spam' : 'Legitimate'}${userValidationNote}
 Reasoning: ${similar.reasoning}`;
       }).join('\n---\n\n')}`
       : ''
