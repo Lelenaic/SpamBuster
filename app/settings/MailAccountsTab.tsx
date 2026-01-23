@@ -2,6 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { TabsContent } from "@/components/ui/tabs"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { RefreshCw, Trash2, Edit, Power } from "lucide-react"
 import {
   AlertDialog,
@@ -107,15 +113,23 @@ export default function MailAccountsTab({
           <p className="text-muted-foreground">No mail accounts configured.</p>
         ) : (
           <div className="space-y-4">
-            {mailAccounts.map(account => (
-              <div key={account.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <span className={`w-2 h-2 rounded-full ${getStatusColor(account.status)}`}></span>
-                  <div>
-                    <p className="font-medium">{account.name || account.config.username}</p>
-                    <p className="text-sm text-muted-foreground">{account.type.toUpperCase()} - Status: {account.status}</p>
+            <TooltipProvider>
+              {mailAccounts.map(account => (
+                <div key={account.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`w-2 h-2 rounded-full ${getStatusColor(account.status)} cursor-help`}></span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Status: {account.status}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <div>
+                      <p className="font-medium">{account.name || account.config.username}</p>
+                      <p className="text-sm text-muted-foreground">{account.type.toUpperCase()} - {account.status}</p>
+                    </div>
                   </div>
-                </div>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -144,7 +158,8 @@ export default function MailAccountsTab({
                   </Button>
                 </div>
               </div>
-            ))}
+              ))}
+            </TooltipProvider>
           </div>
         )}
       </TabsContent>
