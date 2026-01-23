@@ -227,6 +227,9 @@ export default function AIAccountTab({
       <Separator />
       <div className="space-y-2">
         <h2 className="text-2xl font-bold">Embedding Model Configuration</h2>
+        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-md border border-amber-200 dark:border-amber-800">
+          <strong>Note:</strong> Embeddings require Ollama to be installed and running. Then configure it from the settings above. You can still use OpenRouter or any other provider, just configure Ollama and then change.
+        </p>
       </div>
       <div className="space-y-2">
         <div className="flex items-center space-x-2">

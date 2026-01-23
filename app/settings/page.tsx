@@ -440,6 +440,24 @@ function SettingsContent() {
   }
 
   const handleEnableVectorDBChange = async (value: boolean) => {
+    // If trying to enable, first verify Ollama is running
+    if (value) {
+      if (!ollamaBaseUrl) {
+        toast.error('Please configure Ollama Base URL first')
+        return
+      }
+      
+      try {
+        // Test Ollama connection
+        const { OllamaService } = await import("@/lib/ai/ollama")
+        const service = new OllamaService(ollamaBaseUrl, ollamaApiKey)
+        await service.testConnection()
+      } catch (error) {
+        toast.error(`Cannot enable Vector Database: Ollama is not running. Please configure Ollama from the settings above and ensure it's running on ${ollamaBaseUrl}`)
+        return
+      }
+    }
+    
     setEnableVectorDB(value)
     if (typeof window !== "undefined" && window.aiAPI) {
       await window.aiAPI.setEnableVectorDB(value)
