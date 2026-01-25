@@ -20,7 +20,6 @@ function SettingsContent() {
 
   const [aiSource, setAiSource] = useState<string>("ollama")
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState<string>("http://localhost:11434")
-  const [ollamaApiKey, setOllamaApiKey] = useState<string>("")
   const [openRouterApiKey, setOpenRouterApiKey] = useState<string>("")
   const [selectedModel, setSelectedModel] = useState<string>("")
 
@@ -77,7 +76,6 @@ function SettingsContent() {
       if (typeof window !== "undefined" && window.aiAPI) {
         setAiSource(await window.aiAPI.getAISource())
         setOllamaBaseUrl(await window.aiAPI.getOllamaBaseUrl())
-        setOllamaApiKey(await window.aiAPI.getOllamaApiKey())
         setOpenRouterApiKey(await window.aiAPI.getOpenRouterApiKey())
         setSelectedModel(await window.aiAPI.getSelectedModel())
         setSelectedEmbedModel(await window.aiAPI.getSelectedEmbedModel())
@@ -121,13 +119,6 @@ function SettingsContent() {
     setOllamaBaseUrl(value)
     if (typeof window !== "undefined" && window.aiAPI) {
       await window.aiAPI.setOllamaBaseUrl(value)
-    }
-  }
-
-  const handleOllamaApiKeyChange = async (value: string) => {
-    setOllamaApiKey(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setOllamaApiKey(value)
     }
   }
 
@@ -188,7 +179,7 @@ function SettingsContent() {
     try {
       // Always use Ollama for embeddings regardless of main AI provider
       const { OllamaService } = await import("@/lib/ai/ollama")
-      const service = new OllamaService(ollamaBaseUrl || 'http://localhost:11434', ollamaApiKey)
+      const service = new OllamaService(ollamaBaseUrl || 'http://localhost:11434')
       const modelNames = await service.listEmbeddingModels()
       setEmbedModels(modelNames.sort((a: string, b: string) => a.localeCompare(b)))
     } catch {
@@ -259,7 +250,7 @@ function SettingsContent() {
     try {
       // Always test Ollama connection for embeddings
       const { OllamaService } = await import("@/lib/ai/ollama")
-      const service = new OllamaService(ollamaBaseUrl || 'http://localhost:11434', ollamaApiKey)
+      const service = new OllamaService(ollamaBaseUrl || 'http://localhost:11434')
       await service.testConnection()
       toast.success('Embedding connection successful')
     } catch (error) {
@@ -454,10 +445,10 @@ function SettingsContent() {
       try {
         // Test Ollama connection
         const { OllamaService } = await import("@/lib/ai/ollama")
-        const service = new OllamaService(ollamaBaseUrl, ollamaApiKey)
+        const service = new OllamaService(ollamaBaseUrl)
         await service.testConnection()
       } catch (error) {
-        toast.error(`Cannot enable Vector Database: Ollama is not running. Please configure Ollama from the settings above and ensure it's running on ${ollamaBaseUrl}`)
+        toast.error(`Cannot enable Vector Database: ${error instanceof Error ? error.message : 'Unknown error'}`)
         return
       }
     }
@@ -512,8 +503,6 @@ function SettingsContent() {
               setAiSource={setAiSource}
               ollamaBaseUrl={ollamaBaseUrl}
               setOllamaBaseUrl={setOllamaBaseUrl}
-              ollamaApiKey={ollamaApiKey}
-              setOllamaApiKey={setOllamaApiKey}
               openRouterApiKey={openRouterApiKey}
               setOpenRouterApiKey={setOpenRouterApiKey}
               selectedModel={selectedModel}
@@ -538,7 +527,6 @@ function SettingsContent() {
               setTestingEmbedConnection={setTestingEmbedConnection}
               handleAiSourceChange={handleAiSourceChange}
               handleOllamaBaseUrlChange={handleOllamaBaseUrlChange}
-              handleOllamaApiKeyChange={handleOllamaApiKeyChange}
               handleOpenRouterApiKeyChange={handleOpenRouterApiKeyChange}
               fetchModels={fetchModels}
               handleModelChange={handleModelChange}

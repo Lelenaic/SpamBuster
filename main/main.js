@@ -21,6 +21,7 @@ let accountsManager;
 let aiManager;
 let vectorDBManager;
 let mainWindow;
+let wizardWindow;  // Add reference to wizard window
 let cronJob = null;
 let isQuitting = false;
 
@@ -156,6 +157,13 @@ ipcMain.on('open-wizard-window', () => {
   createWizardWindow();
 });
 
+ipcMain.on('wizard-closed', () => {
+  if (wizardWindow) {
+    wizardWindow.close();
+    wizardWindow = null;
+  }
+});
+
 // Processing events - forward events from main to renderer
 // These handlers receive events from the main thread and forward to the renderer
 ipcMain.on('processing:stats-update', (event, data) => {
@@ -215,7 +223,12 @@ const createWindow = () => {
 }
 
 const createWizardWindow = () => {
-  const win = new BrowserWindow({
+  if (wizardWindow) {
+    wizardWindow.focus();
+    return;
+  }
+  
+  wizardWindow = new BrowserWindow({
     width: 1250,
     height: 940,
     webPreferences: {
@@ -223,18 +236,22 @@ const createWizardWindow = () => {
     }
   });
 
+  wizardWindow.on('closed', () => {
+    wizardWindow = null;
+  });
+
   if (app.isPackaged) {
     if (appServe) {
       // Set up the protocol handler first
-      appServe(win);
+      appServe(wizardWindow);
       // Then load the wizard page using the app:// protocol
-      win.loadURL('app://-/wizard.html');
+      wizardWindow.loadURL('app://-/wizard.html');
     }
   } else {
-    win.loadURL("http://localhost:3000/wizard");
-    win.webContents.openDevTools();
-    win.webContents.on("did-fail-load", () => {
-      win.webContents.reloadIgnoringCache();
+    wizardWindow.loadURL("http://localhost:3000/wizard");
+    wizardWindow.webContents.openDevTools();
+    wizardWindow.webContents.on("did-fail-load", () => {
+      wizardWindow.webContents.reloadIgnoringCache();
     });
   }
 }

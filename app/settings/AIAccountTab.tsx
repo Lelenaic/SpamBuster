@@ -32,8 +32,6 @@ interface AIAccountTabProps {
   setAiSource: (value: string) => void
   ollamaBaseUrl: string
   setOllamaBaseUrl: (value: string) => void
-  ollamaApiKey: string
-  setOllamaApiKey: (value: string) => void
   openRouterApiKey: string
   setOpenRouterApiKey: (value: string) => void
   selectedModel: string
@@ -58,7 +56,6 @@ interface AIAccountTabProps {
   setTestingEmbedConnection: (testing: boolean) => void
   handleAiSourceChange: (value: string) => Promise<void>
   handleOllamaBaseUrlChange: (value: string) => Promise<void>
-  handleOllamaApiKeyChange: (value: string) => Promise<void>
   handleOpenRouterApiKeyChange: (value: string) => Promise<void>
   fetchModels: () => Promise<void>
   handleModelChange: (value: string) => Promise<void>
@@ -79,7 +76,6 @@ interface AIAccountTabProps {
 export default function AIAccountTab({
   aiSource,
   ollamaBaseUrl,
-  ollamaApiKey,
   openRouterApiKey,
   selectedModel,
   models,
@@ -95,7 +91,6 @@ export default function AIAccountTab({
   testingEmbedConnection,
   handleAiSourceChange,
   handleOllamaBaseUrlChange,
-  handleOllamaApiKeyChange,
   handleOpenRouterApiKeyChange,
   fetchModels,
   handleModelChange,
@@ -146,16 +141,6 @@ export default function AIAccountTab({
               placeholder="http://localhost:11434"
               value={ollamaBaseUrl}
               onChange={(e) => handleOllamaBaseUrlChange(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ollama-api-key">Ollama API Key (Optional)</Label>
-            <Input
-              id="ollama-api-key"
-              type="password"
-              placeholder="Enter API key"
-              value={ollamaApiKey}
-              onChange={(e) => handleOllamaApiKeyChange(e.target.value)}
             />
           </div>
         </div>

@@ -1,7 +1,11 @@
 import { AIService } from './types'
 
 export class OllamaService implements AIService {
-  constructor(private baseUrl: string, private apiKey?: string) {}
+  constructor(private baseUrl: string) {}
+
+  static getProviderName(): string {
+    return 'Ollama (Local)';
+  }
 
   async listModels(): Promise<string[]> {
     const response = await fetch(`${this.baseUrl}/api/tags`)
@@ -26,9 +30,23 @@ export class OllamaService implements AIService {
     return data.response
   }
 
-  async testConnection(): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/version`)
-    if (!response.ok) throw new Error('Failed to connect to Ollama')
+  async testConnection(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/version`);
+      if (!response.ok) {
+        throw new Error('Ollama service unreachable');
+      }
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Ollama service unreachable') {
+        throw error;
+      }
+      throw new Error('Ollama service unreachable');
+    }
+  }
+
+  isConfigured(): boolean {
+    return !!this.baseUrl && this.baseUrl.length > 0;
   }
 
   async generateEmbedding(text: string, model?: string): Promise<number[]> {

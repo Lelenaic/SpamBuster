@@ -3,6 +3,10 @@ import { AIService } from './types'
 export class OpenRouterService implements AIService {
   constructor(private apiKey: string, private baseUrl: string = 'https://openrouter.ai/api/v1') {}
 
+  static getProviderName(): string {
+    return "OpenRouter (Cloud)";
+  }
+
   async listModels(): Promise<string[]> {
     const response = await fetch(`${this.baseUrl}/models`, {
       headers: {
@@ -73,13 +77,33 @@ export class OpenRouterService implements AIService {
     return data.data[0].embedding;
   }
 
-  async testConnection(): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/key`, {
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
+  async testConnection(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/key`, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status === 401) {
+        throw new Error('Invalid API key');
       }
-    })
-    if (!response.ok) throw new Error('Failed to connect to OpenRouter')
+      
+      if (!response.ok) {
+        throw new Error('Service unreachable');
+      }
+      
+      return true;
+    } catch (error) {
+      if (error instanceof Error && (error.message === 'Invalid API key' || error.message === 'Service unreachable')) {
+        throw error;
+      }
+      throw new Error('Service unreachable');
+    }
+  }
+
+  isConfigured(): boolean {
+    return !!this.apiKey && this.apiKey.length > 0;
   }
 }

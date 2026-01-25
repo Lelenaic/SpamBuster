@@ -160,7 +160,6 @@ export class SpamDetectorService {
 
         // Determine if user confirmed or corrected the AI's classification
         let userValidationNote = '';
-        let confirmationStatus = '';
         
         if (similar.userValidated !== undefined && similar.userValidated !== null) {
           const aiClassification = similar.isSpam ? 'spam' : 'legitimate';
@@ -168,15 +167,12 @@ export class SpamDetectorService {
           
           if (similar.isSpam === similar.userValidated) {
             // User confirmed the AI's classification
-            confirmationStatus = 'CONFIRMED';
             userValidationNote = ` (User CONFIRMED: AI classified as ${aiClassification}, user agreed with this classification. The AI score is VALID and can be trusted.)`;
           } else {
             // User corrected the AI's classification
-            confirmationStatus = 'CORRECTED';
             userValidationNote = ` (User CORRECTED: AI classified as ${aiClassification}, but user marked it as ${userClassification}. The AI score is INVALID and should be considered incorrect.)`;
           }
         } else {
-          confirmationStatus = 'AI_ONLY';
           userValidationNote = ' (No user validation: Only AI classified this email)';
         }
 
@@ -255,23 +251,38 @@ Do not include any other text or formatting.`
     const prompt = await this.buildPrompt(email, rules, simplifyEmailContent, similarEmails, customizeSpamGuidelines, customSpamGuidelines)
 
     const selectedModel = await this.getSelectedModel()
-    const response = await aiService.sendMessage(prompt, selectedModel)
+    
+    // Retry logic: up to 3 attempts
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await aiService.sendMessage(prompt, selectedModel)
 
-    // Extract JSON from response using regex (handles AI models that add comments)
-    const jsonMatch = response.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('No valid JSON found in AI response')
-    }
-    const result = JSON.parse(jsonMatch[0])
+        // Extract JSON from response using regex (handles AI models that add comments)
+        const jsonMatch = response.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) {
+          throw new Error('No valid JSON found in AI response')
+        }
+        const result = JSON.parse(jsonMatch[0])
 
-    // Validate the response structure
-    if (typeof result.score !== 'number' || result.score < 0 || result.score > 10) {
-      throw new Error('Invalid spam score in AI response')
+        // Validate the response structure
+        if (typeof result.score !== 'number' || result.score < 0 || result.score > 10) {
+          throw new Error('Invalid spam score in AI response')
+        }
+
+        return {
+          score: Math.round(result.score), // Ensure it's an integer
+          reasoning: result.reasoning || 'No reasoning provided'
+        }
+      } catch (error) {
+        if (attempt === 3) {
+          // After 3 attempts, re-throw the error to skip the email
+          throw error
+        }
+        // Continue to next attempt
+      }
     }
 
-    return {
-      score: Math.round(result.score), // Ensure it's an integer
-      reasoning: result.reasoning || 'No reasoning provided'
-    }
+    // This should never be reached, but TypeScript requires it
+    throw new Error('Unexpected error in analyzeEmail retry logic')
   }
 }

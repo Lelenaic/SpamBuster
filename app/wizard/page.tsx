@@ -4,6 +4,7 @@ import { useState } from "react";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { AccountSelectionStep } from "./steps/AccountSelectionStep";
 import { ImapSettingsStep } from "./steps/ImapSettingsStep";
+import { AIConfigurationStep } from "./steps/AIConfigurationStep";
 
 export default function WizardPage() {
   const [step, setStep] = useState(0);
@@ -22,6 +23,12 @@ export default function WizardPage() {
     handleNext();
   };
 
+  const handleCloseWizard = () => {
+    if (typeof window !== "undefined" && window.electronAPI) {
+      window.electronAPI.send('wizard-closed');
+    }
+  };
+
   switch (step) {
     case 0:
       return <WelcomeStep onNext={handleNext} />;
@@ -32,6 +39,8 @@ export default function WizardPage() {
         return <ImapSettingsStep onBack={handleBack} onNext={handleNext} />;
       }
       return null;
+    case 3:
+      return <AIConfigurationStep onClose={handleCloseWizard} />;
     default:
       return null;
   }

@@ -3,5 +3,6 @@ export interface AIService {
   listEmbeddingModels(): Promise<string[]>
   sendMessage(message: string, model?: string): Promise<string>
   generateEmbedding(text: string, model?: string): Promise<number[]>
-  testConnection(): Promise<void>
+  testConnection(): Promise<boolean>
+  isConfigured(): boolean
 }

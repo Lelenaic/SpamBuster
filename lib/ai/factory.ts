@@ -12,8 +12,7 @@ export async function createAIService(): Promise<AIService> {
   switch (aiSource) {
     case 'ollama':
       const ollamaBaseUrl = await window.aiAPI.getOllamaBaseUrl()
-      const ollamaApiKey = await window.aiAPI.getOllamaApiKey()
-      return new OllamaService(ollamaBaseUrl || 'http://localhost:11434', ollamaApiKey)
+      return new OllamaService(ollamaBaseUrl || 'http://localhost:11434')
     case 'openrouter':
       const openRouterApiKey = await window.aiAPI.getOpenRouterApiKey()
       if (!openRouterApiKey) throw new Error('API key required for OpenRouter')
