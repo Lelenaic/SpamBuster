@@ -15,6 +15,7 @@ import { EmailProcessorService } from '@/lib/ai/emailProcessor'
 import { Account } from '@/lib/mail/types'
 import { Rule } from '@/lib/types'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface AnalyzedEmail {
   id: string
@@ -284,21 +285,25 @@ export default function Home() {
             <p className="text-muted-foreground">No emails analyzed yet.</p>
           ) : (
             <Accordion type="single" collapsible className="w-full">
-              {analyzedEmails.slice(-10).reverse().map((email) => (
+              {analyzedEmails.slice(-50).reverse().map((email) => (
                 <AccordionItem key={email.id} value={email.id}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex justify-between items-center w-full pr-4">
-                      <span className="truncate text-left">{email.subject}</span>
-                      <Badge variant={email.manualOverride ? (email.manualIsSpam ? "destructive" : "default") : (email.isSpam ? "destructive" : "default")} className={email.manualOverride ? (email.manualIsSpam ? "bg-red-500" : "bg-green-500") : (email.isSpam ? "bg-red-500" : "bg-green-500")}>
-                        {email.manualOverride ? (
-                          <>
-                            <span className="line-through">{email.isSpam ? "SPAM" : "HAM"}</span> → {email.manualIsSpam ? "SPAM" : "HAM"}
-                          </>
-                        ) : (
-                          <>{email.isSpam ? "SPAM" : "HAM"}</>
-                        )} ({email.score}/10)
-                      </Badge>
-                    </div>
+                  <AccordionTrigger className="hover:no-underline items-center !grid grid-cols-[1fr_auto_auto] gap-4 w-full min-w-0">
+                    <span className="truncate text-left min-w-0">{email.subject}</span>
+                    <Badge 
+                      variant={email.manualOverride ? (email.manualIsSpam ? "destructive" : "default") : (email.isSpam ? "destructive" : "default")} 
+                      className={cn(
+                        "shrink-0 justify-self-end",
+                        email.manualOverride ? (email.manualIsSpam ? "bg-red-500" : "bg-green-500") : (email.isSpam ? "bg-red-500" : "bg-green-500")
+                      )}
+                    >
+                      {email.manualOverride ? (
+                        <>
+                          <span className="line-through">{email.isSpam ? "SPAM" : "HAM"}</span> → {email.manualIsSpam ? "SPAM" : "HAM"}
+                        </>
+                      ) : (
+                        <>{email.isSpam ? "SPAM" : "HAM"}</>
+                      )} ({email.score}/10)
+                    </Badge>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-2 pt-2">
