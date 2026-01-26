@@ -66,6 +66,9 @@ function SettingsContent() {
   const [simplifyEmailContentMode, setSimplifyEmailContentMode] = useState<string>("aggressive")
   const [enableCron, setEnableCron] = useState<boolean>(true)
   const [cronExpression, setCronExpression] = useState<string>("* * * * *")
+  const [schedulerMode, setSchedulerMode] = useState<string>("simple")
+  const [schedulerSimpleValue, setSchedulerSimpleValue] = useState<number>(1)
+  const [schedulerSimpleUnit, setSchedulerSimpleUnit] = useState<string>("minutes")
   const [enableVectorDB, setEnableVectorDB] = useState<boolean>(false)
   const [embedModelChangeDialogOpen, setEmbedModelChangeDialogOpen] = useState(false)
   const [pendingEmbedModel, setPendingEmbedModel] = useState<string>("")
@@ -86,6 +89,9 @@ function SettingsContent() {
         setSimplifyEmailContentMode(await window.aiAPI.getSimplifyEmailContentMode())
         setEnableCron(await window.aiAPI.getEnableCron())
         setCronExpression(await window.aiAPI.getCronExpression())
+        setSchedulerMode(await window.aiAPI.getSchedulerMode())
+        setSchedulerSimpleValue(await window.aiAPI.getSchedulerSimpleValue())
+        setSchedulerSimpleUnit(await window.aiAPI.getSchedulerSimpleUnit())
         setEnableVectorDB(await window.aiAPI.getEnableVectorDB())
         setCustomizeSpamGuidelines(await window.aiAPI.getCustomizeSpamGuidelines())
         setCustomSpamGuidelines(await window.aiAPI.getCustomSpamGuidelines())
@@ -443,6 +449,35 @@ function SettingsContent() {
     }
   }
 
+  const handleSchedulerModeChange = async (value: string) => {
+    setSchedulerMode(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setSchedulerMode(value)
+    }
+  }
+
+  const handleSchedulerSimpleValueChange = async (value: number) => {
+    setSchedulerSimpleValue(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setSchedulerSimpleValue(value)
+      // Generate and set the cron expression
+      const cronExpression = await window.aiAPI.generateCronFromSimple(value, schedulerSimpleUnit)
+      setCronExpression(cronExpression)
+      await window.aiAPI.setCronExpression(cronExpression)
+    }
+  }
+
+  const handleSchedulerSimpleUnitChange = async (value: string) => {
+    setSchedulerSimpleUnit(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setSchedulerSimpleUnit(value)
+      // Generate and set the cron expression
+      const cronExpression = await window.aiAPI.generateCronFromSimple(schedulerSimpleValue, value)
+      setCronExpression(cronExpression)
+      await window.aiAPI.setCronExpression(cronExpression)
+    }
+  }
+
   const handleEnableVectorDBChange = async (value: boolean) => {
     // If trying to enable, first verify Ollama is running
     if (value) {
@@ -506,6 +541,12 @@ function SettingsContent() {
               setEnableCron={handleEnableCronChange}
               cronExpression={cronExpression}
               setCronExpression={handleCronExpressionChange}
+              schedulerMode={schedulerMode}
+              setSchedulerMode={handleSchedulerModeChange}
+              schedulerSimpleValue={schedulerSimpleValue}
+              setSchedulerSimpleValue={handleSchedulerSimpleValueChange}
+              schedulerSimpleUnit={schedulerSimpleUnit}
+              setSchedulerSimpleUnit={handleSchedulerSimpleUnitChange}
             />
           </TabsContent>
           <TabsContent value="ai">

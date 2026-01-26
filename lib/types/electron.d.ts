@@ -66,6 +66,13 @@ declare global {
       getCronExpression: () => Promise<string>
       setCronExpression: (value: string) => Promise<void>
       validateCronExpression: (expression: string) => Promise<{ valid: boolean; error?: string | Error }>
+      getSchedulerMode: () => Promise<string>
+      setSchedulerMode: (value: string) => Promise<void>
+      getSchedulerSimpleValue: () => Promise<number>
+      setSchedulerSimpleValue: (value: number) => Promise<void>
+      getSchedulerSimpleUnit: () => Promise<string>
+      setSchedulerSimpleUnit: (value: string) => Promise<void>
+      generateCronFromSimple: (value: number, unit: string) => Promise<string>
       getEnableVectorDB: () => Promise<boolean>
       setEnableVectorDB: (value: boolean) => Promise<void>
       getCustomizeSpamGuidelines: () => Promise<boolean>

@@ -91,6 +91,71 @@ class AIManager {
     this.store.set('cronExpression', value);
   }
 
+  getSchedulerMode() {
+    return this.store.get('schedulerMode', 'simple');
+  }
+
+  setSchedulerMode(value) {
+    this.store.set('schedulerMode', value);
+  }
+
+  getSchedulerSimpleValue() {
+    return this.store.get('schedulerSimpleValue', 1);
+  }
+
+  setSchedulerSimpleValue(value) {
+    this.store.set('schedulerSimpleValue', value);
+  }
+
+  getSchedulerSimpleUnit() {
+    return this.store.get('schedulerSimpleUnit', 'minutes');
+  }
+
+  setSchedulerSimpleUnit(value) {
+    this.store.set('schedulerSimpleUnit', value);
+  }
+
+  /**
+   * Generate a cron expression from simple scheduling inputs
+   * @param {number} value - The interval value (e.g., 5 for every 5 minutes)
+   * @param {string} unit - The unit ('minutes' or 'hours')
+   * @returns {string} A valid cron expression
+   */
+  generateCronFromSimple(value, unit) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { validateCronExpression } = require('cron');
+    
+    const interval = parseInt(value.toString(), 10);
+    let cronExpression = '';
+    
+    if (unit === 'minutes') {
+      // Every X minutes: */X * * * *
+      // If interval is 1, use * * * * * (every minute)
+      if (interval === 1) {
+        cronExpression = '* * * * *';
+      } else {
+        cronExpression = `*/${interval} * * * *`;
+      }
+    } else {
+      // Every X hours: 0 */X * * *
+      // If interval is 1, use 0 * * * * (every hour at minute 0)
+      if (interval === 1) {
+        cronExpression = '0 * * * *';
+      } else {
+        cronExpression = `0 */${interval} * * *`;
+      }
+    }
+    
+    // Validate the generated expression
+    const validation = validateCronExpression(cronExpression);
+    if (!validation.isValid) {
+      // Fallback to default if validation fails
+      return '* * * * *';
+    }
+    
+    return cronExpression;
+  }
+
   getEnableVectorDB() {
     return this.store.get('enableVectorDB', false);
   }
@@ -217,6 +282,34 @@ class AIManager {
 
     ipcMain.handle('ai:validateCronExpression', async (event, expression) => {
       return this.validateCronExpression(expression);
+    });
+
+    ipcMain.handle('ai:getSchedulerMode', async () => {
+      return this.getSchedulerMode();
+    });
+
+    ipcMain.handle('ai:setSchedulerMode', async (event, value) => {
+      return this.setSchedulerMode(value);
+    });
+
+    ipcMain.handle('ai:getSchedulerSimpleValue', async () => {
+      return this.getSchedulerSimpleValue();
+    });
+
+    ipcMain.handle('ai:setSchedulerSimpleValue', async (event, value) => {
+      return this.setSchedulerSimpleValue(value);
+    });
+
+    ipcMain.handle('ai:getSchedulerSimpleUnit', async () => {
+      return this.getSchedulerSimpleUnit();
+    });
+
+    ipcMain.handle('ai:setSchedulerSimpleUnit', async (event, value) => {
+      return this.setSchedulerSimpleUnit(value);
+    });
+
+    ipcMain.handle('ai:generateCronFromSimple', async (event, value, unit) => {
+      return this.generateCronFromSimple(value, unit);
     });
 
     ipcMain.handle('ai:getEnableVectorDB', async () => {

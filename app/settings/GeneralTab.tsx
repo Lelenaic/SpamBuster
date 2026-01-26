@@ -27,6 +27,12 @@ interface GeneralTabProps {
   setEnableCron: (value: boolean) => void
   cronExpression: string
   setCronExpression: (value: string) => void
+  schedulerMode: string
+  setSchedulerMode: (value: string) => void
+  schedulerSimpleValue: number
+  setSchedulerSimpleValue: (value: number) => void
+  schedulerSimpleUnit: string
+  setSchedulerSimpleUnit: (value: string) => void
 }
 
 export default function GeneralTab({
@@ -42,6 +48,12 @@ export default function GeneralTab({
   setEnableCron,
   cronExpression,
   setCronExpression,
+  schedulerMode,
+  setSchedulerMode,
+  schedulerSimpleValue,
+  setSchedulerSimpleValue,
+  schedulerSimpleUnit,
+  setSchedulerSimpleUnit,
 }: GeneralTabProps) {
   const [cronValidationError, setCronValidationError] = useState<string>("")
   const [cronInputValue, setCronInputValue] = useState<string>(cronExpression)
@@ -226,20 +238,69 @@ export default function GeneralTab({
           </div>
           {enableCron && (
             <div className="space-y-2 ml-6">
-              <Label htmlFor="cron-expression">Cron Expression</Label>
-              <Input
-                id="cron-expression"
-                type="text"
-                value={cronInputValue}
-                onChange={(e) => handleCronExpressionChange(e.target.value)}
-                placeholder="* * * * *"
-                className={cronValidationError ? "border-red-500" : ""}
-              />
-              <p className="text-sm text-muted-foreground">
-                Cron expression for scheduling (default: every minute). Use standard cron syntax.
-              </p>
-              {cronValidationError && (
-                <p className="text-sm text-red-500">{cronValidationError}</p>
+              <Label htmlFor="scheduler-mode">Scheduler Mode</Label>
+              <Select value={schedulerMode} onValueChange={setSchedulerMode}>
+                <SelectTrigger id="scheduler-mode" className="w-60">
+                  <SelectValue placeholder="Select mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="simple">Simple</SelectItem>
+                  <SelectItem value="advanced">Advanced (cron)</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {schedulerMode === 'simple' ? (
+                <div className="space-y-2 mt-2">
+                  <Label htmlFor="scheduler-simple">Run every</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="scheduler-simple"
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={schedulerSimpleValue}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value)
+                        if (!isNaN(value) && value >= 1) {
+                          setSchedulerSimpleValue(value)
+                        }
+                      }}
+                      className="w-24"
+                    />
+                    <Select value={schedulerSimpleUnit} onValueChange={setSchedulerSimpleUnit}>
+                      <SelectTrigger id="scheduler-simple-unit" className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minutes">Minutes</SelectItem>
+                        <SelectItem value="hours">Hours</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {schedulerSimpleUnit === 'minutes' 
+                      ? `Every ${schedulerSimpleValue} minute${schedulerSimpleValue > 1 ? 's' : ''}`
+                      : `Every ${schedulerSimpleValue} hour${schedulerSimpleValue > 1 ? 's' : ''} at minute 0`}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 mt-2">
+                  <Label htmlFor="cron-expression">Cron Expression</Label>
+                  <Input
+                    id="cron-expression"
+                    type="text"
+                    value={cronInputValue}
+                    onChange={(e) => handleCronExpressionChange(e.target.value)}
+                    placeholder="* * * * *"
+                    className={cronValidationError ? "border-red-500" : ""}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Cron expression for scheduling. Use standard cron syntax.
+                  </p>
+                  {cronValidationError && (
+                    <p className="text-sm text-red-500">{cronValidationError}</p>
+                  )}
+                </div>
               )}
             </div>
           )}
