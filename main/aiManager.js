@@ -148,7 +148,8 @@ class AIManager {
     
     // Validate the generated expression
     const validation = validateCronExpression(cronExpression);
-    if (!validation.isValid) {
+    
+    if (!validation.valid) {
       // Fallback to default if validation fails
       return '* * * * *';
     }
@@ -185,9 +186,10 @@ class AIManager {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { validateCronExpression } = require('cron');
       const validation = validateCronExpression(expression);
-      return validation;
+      // Return in a format compatible with the frontend expected format
+      return { valid: validation.valid, isValid: validation.valid };
     } catch (error) {
-      return { valid: false, error: error.message };
+      return { valid: false, isValid: false, error: error.message };
     }
   }
 

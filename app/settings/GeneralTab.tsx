@@ -8,8 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { useState } from "react"
-import { useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 import { EmailProcessorService } from "@/lib/ai/emailProcessor"
@@ -64,6 +63,37 @@ export default function GeneralTab({
   useEffect(() => {
     setCronInputValue(cronExpression)
   }, [cronExpression])
+
+  // Use a ref to track the last cron expression we updated to avoid redundant calls
+  // Initialize with current cronExpression to prevent update on initial mount
+  const lastCronExprRef = useRef<string>(cronExpression)
+
+  // Effect to update cron when simple schedule values change
+  useEffect(() => {
+    const updateCronFromSimple = async () => {
+      if (schedulerMode === 'simple' && enableCron && typeof window !== 'undefined' && window.aiAPI) {
+        // Use the existing IPC handler from aiManager.js to generate cron from simple values
+        const cronExpr = await window.aiAPI.generateCronFromSimple(schedulerSimpleValue, schedulerSimpleUnit)
+        
+        // Only update if the expression has changed to avoid redundant calls
+        if (lastCronExprRef.current !== cronExpr) {
+          lastCronExprRef.current = cronExpr
+          window.aiAPI.setCronExpression(cronExpr)
+          // Also update the cronExpression state to keep it in sync
+          setCronExpression(cronExpr)
+        }
+      }
+    }
+    updateCronFromSimple()
+  }, [schedulerSimpleValue, schedulerSimpleUnit, schedulerMode, enableCron])
+
+  // Effect to sync cron expression when switching from simple to advanced mode
+  useEffect(() => {
+    if (schedulerMode === 'advanced' && enableCron && typeof window !== 'undefined' && window.aiAPI) {
+      // Sync the input with the current cron expression
+      setCronInputValue(cronExpression)
+    }
+  }, [schedulerMode, cronExpression, enableCron])
 
   const handleSensitivityChange = (value: string) => {
     const numValue = parseInt(value)
