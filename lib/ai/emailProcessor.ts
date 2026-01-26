@@ -70,6 +70,7 @@ export class EmailProcessorService {
   private processedChecksums: string[] = []
   private initialized = false
   private isProcessing = false
+  private shouldStop = false
   private currentProcessingData: {
     accounts: Account[]
     rules: Rule[]
@@ -293,6 +294,12 @@ export class EmailProcessorService {
       const sensitivity = await this.getSensitivity()
 
       for (const email of emails) {
+        // Check if processing should stop
+        if (this.shouldStop) {
+          console.log('Processing stopped by user')
+          break
+        }
+        
         try {
           // Check if email is old enough to process
           if (!this.isEmailOldEnough(email.date, maxAgeDays)) {
@@ -519,6 +526,7 @@ export class EmailProcessorService {
     }
 
     // Reset in-memory state for fresh processing
+    this.shouldStop = false
     this.currentAccountStats = {}
     this.currentOverallStats = {
       totalEmails: 0,
@@ -669,6 +677,7 @@ export class EmailProcessorService {
   }
 
   stopProcessing(): void {
+    this.shouldStop = true
     this.isProcessing = false
     this.currentProcessingData = null
     this.currentAccountId = undefined
