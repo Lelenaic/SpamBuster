@@ -11,12 +11,6 @@ interface Store {
   set: (key: string, value: unknown) => void
 }
 
-// Async store interface for window.storeAPI
-interface AsyncStore {
-  get: (key: string) => Promise<unknown>
-  set: (key: string, value: unknown) => Promise<void>
-}
-
 // Create a sync-compatible wrapper around async store API
 function createSyncStoreFromAPI(): Store {
   const syncStore: Store = {

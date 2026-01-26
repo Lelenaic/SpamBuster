@@ -218,7 +218,6 @@ export function useEmailProcessing(
   }
 
   const startProcessing = async () => {
-    
     const currentAccounts = accountsRef.current
     const currentRules = rulesRef.current
     const currentProcessor = processorRef.current
@@ -252,14 +251,17 @@ export function useEmailProcessing(
       setAccountStats(newAccountStats)
       setOverallStats(newOverallStats)
       setStatus('completed')
+      // Note: We don't call stopProcessing() here because processing completed normally
+      // The stopProcessing() method would emit 'idle' status which would reset our status
     } catch (error) {
+      console.error('Processing failed:', error);
       setStatus('error')
-    } finally {
-      processingRef.current = false
-      // Also ensure processor state is consistent
+      // Only call stopProcessing() on error to clean up the processor state
       if (currentProcessor) {
         currentProcessor.stopProcessing()
       }
+    } finally {
+      processingRef.current = false
     }
   }
 
