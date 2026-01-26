@@ -67,11 +67,10 @@ export default function ProcessingStatus({
     switch (status) {
       case 'processing':
         return <RefreshCw className="h-4 w-4 animate-spin" />
-
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4" />
       case 'error':
-        return <AlertTriangle className="h-4 w-4 text-red-500" />
+        return <AlertTriangle className="h-4 w-4" />
       default:
         return <Clock className="h-4 w-4" />
     }
@@ -81,7 +80,6 @@ export default function ProcessingStatus({
     switch (status) {
       case 'processing':
         return 'bg-blue-500'
-
       case 'completed':
         return 'bg-green-500'
       case 'error':
