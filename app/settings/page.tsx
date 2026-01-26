@@ -461,9 +461,9 @@ function SettingsContent() {
     if (typeof window !== "undefined" && window.aiAPI) {
       await window.aiAPI.setSchedulerSimpleValue(value)
       // Generate and set the cron expression
-      const cronExpression = await window.aiAPI.generateCronFromSimple(value, schedulerSimpleUnit)
-      setCronExpression(cronExpression)
-      await window.aiAPI.setCronExpression(cronExpression)
+      const newCronExpression = await window.aiAPI.generateCronFromSimple(value, schedulerSimpleUnit)
+      setCronExpression(newCronExpression)
+      await window.aiAPI.setCronExpression(newCronExpression)
     }
   }
 
@@ -472,9 +472,9 @@ function SettingsContent() {
     if (typeof window !== "undefined" && window.aiAPI) {
       await window.aiAPI.setSchedulerSimpleUnit(value)
       // Generate and set the cron expression
-      const cronExpression = await window.aiAPI.generateCronFromSimple(schedulerSimpleValue, value)
-      setCronExpression(cronExpression)
-      await window.aiAPI.setCronExpression(cronExpression)
+      const newCronExpression = await window.aiAPI.generateCronFromSimple(schedulerSimpleValue, value)
+      setCronExpression(newCronExpression)
+      await window.aiAPI.setCronExpression(newCronExpression)
     }
   }
 

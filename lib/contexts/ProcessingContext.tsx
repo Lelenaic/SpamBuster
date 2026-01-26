@@ -175,10 +175,15 @@ export function ProcessingProvider({ children, accounts, rules, processor }: Pro
 
     // Listen for cron-triggered processing
     if (window.electronAPI) {
+      console.log('📨 Setting up cron trigger listener');
       const handleCronTrigger = () => {
+        console.log('📨 Received trigger-email-processing event from main process');
         // Start processing if not already processing
         if (!processingRef.current) {
+          console.log('📨 Starting processing via cron trigger');
           startProcessing()
+        } else {
+          console.log('📨 Processing already in progress, skipping cron trigger');
         }
       }
       window.electronAPI.on('trigger-email-processing', handleCronTrigger)

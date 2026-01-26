@@ -24,6 +24,7 @@ let mainWindow;
 let wizardWindow;  // Add reference to wizard window
 let cronJob = null;
 let isQuitting = false;
+let isSetupCronJobRunning = false; // Mutex to prevent concurrent cron setup
 
 async function initStore() {
   const { default: Store } = await import('electron-store');
@@ -40,33 +41,43 @@ async function initStore() {
 }
 
 async function setupCronJob() {
-  // Destroy existing cron job if it exists
-  if (cronJob && typeof cronJob.destroy === 'function') {
-    cronJob.destroy();
-    cronJob = null;
-  }
-
-  if (!aiManager) {
+  // Prevent concurrent calls
+  if (isSetupCronJobRunning) {
     return;
   }
-
-  const enableCron = aiManager.getEnableCron();
-  const cronExpression = aiManager.getCronExpression();
+  isSetupCronJobRunning = true;
   
-  if (enableCron && cronExpression) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { CronJob } = require('cron');
-      cronJob = new CronJob(cronExpression, () => {
-        // Trigger email processing
-        if (mainWindow && mainWindow.webContents) {
-          mainWindow.webContents.send('trigger-email-processing');
-        }
-      });
-      cronJob.start();
-    } catch (error) {
-      console.error('❌ Failed to setup cron job:', error);
+  try {
+    // Stop existing cron job if it exists
+    if (cronJob && typeof cronJob.stop === 'function') {
+      cronJob.stop();
+      cronJob = null;
     }
+
+    if (!aiManager) {
+      return;
+    }
+
+    const enableCron = aiManager.getEnableCron();
+    const cronExpression = aiManager.getCronExpression();
+    
+    if (enableCron && cronExpression) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { CronJob } = require('cron');
+        cronJob = new CronJob(cronExpression, () => {
+          // Trigger email processing
+          if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('trigger-email-processing');
+          }
+        });
+        cronJob.start();
+      } catch (error) {
+        console.error('Failed to setup cron job:', error);
+      }
+    }
+  } finally {
+    isSetupCronJobRunning = false;
   }
 }
 
@@ -76,15 +87,15 @@ async function initializeApp() {
 
   // Override the ai manager handlers to also update cron job
   const originalSetEnableCron = aiManager.setEnableCron.bind(aiManager);
-  aiManager.setEnableCron = (value) => {
+  aiManager.setEnableCron = async (value) => {
     originalSetEnableCron(value);
-    setupCronJob();
+    await setupCronJob();
   };
 
   const originalSetCronExpression = aiManager.setCronExpression.bind(aiManager);
-  aiManager.setCronExpression = (value) => {
+  aiManager.setCronExpression = async (value) => {
     originalSetCronExpression(value);
-    setupCronJob();
+    await setupCronJob();
   };
 
   // Override setSelectedEmbedModel to also update vector DB dimension
