@@ -47,8 +47,6 @@ declare global {
       setAISource: (value: string) => Promise<void>
       getOllamaBaseUrl: () => Promise<string>
       setOllamaBaseUrl: (value: string) => Promise<void>
-      getOllamaApiKey: () => Promise<string>
-      setOllamaApiKey: (value: string) => Promise<void>
       getOpenRouterApiKey: () => Promise<string>
       setOpenRouterApiKey: (value: string) => Promise<void>
       getSelectedModel: () => Promise<string>

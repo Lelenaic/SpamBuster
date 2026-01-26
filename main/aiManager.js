@@ -19,6 +19,14 @@ class AIManager {
     this.store.set('ollamaBaseUrl', value);
   }
 
+  getOpenRouterApiKey() {
+    return this.store.get('openRouterApiKey', '');
+  }
+
+  setOpenRouterApiKey(value) {
+    this.store.set('openRouterApiKey', value);
+  }
+
   getSelectedModel() {
     return this.store.get('selectedModel', '');
   }
@@ -125,6 +133,14 @@ class AIManager {
 
     ipcMain.handle('ai:setOllamaBaseUrl', async (event, value) => {
       return this.setOllamaBaseUrl(value);
+    });
+
+    ipcMain.handle('ai:getOpenRouterApiKey', async () => {
+      return this.getOpenRouterApiKey();
+    });
+
+    ipcMain.handle('ai:setOpenRouterApiKey', async (event, value) => {
+      return this.setOpenRouterApiKey(value);
     });
 
     ipcMain.handle('ai:getSelectedModel', async () => {
