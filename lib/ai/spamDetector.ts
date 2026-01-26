@@ -112,14 +112,16 @@ function extractTextFromHTML(html: string): string {
 }
 
 export const DEFAULT_SPAM_GUIDELINES = `SPAM SCORE GUIDELINES:
-- 0-2 = Definitely not spam (legitimate email)
-- 3-4 = Probably not spam (minor concerns)
-- 5-6 = Unsure, could be either
-- 7-8 = Probably spam (matches user rules OR multiple strong indicators)
-- 9-10 = Definitely spam (matches user rules OR 100% fraud/phishing)
+- 0-2 = Definitely not spam (legitimate email, absolutely certain)
+- 3-4 = Probably not spam (minor concerns but mostly legitimate)
+- 5-6 = Unsure, could be either (use this when uncertain!)
+- 7-8 = Probably spam (confident but not 100% certain)
+- 9-10 = Definitely spam (absolutely certain, no doubt)
+
+⚠️ CRITICAL: Use the full 0-10 scale! If you're uncertain, use 5-6. Reserve 0-2 and 9-10 ONLY for cases where you are absolutely certain.
 
 DEFAULT SPAM INDICATORS (only apply when NO user rules match):
-- Unsolicited commercial promotions or ads
+- Unsolicited commercial promotions or marketing emails
 - High urgency/scarcity tactics (e.g., "act now or lose!")
 - Poor grammar, all caps, excessive punctuation (!!!)
 - Suspicious/masked links or attachments
@@ -130,37 +132,66 @@ DEFAULT SPAM INDICATORS (only apply when NO user rules match):
 
 HAM SIGNALS (only apply when NO user rules match):
 - Personalized greetings or references
-- Legitimate business/receipt confirmations
+- Transactional emails: receipts, order confirmations, shipping notifications, invoices
 - Expected from known contacts
 - Normal grammar and professional tone
 - No suspicious links/attachments
 
+CRITICAL EMAIL TYPE DISTINCTIONS (for matching user rules):
+- **Newsletter**: Periodic marketing/promotional content, typically with an unsubscribe link
+- **Transactional**: Order confirmations, receipts, invoices, shipping updates, password resets, account notifications
+- **Marketing**: Promotional content, sales, offers, advertisements
+- **Personal**: Direct communication from individuals
+
+⚠️ A user rule about "newsletters" does NOT apply to transactional emails (receipts, confirmations, invoices)
+⚠️ A user rule about "marketing" does NOT apply to transactional emails or personal correspondence
+⚠️ Only apply a user rule if the email actually matches the specific type mentioned in the rule
+
 ADDITIONAL GUIDELINES FOR DEFAULT BEHAVIOR:
-- When in doubt and no rules match, classify as legitimate (ham)
+- When in doubt and no rules match, classify as legitimate (ham) with score 3-5
 - Single weak indicators alone should not raise spam score above 3/10
+- Transactional emails (receipts, confirmations, invoices) are NEVER spam by default unless explicitly matching a user rule
 - Large brands sending legitimate communications are not spam UNLESS user rules say otherwise
 - Encoding issues alone are not a reason to mark as spam
-- Urgency combined with suspicious links/requests = high spam score
+- Marketing newsletters from legitimate companies are spam-like (score 4-6) but not definitive spam unless user rules say so
 
 EXAMPLES:
 
-Example 1 - User Rule Match:
-Email: Professional newsletter from "Zoho France <newsletter@zoho.com>" with unsubscribe link
+Example 1 - User Rule Match (Newsletter):
+Email: Professional newsletter from "Zoho France <newsletter@zoho.com>" with unsubscribe link, containing product updates
 User Rule: "I don't want any newsletters, they're all spam"
 Score: 9/10 (spam)
-Reasoning: User explicitly defined newsletters as spam. This rule overrides the fact that it's from a legitimate company with proper formatting.
+Reasoning: This is a newsletter (periodic marketing content with unsubscribe link). User explicitly defined newsletters as spam. Rule applies and overrides legitimacy.
 
-Example 2 - No Rules, Legitimate:
+Example 2 - User Rule Does NOT Match (Transactional):
+Email: Order confirmation from "Amazon <retour@amazon.fr>" with order details and return information
+User Rule: "I don't want any newsletters, they're all spam"
+Score: 0/10 (ham)
+Reasoning: This is a transactional order confirmation, NOT a newsletter. User's rule about newsletters does not apply. No default spam indicators present.
+
+Example 3 - User Rule Does NOT Match (Receipt):
+Email: Payment receipt from "Stripe <invoice+statements@stripe.com>" for a completed transaction
+User Rule: "I don't want any newsletters or marketing emails"
+Score: 0/10 (ham)
+Reasoning: This is a transactional receipt, NOT a newsletter or marketing email. User's rule does not apply. Receipts are legitimate by default.
+
+Example 4 - No Rules, Legitimate:
 Email: "Hi John, meeting rescheduled to Friday due to my family emergency. Best, Sarah."
 User Rules: None match
-Score: 0/10 (ham)
+Score: 1/10 (ham)
 Reasoning: Personalized greeting, legitimate request, no spam indicators present.
 
-Example 3 - No Rules, Clear Spam:
+Example 5 - No Rules, Marketing but Uncertain:
+Email: Professional promotional email from a known brand with unsubscribe link
+User Rules: None or none that apply
+Score: 5/10 (uncertain)
+Reasoning: It's marketing content, but from a legitimate company with proper unsubscribe. No user rule applies. Could go either way depending on user preference.
+
+Example 6 - No Rules, Clear Spam:
 Email: "URGENT! Your account expires! Click here NOW to verify: bit.ly/fake!!!"
 User Rules: None match
-Score: 9/10 (spam)
-Reasoning: Generic urgency, suspicious shortened link, all caps, pressure tactics.`
+Score: 10/10 (spam)
+Reasoning: Generic urgency, suspicious shortened link, all caps, pressure tactics. Clearly phishing.`
 
 export interface SpamAnalysisResult {
   score: number // 0-10, where 0 = not spam, 10 = definitely spam
@@ -292,22 +323,33 @@ export class SpamDetectorService {
     const basePromptStart = `You are a spam email detection expert. Analyze the following email content and determine if it's spam.
 
     ═══════════════════════════════════════════════════════════════════════════════════
-    🚨 CRITICAL: USER-DEFINED RULES ARE ABSOLUTE LAW 🚨
+    🚨 CRITICAL: RULE MATCHING LOGIC 🚨
     ═══════════════════════════════════════════════════════════════════════════════════
     
-    MANDATORY RULE HIERARCHY:
+    STEP 1: DETERMINE IF ANY USER RULE ACTUALLY MATCHES THIS EMAIL
     
-    1. **USER-DEFINED RULES OVERRIDE EVERYTHING** - If a user rule matches the email, that rule determines the classification. Period. No exceptions.
-       - If a rule says "newsletters are spam", then ALL newsletters are spam with score 8-10/10
-       - If a rule says "emails from domain X are spam", then they are spam with score 8-10/10
-       - If a rule says "emails containing keyword Y are spam", then they are spam with score 8-10/10
-       - It does NOT matter if the email is from a legitimate company
-       - It does NOT matter if the email has proper unsubscribe links
-       - It does NOT matter if the email is professionally formatted
-       - USER RULES = ABSOLUTE TRUTH
+    Before applying any rule, you MUST determine if the email actually matches the rule's criteria:
     
-    2. **DEFAULT BEHAVIOR (only when NO user rules match):**
-       Only if no user-defined rules apply to this email, then analyze it using standard spam detection criteria below.
+    - A rule about "newsletters" ONLY matches emails that are newsletters (periodic marketing/promotional content)
+    - A rule about "newsletters" does NOT match: receipts, order confirmations, invoices, shipping notifications, account alerts
+    - A rule about "marketing" ONLY matches promotional/sales emails
+    - A rule about "marketing" does NOT match: transactional emails, receipts, personal correspondence
+    - A rule about specific keywords ONLY matches if those exact keywords appear in the email
+    - A rule about specific senders ONLY matches if the sender matches
+    
+    STEP 2: APPLY THE RULE ONLY IF IT MATCHES
+    
+    IF a user rule actually matches this email:
+       - Apply that rule with score 8-10/10 (depending on how strongly it matches)
+       - The rule overrides any other considerations (legitimacy, brand reputation, formatting)
+       - USER RULES = ABSOLUTE TRUTH when they match
+    
+    IF NO user rules match this email:
+       - Proceed to default spam detection using the guidelines below
+       - Do NOT try to force-apply rules that don't match the email type
+    
+    ⚠️ CRITICAL: A transactional email (receipt, confirmation, invoice) is NOT a newsletter or marketing email.
+    ⚠️ CRITICAL: Do not apply newsletter/marketing rules to transactional emails.
     
     ═══════════════════════════════════════════════════════════════════════════════════
     `
@@ -318,17 +360,18 @@ export class SpamDetectorService {
 
     const basePromptEnd = `
     ═══════════════════════════════════════════════════════════════════════════════════
-    USER-DEFINED RULES (check FIRST, these override everything):`
+    USER-DEFINED RULES (check if any ACTUALLY MATCH this email):`
 
     const rulesText = rules.length > 0
       ? rules.map(rule => `- ${rule.text}`).join('\n')
       : 'No additional rules defined.'
 
     const similarEmailsText = similarEmails.length > 0
-      ? `\n\nFor additional context, here are some similar emails that were previously analyzed, less important than the user-defined rules:\n\n${similarEmails.map((similar, index) => {
+      ? `\n\nFor additional context, here are some similar emails that were previously analyzed. Pay attention to user corrections - they indicate the AI made a mistake:\n\n${similarEmails.map((similar, index) => {
 
         // Determine if user confirmed or corrected the AI's classification
         let userValidationNote = '';
+        let correctClassification = '';
         
         if (similar.userValidated !== undefined && similar.userValidated !== null) {
           const aiClassification = similar.isSpam ? 'spam' : 'legitimate';
@@ -336,21 +379,26 @@ export class SpamDetectorService {
           
           if (similar.isSpam === similar.userValidated) {
             // User confirmed the AI's classification
-            userValidationNote = ` (User CONFIRMED: AI classified as ${aiClassification}, user agreed with this classification. The AI score is VALID and can be trusted.)`;
+            userValidationNote = `✓ User CONFIRMED this classification`;
+            correctClassification = `Correct classification: ${userClassification}`;
           } else {
             // User corrected the AI's classification
-            userValidationNote = ` (User CORRECTED: AI classified as ${aiClassification}, but user marked it as ${userClassification}. The AI score is INVALID and should be considered incorrect.)`;
+            userValidationNote = `✗ User CORRECTED - AI was WRONG!`;
+            correctClassification = `AI said: ${aiClassification} (INCORRECT) | Actual: ${userClassification} (CORRECT)`;
           }
         } else {
-          userValidationNote = ' (No user validation: Only AI classified this email)';
+          userValidationNote = 'No user validation (treat as reference only, may be incorrect)';
+          correctClassification = `AI classification: ${similar.isSpam ? 'spam' : 'legitimate'} (unverified)`;
         }
 
         return `Similar Email ${index + 1}:
 Subject: ${similar.subject}
 Sender: ${similar.sender}
-Spam Score: ${similar.score}/10
-Classification: ${similar.isSpam ? 'Spam' : 'Legitimate'}${userValidationNote}
-Reasoning: ${similar.reasoning}`;
+${correctClassification}
+Validation: ${userValidationNote}
+${similar.userValidated !== undefined && similar.userValidated !== null && similar.isSpam !== similar.userValidated ?
+`⚠️ IMPORTANT: The AI was wrong about this email. Do NOT follow the AI's reasoning below - it was incorrect. Learn from this mistake.` :
+`AI Reasoning (for reference): ${similar.reasoning}`}`;
       }).join('\n---\n\n')}`
       : ''
 
