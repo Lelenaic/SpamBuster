@@ -208,11 +208,11 @@ export default function GeneralTab({
                 type="text"
                 value={cronInputValue}
                 onChange={(e) => handleCronExpressionChange(e.target.value)}
-                placeholder="*/5 * * * *"
+                placeholder="* * * * *"
                 className={cronValidationError ? "border-red-500" : ""}
               />
               <p className="text-sm text-muted-foreground">
-                Cron expression for scheduling (default: every 5 minutes). Use standard cron syntax.
+                Cron expression for scheduling (default: every minute). Use standard cron syntax.
               </p>
               {cronValidationError && (
                 <p className="text-sm text-red-500">{cronValidationError}</p>
