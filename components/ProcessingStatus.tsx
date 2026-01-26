@@ -217,7 +217,7 @@ export default function ProcessingStatus({
               ) : (
                 <Play className="h-4 w-4 mr-2" />
               )}
-              Start Processing
+              Start spam analysis
             </Button>
           )}
           
