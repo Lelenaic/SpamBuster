@@ -111,10 +111,9 @@ export default function GeneralTab({
       }
 
       // Clear processed checksums from electron-store
-      const processor = EmailProcessorService.getExistingInstance()
-      if (processor) {
-        await processor.clearProcessedCache()
-      }
+      // Use getOrCreateFromRenderer to ensure processor exists
+      const processor = EmailProcessorService.getOrCreateFromRenderer()
+      await processor.clearProcessedCache()
 
       const message = clearVectorDB ? "Checksums and vector database cleared successfully" : "Checksums cleared successfully"
       toast.success(message)

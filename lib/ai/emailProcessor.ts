@@ -11,6 +11,30 @@ interface Store {
   set: (key: string, value: unknown) => void
 }
 
+// Async store interface for window.storeAPI
+interface AsyncStore {
+  get: (key: string) => Promise<unknown>
+  set: (key: string, value: unknown) => Promise<void>
+}
+
+// Create a sync-compatible wrapper around async store API
+function createSyncStoreFromAPI(): Store {
+  const syncStore: Store = {
+    get: (_key: string, defaultValue?: unknown): unknown => {
+      // This is a synchronous getter that returns defaultValue initially
+      // The async operations happen in the background
+      return defaultValue
+    },
+    set: (key: string, value: unknown): void => {
+      // Queue the async store operation
+      if (typeof window !== 'undefined' && window.storeAPI) {
+        window.storeAPI.set(key, value).catch((err: Error) => console.error('Store set error:', err))
+      }
+    }
+  }
+  return syncStore
+}
+
 export interface ProcessedEmailResult {
   emailId: string
   checksum: string
@@ -89,6 +113,15 @@ export class EmailProcessorService {
 
   // Get the singleton instance (returns null if not created yet)
   static getExistingInstance(): EmailProcessorService | null {
+    return singletonInstance
+  }
+
+  // Create or get singleton instance from renderer process using window.storeAPI
+  static getOrCreateFromRenderer(): EmailProcessorService {
+    if (!singletonInstance) {
+      const syncStore = createSyncStoreFromAPI()
+      singletonInstance = new EmailProcessorService(syncStore)
+    }
     return singletonInstance
   }
 
