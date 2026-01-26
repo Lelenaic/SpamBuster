@@ -6,8 +6,6 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GitHub Releases](https://img.shields.io/github/downloads/lelenaic/spambuster/latest/total.svg)](https://github.com/lelenaic/spambuster/releases/latest)
 
-DISCLAIMER: This software is a work in progress project. Please feel free to open issues or contribute.
-
 AI-powered spam email cleaner for your emails (Outlook, Gmail and IMAP)
 
 Uses OpenRouter or Ollama to classify emails based on your custom anti-spam rules.
@@ -32,7 +30,7 @@ Download pre-built binaries from the [latest release](https://github.com/lelenai
 - Outlook/Microsoft 365 support
 - Gmail/Google Workspace support
 - Auto update
-- Rules community marketplace
+- Publish rules to community marketplace
 
 ## 🛠️ Development
 

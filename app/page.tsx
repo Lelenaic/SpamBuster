@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { X, AlertTriangle, CheckCircle, Undo } from 'lucide-react'
+import { X, AlertTriangle, CheckCircle, Undo, Bell, Mail } from 'lucide-react'
 import { Alert as AlertType } from '@/lib/types'
 import { AlertsManager } from '@/lib/alerts'
 import ProcessingStatus from '@/components/ProcessingStatus'
@@ -256,7 +256,7 @@ export default function Home() {
       )}
       
       <div className="bg-card rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Alerts</h2>
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Bell className="h-5 w-5" />Alerts</h2>
         {alerts.length === 0 ? (
           <p className="text-muted-foreground">No alerts at the moment.</p>
         ) : (
@@ -279,7 +279,7 @@ export default function Home() {
         )}
         <hr className="mt-6" />
         <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-4">Analyzed Emails</h2>
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Mail className="h-5 w-5" />Analyzed Emails</h2>
           {analyzedEmails.length === 0 ? (
             <p className="text-muted-foreground">No emails analyzed yet.</p>
           ) : (
