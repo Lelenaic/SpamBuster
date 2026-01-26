@@ -63,6 +63,7 @@ function SettingsContent() {
   const [aiSensitivity, setAiSensitivity] = useState<number>(7)
   const [emailAgeDays, setEmailAgeDays] = useState<number>(1)
   const [simplifyEmailContent, setSimplifyEmailContent] = useState<boolean>(true)
+  const [simplifyEmailContentMode, setSimplifyEmailContentMode] = useState<string>("aggressive")
   const [enableCron, setEnableCron] = useState<boolean>(true)
   const [cronExpression, setCronExpression] = useState<string>("* * * * *")
   const [enableVectorDB, setEnableVectorDB] = useState<boolean>(false)
@@ -82,6 +83,7 @@ function SettingsContent() {
         setAiSensitivity(await window.aiAPI.getAISensitivity())
         setEmailAgeDays(await window.aiAPI.getEmailAgeDays())
         setSimplifyEmailContent(await window.aiAPI.getSimplifyEmailContent())
+        setSimplifyEmailContentMode(await window.aiAPI.getSimplifyEmailContentMode())
         setEnableCron(await window.aiAPI.getEnableCron())
         setCronExpression(await window.aiAPI.getCronExpression())
         setEnableVectorDB(await window.aiAPI.getEnableVectorDB())
@@ -420,6 +422,13 @@ function SettingsContent() {
     }
   }
 
+  const handleSimplifyEmailContentModeChange = async (value: string) => {
+    setSimplifyEmailContentMode(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setSimplifyEmailContentMode(value)
+    }
+  }
+
   const handleEnableCronChange = async (value: boolean) => {
     setEnableCron(value)
     if (typeof window !== "undefined" && window.aiAPI) {
@@ -491,6 +500,8 @@ function SettingsContent() {
               setEmailAgeDays={handleEmailAgeDaysChange}
               simplifyEmailContent={simplifyEmailContent}
               setSimplifyEmailContent={handleSimplifyEmailContentChange}
+              simplifyEmailContentMode={simplifyEmailContentMode}
+              setSimplifyEmailContentMode={handleSimplifyEmailContentModeChange}
               enableCron={enableCron}
               setEnableCron={handleEnableCronChange}
               cronExpression={cronExpression}

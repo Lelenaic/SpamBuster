@@ -67,6 +67,14 @@ class AIManager {
     this.store.set('simplifyEmailContent', value);
   }
 
+  getSimplifyEmailContentMode() {
+    return this.store.get('simplifyEmailContentMode', 'aggressive');
+  }
+
+  setSimplifyEmailContentMode(value) {
+    this.store.set('simplifyEmailContentMode', value);
+  }
+
   getEnableCron() {
     return this.store.get('enableCron', true);
   }
@@ -181,6 +189,14 @@ class AIManager {
 
     ipcMain.handle('ai:setSimplifyEmailContent', async (event, value) => {
       return this.setSimplifyEmailContent(value);
+    });
+
+    ipcMain.handle('ai:getSimplifyEmailContentMode', async () => {
+      return this.getSimplifyEmailContentMode();
+    });
+
+    ipcMain.handle('ai:setSimplifyEmailContentMode', async (event, value) => {
+      return this.setSimplifyEmailContentMode(value);
     });
 
     ipcMain.handle('ai:getEnableCron', async () => {

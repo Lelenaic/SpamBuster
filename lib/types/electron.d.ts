@@ -59,6 +59,8 @@ declare global {
       setEmailAgeDays: (value: number) => Promise<void>
       getSimplifyEmailContent: () => Promise<boolean>
       setSimplifyEmailContent: (value: boolean) => Promise<void>
+      getSimplifyEmailContentMode: () => Promise<string>
+      setSimplifyEmailContentMode: (value: string) => Promise<void>
       getEnableCron: () => Promise<boolean>
       setEnableCron: (value: boolean) => Promise<void>
       getCronExpression: () => Promise<string>

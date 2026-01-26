@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useState } from "react"
 import { useEffect } from "react"
@@ -20,6 +21,8 @@ interface GeneralTabProps {
   setEmailAgeDays: (value: number) => void
   simplifyEmailContent: boolean
   setSimplifyEmailContent: (value: boolean) => void
+  simplifyEmailContentMode: string
+  setSimplifyEmailContentMode: (value: string) => void
   enableCron: boolean
   setEnableCron: (value: boolean) => void
   cronExpression: string
@@ -33,6 +36,8 @@ export default function GeneralTab({
   setEmailAgeDays,
   simplifyEmailContent,
   setSimplifyEmailContent,
+  simplifyEmailContentMode,
+  setSimplifyEmailContentMode,
   enableCron,
   setEnableCron,
   cronExpression,
@@ -181,6 +186,25 @@ export default function GeneralTab({
               </p>
             </div>
           </div>
+          {simplifyEmailContent && (
+            <div className="space-y-2 ml-6">
+              <Label htmlFor="simplify-email-content-mode">Simplification Mode</Label>
+              <Select value={simplifyEmailContentMode} onValueChange={setSimplifyEmailContentMode}>
+                <SelectTrigger id="simplify-email-content-mode" className="w-60">
+                  <SelectValue placeholder="Select mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="simple">Simple</SelectItem>
+                  <SelectItem value="aggressive">Aggressive (recommended)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                {simplifyEmailContentMode === 'aggressive' 
+                  ? 'Aggressive: Removes all HTML tags that do not have a Markdown equivalent and remove all the style.'
+                  : 'Simple: Keeps HTML tags that do not have a Markdown equivalent and keep the style.'}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4 mt-10">

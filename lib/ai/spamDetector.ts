@@ -4,6 +4,113 @@ import { Rule } from '../types'
 import { EmailData } from '../mail/types'
 import TurndownService from 'turndown'
 
+/**
+ * Decode MIME quoted-printable encoded content
+ */
+function decodeQuotedPrintable(input: string): string {
+  return input
+    .replace(/=0A/g, '\n')
+    .replace(/=0D/g, '\r')
+    .replace(/=09/g, '\t')
+    .replace(/=([0-9A-F]{2})/gi, (_, hex) => {
+      return String.fromCharCode(parseInt(hex, 16))
+    })
+}
+
+/**
+ * Extract plain text from HTML by removing all tags and CSS
+ */
+function extractTextFromHTML(html: string): string {
+  // Decode quoted-printable encoding first
+  let decoded = decodeQuotedPrintable(html)
+  
+  // Split by multipart boundaries and take only the text content part
+  const boundaryMatch = decoded.match(/--=_Part_[\d_]+/)
+  if (boundaryMatch) {
+    const parts = decoded.split(/--=_Part_[\d_]+/)
+    let bestPart = decoded
+    let bestScore = 0
+    
+    for (const part of parts) {
+      // Skip very short parts or parts that are mostly CSS
+      const cssPatterns = (part.match(/@[\w-]+\s*\{/g) || []).length
+      const cssRuleBlocks = (part.match(/\{[^}]+\}/g) || []).length
+      const textContent = part.replace(/<[^>]+>/g, '').replace(/@[\w-]+\s*\{[^}]+\}/g, '')
+      const textLength = textContent.length
+      
+      // Score: prefer parts with more text and less CSS
+      const score = textLength - (cssPatterns * 100) - (cssRuleBlocks * 50)
+      
+      if (score > bestScore && textLength > 100) {
+        bestScore = score
+        bestPart = part
+      }
+    }
+    decoded = bestPart
+  }
+  
+  // Remove everything after the main text content (often there's CSS appended)
+  // Look for common footer patterns and cut off after them
+  const footerMatch = decoded.match(/Amazon\.fr est le nom commercial d'Amazon/)
+  if (footerMatch && footerMatch.index !== undefined) {
+    decoded = decoded.substring(0, footerMatch.index + 200) + '...' // Keep a bit of footer
+  }
+  
+  // Remove HTML comments
+  decoded = decoded.replace(/<!--[^>]*-->/g, '')
+  
+  // Remove style elements and their content (case insensitive)
+  decoded = decoded.replace(/<style[\s\S]*?<\/style>/gi, '')
+  
+  // Remove script elements and their content
+  decoded = decoded.replace(/<script[\s\S]*?<\/script>/gi, '')
+  
+  // Remove noscript elements and their content
+  decoded = decoded.replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+  
+  // Remove iframe elements and their content
+  decoded = decoded.replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+  
+  // Remove all remaining HTML tags
+  decoded = decoded.replace(/<[^>]+>/g, '')
+  
+  // Remove @-rules and CSS blocks that appear outside tags
+  decoded = decoded.replace(/@[\w-]+\s*\{[^}]+\}/g, '')
+  
+  // Remove any remaining CSS-like patterns with curly braces
+  decoded = decoded.replace(/\{[^}]+\}/g, '')
+  
+  // Remove any remaining CSS selectors and properties
+  decoded = decoded.replace(/[a-zA-Z-]+:\s*[^;]+;?/g, '')
+  
+  // Decode common HTML entities
+  decoded = decoded
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&copy;/g, '©')
+    .replace(/&reg;/g, '®')
+    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)))
+  
+  // Remove remaining HTML entities
+  decoded = decoded.replace(/&[a-z]+;/gi, '')
+  
+  // Clean up: remove multiple spaces and newlines
+  decoded = decoded.replace(/[ \t]+/g, ' ')
+  decoded = decoded.replace(/\n{3,}/g, '\n\n')
+  
+  // Extract meaningful text lines
+  const lines = decoded.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && !line.match(/^[@:\{\}]/))
+    
+  return lines.join('\n').trim()
+}
+
 export const DEFAULT_SPAM_GUIDELINES = `SPAM SCORE GUIDELINES:
 - 0-2 = Definitely not spam (legitimate email)
 - 3-4 = Probably not spam (minor concerns)
@@ -89,7 +196,57 @@ export class SpamDetectorService {
     return await window.aiAPI.getSimplifyEmailContent()
   }
 
-  private async buildPrompt(email: EmailData, rules: Rule[], shouldSimplify: boolean, similarEmails: Array<{
+  private async getSimplifyEmailContentMode(): Promise<string> {
+    if (typeof window === 'undefined' || !window.aiAPI) {
+      return 'aggressive'
+    }
+    return await window.aiAPI.getSimplifyEmailContentMode()
+  }
+
+  private createTurndownService(mode: string): TurndownService {
+    const turndownService = new TurndownService()
+    
+    if (mode === 'aggressive') {
+      // Remove all style/script elements and their content
+      turndownService.addRule('removeStyleElements', {
+        filter: ['style', 'script', 'noscript', 'iframe', 'head'],
+        replacement: function () {
+          return '' // Remove these elements entirely
+        }
+      })
+      
+      // Remove style attributes from all elements by extracting text content only
+      turndownService.addRule('removeStyleAttributes', {
+        filter: function (node) {
+          // Apply to any element that has a style attribute
+          return node.nodeType === 1 && node.hasAttribute && node.hasAttribute('style')
+        },
+        replacement: function (content, node, options) {
+          // Return only the text content, stripping the style attribute entirely
+          return turndownService.escape(node.textContent || '') + '\n\n'
+        }
+      })
+      
+      // Add fallback rule to escape all remaining HTML tags and extract text only
+      turndownService.addRule('plainTextFallback', {
+        filter: function (node) {
+          return true // Apply to all nodes
+        },
+        replacement: function (content, node, options) {
+          // For text nodes, return escaped content
+          if (node.nodeType === 3) {
+            return turndownService.escape(content)
+          }
+          // For elements, extract text content only (strips style attrs automatically)
+          return turndownService.escape(node.textContent || '') + '\n\n'
+        }
+      })
+    }
+    
+    return turndownService
+  }
+
+  private async buildPrompt(email: EmailData, rules: Rule[], shouldSimplify: boolean, simplifyMode: string, similarEmails: Array<{
     id: string;
     emailId: string;
     subject: string;
@@ -118,7 +275,19 @@ export class SpamDetectorService {
     }
 
     // Simplify email content if enabled
-    const simplifiedBody = shouldSimplify ? this.turndownService.turndown(email.body) : email.body
+    let simplifiedBody: string
+    if (shouldSimplify) {
+      if (simplifyMode === 'aggressive') {
+        // Use regex-based extraction for aggressive mode
+        simplifiedBody = extractTextFromHTML(email.body)
+      } else {
+        // Use turndown for simple mode
+        const turndownService = this.createTurndownService(simplifyMode)
+        simplifiedBody = turndownService.turndown(email.body)
+      }
+    } else {
+      simplifiedBody = email.body
+    }
 
     const basePromptStart = `You are a spam email detection expert. Analyze the following email content and determine if it's spam.
 
@@ -210,6 +379,7 @@ Do not include any other text or formatting.`
   async analyzeEmail(email: EmailData, rules: Rule[] = []): Promise<SpamAnalysisResult> {
     const aiService = await this.getAIService()
     const simplifyEmailContent = await this.getSimplifyEmailContent()
+    const simplifyEmailContentMode = await this.getSimplifyEmailContentMode()
 
     // Get custom spam guidelines if enabled
     let customizeSpamGuidelines = false
@@ -248,7 +418,7 @@ Do not include any other text or formatting.`
       }
     }
 
-    const prompt = await this.buildPrompt(email, rules, simplifyEmailContent, similarEmails, customizeSpamGuidelines, customSpamGuidelines)
+    const prompt = await this.buildPrompt(email, rules, simplifyEmailContent, simplifyEmailContentMode, similarEmails, customizeSpamGuidelines, customSpamGuidelines)
 
     const selectedModel = await this.getSelectedModel()
     

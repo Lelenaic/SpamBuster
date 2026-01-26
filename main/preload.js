@@ -64,6 +64,8 @@ contextBridge.exposeInMainWorld("aiAPI", {
     setEmailAgeDays: (value) => ipcRenderer.invoke('ai:setEmailAgeDays', value),
     getSimplifyEmailContent: () => ipcRenderer.invoke('ai:getSimplifyEmailContent'),
     setSimplifyEmailContent: (value) => ipcRenderer.invoke('ai:setSimplifyEmailContent', value),
+    getSimplifyEmailContentMode: () => ipcRenderer.invoke('ai:getSimplifyEmailContentMode'),
+    setSimplifyEmailContentMode: (value) => ipcRenderer.invoke('ai:setSimplifyEmailContentMode', value),
     getEnableCron: () => ipcRenderer.invoke('ai:getEnableCron'),
     setEnableCron: (value) => ipcRenderer.invoke('ai:setEnableCron', value),
     getCronExpression: () => ipcRenderer.invoke('ai:getCronExpression'),

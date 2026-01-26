@@ -26,6 +26,10 @@ Download pre-built binaries from the [latest release](https://github.com/lelenai
 [![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/spambuster)
 
 
+## ？How does it work?
+You start by configuring a mail account and an AI provider. Then every x minutes it will check your new emails, download them and send them to the configured AI model to analyze them. You can configure custom rules too to restrict spam check or whitelist some senders for example. You can enable a integrated vector database that will stored the analyzed emails and will be use to match similar emails to guide AI thanks to previous analysis.
+
+
 ## 📋 TODO
 - Outlook/Microsoft 365 support
 - Gmail/Google Workspace support
