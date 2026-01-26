@@ -28,11 +28,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit3, Trash2, Power, Copy, Check, BadgeCheck, RefreshCw } from 'lucide-react';
+import { Plus, Edit3, Trash2, Power, Copy, Check, BadgeCheck, RefreshCw, Wand2 } from 'lucide-react';
 import { Rule } from '@/lib/types';
 import { Account } from '@/lib/mail/types';
 import { apiClient, CommunityRule, PaginatedResponse } from '@/lib/api';
 import { toast } from 'sonner';
+import { createAIService } from '@/lib/ai/factory';
+import { getRuleGeneratorService } from '@/lib/ai/ruleGenerator';
 
 export default function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
@@ -58,6 +60,12 @@ export default function RulesPage() {
   const [isFilteringOfficial, setIsFilteringOfficial] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // AI Generation state
+  const [isAIGenerationModalOpen, setIsAIGenerationModalOpen] = useState(false);
+  const [aiPromptDescription, setAiPromptDescription] = useState('');
+  const [generatedRuleText, setGeneratedRuleText] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const loadMoreRules = useCallback(async () => {
     if (isLoadingMore || currentPage >= totalPages) {
@@ -290,6 +298,53 @@ export default function RulesPage() {
     }
   };
 
+  const generateRuleWithAI = async (description: string): Promise<string> => {
+    const ruleGenerator = getRuleGeneratorService();
+    return ruleGenerator.generateRuleText(description);
+  };
+
+  const handleAIGenerate = async () => {
+    if (!aiPromptDescription.trim()) {
+      toast.error('Please describe the spam you want to detect');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGeneratedRuleText('');
+
+    try {
+      const ruleText = await generateRuleWithAI(aiPromptDescription);
+      setGeneratedRuleText(ruleText);
+    } catch (error) {
+      toast.error('Failed to generate rule. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleUseGeneratedRule = () => {
+    if (generatedRuleText) {
+      setFormData(prev => ({ ...prev, text: generatedRuleText }));
+      setIsAIGenerationModalOpen(false);
+      setAiPromptDescription('');
+      setGeneratedRuleText('');
+    }
+  };
+
+  const handleRegenerateRule = async () => {
+    if (aiPromptDescription.trim()) {
+      setIsGenerating(true);
+      try {
+        const ruleText = await generateRuleWithAI(aiPromptDescription);
+        setGeneratedRuleText(ruleText);
+      } catch (error) {
+        toast.error('Failed to regenerate rule. Please try again.');
+      } finally {
+        setIsGenerating(false);
+      }
+    }
+  };
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Rules</h1>
@@ -329,12 +384,33 @@ export default function RulesPage() {
                     <div>
                       <Label htmlFor="text" className="block">Rule Text <span className="text-red-500">*</span></Label>
                       <p className="text-sm text-muted-foreground mb-2">This is the prompt sent to the AI</p>
-                      <Textarea
-                        id="text"
-                        value={formData.text}
-                        onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
-                        required
-                      />
+                      <div className="relative">
+                        <Textarea
+                          id="text"
+                          value={formData.text}
+                          onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
+                          required
+                          className="min-h-[100px] pr-10"
+                        />
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-2 right-2 h-8 w-8"
+                                onClick={() => setIsAIGenerationModalOpen(true)}
+                              >
+                                <Wand2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Generate with AI</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -389,6 +465,115 @@ export default function RulesPage() {
                       <Button type="submit">{editingRule ? 'Update Rule' : 'Create Rule'}</Button>
                     </div>
                   </form>
+                  {/* AI Generation Modal - nested, doesn't close the rule modal */}
+                  <Dialog open={isAIGenerationModalOpen} onOpenChange={setIsAIGenerationModalOpen}>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>
+                          <div className="flex items-center gap-2">
+                            <Wand2 className="h-5 w-5" />
+                            Generate Rule with AI
+                          </div>
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        {!generatedRuleText ? (
+                          <>
+                            <div>
+                              <Label htmlFor="ai-description">Describe the spam you want to detect</Label>
+                              <Textarea
+                                id="ai-description"
+                                placeholder="e.g., Emails claiming you've won a lottery or prize"
+                                value={aiPromptDescription}
+                                onChange={(e) => setAiPromptDescription(e.target.value)}
+                                className="min-h-[100px] mt-2"
+                              />
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  setIsAIGenerationModalOpen(false);
+                                  setAiPromptDescription('');
+                                  setGeneratedRuleText('');
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={handleAIGenerate}
+                                disabled={isGenerating || !aiPromptDescription.trim()}
+                              >
+                                {isGenerating ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 mr-2" />
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Wand2 className="h-4 w-4 mr-2" />
+                                    Generate
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div>
+                              <Label htmlFor="generated-rule">Generated Rule</Label>
+                              <Textarea
+                                id="generated-rule"
+                                value={generatedRuleText}
+                                readOnly
+                                className="min-h-[80px] mt-2 bg-muted"
+                              />
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  setIsAIGenerationModalOpen(false);
+                                  setAiPromptDescription('');
+                                  setGeneratedRuleText('');
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleRegenerateRule}
+                                disabled={isGenerating}
+                              >
+                                {isGenerating ? (
+                                  <div className="flex items-center">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-foreground mr-2" />
+                                    Regenerating...
+                                  </div>
+                                ) : (
+                                  <>
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                    Regenerate
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={handleUseGeneratedRule}
+                              >
+                                <Check className="h-4 w-4" />
+                                Use Rule
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </DialogContent>
               </Dialog>
             </div>
