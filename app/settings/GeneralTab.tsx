@@ -206,7 +206,7 @@ export default function GeneralTab({
               className="w-32"
             />
             <p className="text-sm text-muted-foreground">
-              Number of days to look back when analyzing email age for spam detection (default: 7 days)
+              Number of days to look back when analyzing email age for spam detection (default: 1 day)
             </p>
           </div>
         </div>

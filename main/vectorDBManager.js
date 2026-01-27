@@ -227,6 +227,12 @@ class VectorDBManager {
   }
 
   async storeAnalyzedEmail(emailData) {
+    // Check if embedding model is configured before proceeding
+    const embedModel = this.store.get('selectedEmbedModel', '');
+    if (!embedModel) {
+      return;
+    }
+
     await this.initialize();
 
     try {
