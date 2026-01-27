@@ -16,6 +16,7 @@ import {
   CheckCircle,
   AlertTriangle
 } from 'lucide-react'
+import { Account } from '@/lib/mail/types'
 
 export interface ProcessingStats {
   totalEmails: number
@@ -38,6 +39,7 @@ interface ProcessingStatusProps {
   status: ProcessingStatus
   overallStats: ProcessingStats
   accountStats: AccountProcessingStats
+  accounts?: Account[]
   currentAccount?: string
   progress: number
 }
@@ -50,9 +52,20 @@ export default function ProcessingStatus({
   overallStats,
   accountStats,
   currentAccount,
-  progress
+  progress,
+  accounts = []
 }: ProcessingStatusProps) {
   const [isStarting, setIsStarting] = useState(false)
+
+  // Helper to get email display from account ID
+  const getAccountEmail = (accountId: string): string => {
+    const account = accounts.find(acc => acc.id === accountId)
+    if (account) {
+      // Prefer name if available, otherwise use config.username (email)
+      return account.name || account.config.username || accountId
+    }
+    return accountId
+  }
 
   const handleStart = async () => {
     setIsStarting(true)
@@ -169,7 +182,7 @@ export default function ProcessingStatus({
         {currentAccount && (
           <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
             <div className="text-sm font-medium">Processing Account:</div>
-            <div className="text-sm text-muted-foreground">{currentAccount}</div>
+            <div className="text-sm text-muted-foreground">{getAccountEmail(currentAccount)}</div>
           </div>
         )}
 
@@ -180,7 +193,7 @@ export default function ProcessingStatus({
             <div className="space-y-2 max-h-32 overflow-y-auto">
               {activeAccounts.map(([accountId, stats]) => (
                 <div key={accountId} className="flex justify-between items-center p-2 bg-muted rounded text-sm">
-                  <span className="font-mono text-xs">{accountId.slice(0, 8)}...</span>
+                  <span className="font-mono text-xs truncate max-w-[200px]">{getAccountEmail(accountId)}</span>
                   <div className="flex gap-4 text-xs">
                     <span>{stats.totalEmails} total</span>
                     <span className="text-green-600">{stats.processedEmails} processed</span>

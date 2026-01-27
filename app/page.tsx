@@ -251,6 +251,7 @@ export default function Home() {
           status={processing.status}
           overallStats={processing.overallStats}
           accountStats={processing.accountStats}
+          accounts={accounts}
           currentAccount={processing.currentAccount}
           progress={processing.progress}
         />
