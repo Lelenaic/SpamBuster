@@ -31,8 +31,7 @@ You start by configuring a mail account and an AI provider. Then every x minutes
 
 
 ## 📋 TODO
-- Outlook/Microsoft 365 support
-- Gmail/Google Workspace support
+- Google Workspace support
 - Auto update
 - Publish rules to community marketplace
 - Create a full web dockerized version
