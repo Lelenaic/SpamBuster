@@ -521,6 +521,97 @@ class AccountsManager {
         return { success: false, error: errorMessage };
       }
     });
+
+    // Microsoft OAuth handlers
+    ipcMain.handle('oauth:getDeviceCode', async (event, clientId, tenantId) => {
+      try {
+        const tokenEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/devicecode`;
+        const response = await fetch(tokenEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: clientId,
+            scope: 'User.Read Mail.Read Mail.ReadWrite offline_access',
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Device code request failed: ${response.status} ${errorText}`);
+        }
+
+        const data = await response.json();
+        return { success: true, ...data };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('oauth:exchangeCode', async (event, clientId, tenantId, deviceCode) => {
+      try {
+        const tokenEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+        const response = await fetch(tokenEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: clientId,
+            device_code: deviceCode,
+            grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          
+          // Check if it's a pending authorization error
+          if (errorData.error === 'authorization_pending') {
+            return { success: false, error: 'authorization_pending' };
+          }
+          if (errorData.error === 'expired_token') {
+            return { success: false, error: 'expired_token' };
+          }
+          throw new Error(errorData.error_description || `Token exchange failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return { success: true, ...data };
+      } catch (error) {
+        console.error('Failed to exchange code for token:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('oauth:refreshToken', async (event, clientId, tenantId, refreshToken) => {
+      try {
+        const tokenEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+        const response = await fetch(tokenEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: clientId,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token',
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error_description || `Token refresh failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return { success: true, ...data };
+      } catch (error) {
+        console.error('Failed to refresh token:', error);
+        return { success: false, error: error.message };
+      }
+    });
   }
 }
 

@@ -12,6 +12,7 @@ import { AlertsManager } from '@/lib/alerts'
 import ProcessingStatus from '@/components/ProcessingStatus'
 import { useEmailProcessing } from '@/lib/hooks/useEmailProcessing'
 import { EmailProcessorService } from '@/lib/ai/emailProcessor'
+import { MailProviderFactory } from '@/lib/mail/factory'
 import { Account } from '@/lib/mail/types'
 import { Rule } from '@/lib/types'
 import { toast } from 'sonner'
@@ -183,17 +184,17 @@ export default function Home() {
         }
       }
 
-      // Move email to spam folder
+      // Move email to spam folder using abstraction layer
       const account = accounts.find(acc => acc.id === email.accountId)
-      if (account && window.electronAPI) {
+      if (account) {
         try {
-          const result = await window.electronAPI.invoke('move-email-to-spam', account.config, email.emailId) as { success: boolean; error?: string }
+          const provider = MailProviderFactory.createProvider(account.type)
+          const result = await provider.moveEmailToSpam(account.config, email.emailId)
           if (result.success) {
             toast.success('Email moved to spam folder')
           } else {
             toast.error('Failed to move email to spam folder: ' + (result.error || 'Unknown error'))
           }
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
           toast.error('Failed to move email to spam folder')
         }

@@ -103,6 +103,33 @@ function SettingsContent() {
     loadSettings()
   }, [])
 
+  // Listen for accounts-refresh-needed event from wizard
+  useEffect(() => {
+    const handleAccountsRefresh = async () => {
+      const mailAccounts = await window.accountsAPI.getAll()
+      setMailAccounts(mailAccounts)
+    }
+    
+    // Listen for accounts-refresh-needed
+    if (typeof window !== "undefined" && window.electronAPI) {
+      window.electronAPI.on('accounts-refresh-needed', handleAccountsRefresh)
+    }
+
+    // Also listen for wizard-closed as fallback
+    if (typeof window !== "undefined" && window.electronAPI) {
+      window.electronAPI.on('wizard-closed', handleAccountsRefresh)
+    }
+
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const electronAPI = (window as any).electronAPI;
+      if (electronAPI?.removeAllListeners) {
+        electronAPI.removeAllListeners('accounts-refresh-needed');
+        electronAPI.removeAllListeners('wizard-closed');
+      }
+    }
+  }, [])
+
   const handleTabChange = (value: string) => {
     setActiveTab(value)
     const params = new URLSearchParams(searchParams.toString())
@@ -271,10 +298,10 @@ function SettingsContent() {
   useEffect(() => {
     if (accountToModify) {
       setModifyFormData({
-        username: accountToModify.config.username,
-        password: accountToModify.config.password,
-        host: accountToModify.config.host,
-        port: accountToModify.config.port,
+        username: accountToModify.config.username || '',
+        password: accountToModify.config.password || '',
+        host: accountToModify.config.host || '',
+        port: accountToModify.config.port || 993,
         secure: accountToModify.config.secure ? "true" : "false",
         allowUnsignedCertificate: accountToModify.config.allowUnsignedCertificate || false,
         spamFolder: accountToModify.config.spamFolder || "Spam",
@@ -311,11 +338,15 @@ function SettingsContent() {
       const provider = MailProviderFactory.createProvider(account.type)
       const result = await provider.testConnection(account.config)
       
+      const userEmail = account.type === 'outlook' 
+        ? account.config.oauth2Config?.userEmail 
+        : account.config.username
+      
       if (result.success) {
-        toast.success(`Connection successful for ${account.config.username}`)
+        toast.success(`Connection successful for ${userEmail || 'account'}`)
         
         // Clear alerts and set status back to working
-        await AlertsManager.deleteByAccount(account.name || account.config.username)
+        await AlertsManager.deleteByAccount(userEmail || account.name || 'account')
         await window.accountsAPI.update(account.id, { status: 'working' as const })
         const updatedAccounts = await window.accountsAPI.getAll()
         setMailAccounts(updatedAccounts)
@@ -382,7 +413,10 @@ function SettingsContent() {
     
     // If enabling the account, delete all alerts for this account
     if (newStatus === 'working') {
-      await AlertsManager.deleteByAccount(account.name || account.config.username)
+      const userEmail = account.type === 'outlook' 
+        ? account.config.oauth2Config?.userEmail 
+        : account.config.username
+      await AlertsManager.deleteByAccount(userEmail || account.name || 'account')
     }
     
     await window.accountsAPI.update(account.id, { status: newStatus })

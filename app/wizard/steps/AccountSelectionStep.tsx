@@ -28,9 +28,9 @@ export function AccountSelectionStep({ onBack, onAccountSelect }: AccountSelecti
             <IconBrandGoogle className="mr-2 h-4 w-4" />
             Add Google Workspace/Gmail account (COMING SOON)
           </Button>
-          <Button className="w-full" variant="outline" disabled>
+          <Button className="w-full" variant="outline" onClick={() => onAccountSelect?.('outlook')}>
             <IconBrandWindows className="mr-2 h-4 w-4" />
-            Add Microsoft 365/Outlook account (COMING SOON)
+            Add Microsoft 365 account
           </Button>
           <Button className="w-full" variant="outline" onClick={() => onAccountSelect?.('imap')}>
             <IconMail className="mr-2 h-4 w-4" />

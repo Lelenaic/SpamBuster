@@ -173,6 +173,17 @@ ipcMain.on('wizard-closed', () => {
     wizardWindow.close();
     wizardWindow = null;
   }
+  // Notify main window to refresh accounts list
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('accounts-refresh-needed');
+  }
+});
+
+// Also listen for accounts-refresh-needed from wizard and forward it
+ipcMain.on('accounts-refresh-needed', () => {
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('accounts-refresh-needed');
+  }
 });
 
 // Processing events - forward events from main to renderer

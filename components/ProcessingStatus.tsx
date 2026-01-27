@@ -116,8 +116,24 @@ export default function ProcessingStatus({
     }
   }
 
-  const accountsArray = Object.entries(accountStats)
-  const activeAccounts = accountsArray.filter(([, stats]) => stats.totalEmails > 0)
+  // Get all accounts to display - show all configured accounts even if no emails processed
+  const displayAccounts = accounts.length > 0 
+    ? accounts.map(account => ({
+        accountId: account.id,
+        email: account.name || account.config.username || account.id,
+        stats: accountStats[account.id] || {
+          totalEmails: 0,
+          spamEmails: 0,
+          processedEmails: 0,
+          skippedEmails: 0,
+          errors: 0
+        }
+      }))
+    : Object.entries(accountStats).map(([accountId, stats]) => ({
+        accountId,
+        email: getAccountEmail(accountId),
+        stats
+      }))
 
   return (
     <Card className="mb-6">
@@ -187,13 +203,13 @@ export default function ProcessingStatus({
         )}
 
         {/* Account Details */}
-        {activeAccounts.length > 0 && (
+        {displayAccounts.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Account Statistics:</h4>
             <div className="space-y-2 max-h-32 overflow-y-auto">
-              {activeAccounts.map(([accountId, stats]) => (
+              {displayAccounts.map(({ accountId, email, stats }) => (
                 <div key={accountId} className="flex justify-between items-center p-2 bg-muted rounded text-sm">
-                  <span className="font-mono text-xs truncate max-w-[200px]">{getAccountEmail(accountId)}</span>
+                  <span className="font-mono text-xs truncate max-w-[200px]">{email}</span>
                   <div className="flex gap-4 text-xs">
                     <span>{stats.totalEmails} total</span>
                     <span className="text-green-600">{stats.processedEmails} processed</span>

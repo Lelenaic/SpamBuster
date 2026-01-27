@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog"
 import { Account, AccountStatus } from "@/lib/mail"
 import { ImapForm } from "@/components/ImapForm"
+import { Microsoft365EditForm } from "./Microsoft365EditForm"
 
 const getStatusColor = (status: AccountStatus) => {
   switch (status) {
@@ -91,6 +92,7 @@ export default function MailAccountsTab({
   accountToDelete,
   modifyDialogOpen,
   setModifyDialogOpen,
+  accountToModify,
   modifyFormData,
   testingModify,
   testingAccountId,
@@ -183,19 +185,29 @@ export default function MailAccountsTab({
             <DialogTitle>Modify Account</DialogTitle>
             <DialogDescription>Update your account settings.</DialogDescription>
           </DialogHeader>
-          <ImapForm
-            formData={modifyFormData}
-            onChange={handleModifyFormChange}
-            prefix="modify-"
-            folders={modifyFolders}
-            onFetchFolders={handleFetchModifyFolders}
-            loadingFolders={loadingModifyFolders}
-          />
-          <DialogFooter>
-            <Button onClick={handleSaveModify} disabled={testingModify}>
-              {testingModify ? "Testing..." : "Test and Save"}
-            </Button>
-          </DialogFooter>
+          {accountToModify?.type === 'outlook' ? (
+            <Microsoft365EditForm
+              account={accountToModify!}
+              onSave={handleSaveModify}
+              onCancel={() => setModifyDialogOpen(false)}
+            />
+          ) : (
+            <>
+              <ImapForm
+                formData={modifyFormData}
+                onChange={handleModifyFormChange}
+                prefix="modify-"
+                folders={modifyFolders}
+                onFetchFolders={handleFetchModifyFolders}
+                loadingFolders={loadingModifyFolders}
+              />
+              <DialogFooter>
+                <Button onClick={handleSaveModify} disabled={testingModify}>
+                  {testingModify ? "Testing..." : "Test and Save"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>

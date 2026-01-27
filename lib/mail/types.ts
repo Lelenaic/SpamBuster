@@ -1,12 +1,27 @@
 export interface MailConnectionConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  username: string;
-  password: string;
+  // IMAP fields (for backward compatibility)
+  host?: string;
+  port?: number;
+  secure?: boolean;
+  username?: string;
+  password?: string;
   allowUnsignedCertificate?: boolean;
   spamFolder?: string;
-  // Add other common options as needed
+  spamFolderId?: string;
+  // OAuth2 fields
+  authType?: 'password' | 'oauth2';
+  oauth2Config?: Microsoft365Config;
+}
+
+export interface Microsoft365Config {
+  clientId: string;
+  tenantId: string;
+  userEmail: string;
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiry?: Date;
+  spamFolder?: string;
+  spamFolderId?: string;
 }
 
 export interface TestConnectionResult {
@@ -29,6 +44,7 @@ export interface MailProvider {
   testConnection(config: MailConnectionConfig): Promise<TestConnectionResult>;
   fetchEmails(config: MailConnectionConfig, maxAgeDays: number): Promise<FetchEmailsResult>;
   moveEmailToSpam(config: MailConnectionConfig, emailId: string): Promise<MoveEmailResult>;
+  getMailFolders?(config: MailConnectionConfig): Promise<{ name: string; id: string }[]>;
 }
 
 export interface EmailData {

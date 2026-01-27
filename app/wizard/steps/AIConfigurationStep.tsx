@@ -84,6 +84,9 @@ export function AIConfigurationStep({ onClose }: AIConfigurationStepProps) {
 
   const handleClose = () => {
     if (typeof window !== "undefined") {
+      // Call the onClose prop to notify parent and send IPC events
+      onClose?.();
+      // Then close the wizard window
       window.close();
     }
   };

@@ -113,6 +113,31 @@ declare global {
     shellAPI: {
       openExternal: (url: string) => Promise<void>
     }
+    oauthAPI: {
+      getDeviceCode: (clientId: string, tenantId: string) => Promise<{
+        success: boolean;
+        user_code?: string;
+        device_code?: string;
+        verification_uri?: string;
+        expires_in?: number;
+        message?: string;
+        error?: string;
+      }>
+      exchangeCode: (clientId: string, tenantId: string, deviceCode: string) => Promise<{
+        success: boolean;
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+        error?: string;
+      }>
+      refreshToken: (clientId: string, tenantId: string, refreshToken: string) => Promise<{
+        success: boolean;
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+        error?: string;
+      }>
+    }
     processingEvents: {
       onStatsUpdate: (callback: (data: {
         accountId: string;

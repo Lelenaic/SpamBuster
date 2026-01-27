@@ -298,6 +298,12 @@ class VectorDBManager {
   }
 
   async findSimilarEmails(queryText, limit = 5, accountId = null) {
+    // Check if embedding model is configured before proceeding
+    const embedModel = this.store.get('selectedEmbedModel', '');
+    if (!embedModel) {
+      return [];
+    }
+
     await this.initialize();
 
     try {

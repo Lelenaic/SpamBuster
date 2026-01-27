@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     },
     invoke: (channel, ...args) => {
         return ipcRenderer.invoke(channel, ...args);
+    },
+    removeAllListeners: (channel) => {
+        ipcRenderer.removeAllListeners(channel);
     }
 });
 
@@ -96,6 +99,12 @@ contextBridge.exposeInMainWorld("vectorDBAPI", {
 
 contextBridge.exposeInMainWorld("shellAPI", {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+});
+
+contextBridge.exposeInMainWorld("oauthAPI", {
+    getDeviceCode: (clientId, tenantId) => ipcRenderer.invoke('oauth:getDeviceCode', clientId, tenantId),
+    exchangeCode: (clientId, tenantId, deviceCode) => ipcRenderer.invoke('oauth:exchangeCode', clientId, tenantId, deviceCode),
+    refreshToken: (clientId, tenantId, refreshToken) => ipcRenderer.invoke('oauth:refreshToken', clientId, tenantId, refreshToken),
 });
 
 // Processing events API for real-time status updates
