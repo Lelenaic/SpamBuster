@@ -35,6 +35,7 @@ You start by configuring a mail account and an AI provider. Then every x minutes
 - Gmail/Google Workspace support
 - Auto update
 - Publish rules to community marketplace
+- Create a full web dockerized version
 
 ## 🛠️ Development
 
