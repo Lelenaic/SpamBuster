@@ -31,17 +31,27 @@ export class OpenRouterService implements AIService {
     return data.data.map((m: { id: string }) => m.id)
   }
 
-  async sendMessage(message: string, model?: string): Promise<string> {
+  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number): Promise<string> {
+    const body: Record<string, unknown> = {
+      model,
+      messages: [{ role: 'user', content: message }]
+    }
+    
+    // Add temperature and top_p if provided (low temperature = more focused responses)
+    if (temperature !== undefined) {
+      body.temperature = temperature
+    }
+    if (top_p !== undefined) {
+      body.top_p = top_p
+    }
+    
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: message }]
-      })
+      body: JSON.stringify(body)
     })
     if (!response.ok) throw new Error('Failed to send message')
     const data = await response.json()

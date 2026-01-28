@@ -19,11 +19,26 @@ export class OllamaService implements AIService {
     return this.listModels()
   }
 
-  async sendMessage(message: string, model?: string): Promise<string> {
+  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number): Promise<string> {
+    const body: Record<string, unknown> = {
+      model,
+      prompt: message,
+      stream: false,
+      format: 'json'
+    }
+    
+    // Add temperature and top_p if provided (low temperature = more focused responses)
+    if (temperature !== undefined) {
+      body.temperature = temperature
+    }
+    if (top_p !== undefined) {
+      body.top_p = top_p
+    }
+    
     const response = await fetch(`${this.baseUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt: message, stream: false, format: 'json' })
+      body: JSON.stringify(body)
     })
     if (!response.ok) throw new Error('Failed to send message')
     const data = await response.json()

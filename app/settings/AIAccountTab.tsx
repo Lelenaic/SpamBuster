@@ -71,6 +71,12 @@ interface AIAccountTabProps {
   customSpamGuidelines: string
   setCustomSpamGuidelines: (value: string) => void
   handleCustomSpamGuidelinesChange: (value: string) => Promise<void>
+  temperature: number
+  setTemperature: (value: number) => void
+  handleTemperatureChange: (value: number) => Promise<void>
+  topP: number
+  setTopP: (value: number) => void
+  handleTopPChange: (value: number) => Promise<void>
 }
 
 export default function AIAccountTab({
@@ -106,6 +112,12 @@ export default function AIAccountTab({
   customSpamGuidelines,
   setCustomSpamGuidelines,
   handleCustomSpamGuidelinesChange,
+  temperature,
+  setTemperature,
+  handleTemperatureChange,
+  topP,
+  setTopP,
+  handleTopPChange,
 }: AIAccountTabProps) {
   const handleCustomizeSpamGuidelinesChange = async (checked: boolean) => {
     setCustomizeSpamGuidelines(checked)
@@ -229,6 +241,43 @@ export default function AIAccountTab({
           </Button>
         </div>
       )}
+      <Separator />
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold">AI Response Settings</h2>
+          <p className="text-sm text-muted-foreground">Configure how the AI generates responses. Lower values make responses more deterministic and focused.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="temperature">Temperature ({temperature})</Label>
+            <Input
+              id="temperature"
+              type="number"
+              step="0.1"
+              min="0"
+              max="2"
+              value={temperature}
+              onChange={(e) => setTemperature(parseFloat(e.target.value))}
+              onBlur={() => handleTemperatureChange(temperature)}
+            />
+            <p className="text-xs text-muted-foreground">Lower values = more focused responses (recommended: 0.1)</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="top-p">Top P ({topP})</Label>
+            <Input
+              id="top-p"
+              type="number"
+              step="0.1"
+              min="0"
+              max="1"
+              value={topP}
+              onChange={(e) => setTopP(parseFloat(e.target.value))}
+              onBlur={() => handleTopPChange(topP)}
+            />
+            <p className="text-xs text-muted-foreground">Nucleus sampling threshold (recommended: 0.9)</p>
+          </div>
+        </div>
+      </div>
       <Separator />
       <div className="space-y-4">
         <div className="space-y-2">

@@ -40,7 +40,14 @@ Do not include any other text or formatting.`;
     // Retry logic: up to 3 attempts
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const response = await aiService.sendMessage(prompt, selectedModel);
+        // Get temperature and topP from settings
+        let temperature = 0.1
+        let topP = 0.9
+        if (typeof window !== 'undefined' && window.aiAPI) {
+          temperature = await window.aiAPI.getTemperature()
+          topP = await window.aiAPI.getTopP()
+        }
+        const response = await aiService.sendMessage(prompt, selectedModel, temperature, topP);
 
         // Extract JSON from response using regex (handles AI models that add comments)
         const jsonMatch = response.match(/\{[\s\S]*\}/);

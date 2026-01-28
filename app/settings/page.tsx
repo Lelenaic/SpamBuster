@@ -74,6 +74,8 @@ function SettingsContent() {
   const [pendingEmbedModel, setPendingEmbedModel] = useState<string>("")
   const [customizeSpamGuidelines, setCustomizeSpamGuidelines] = useState<boolean>(false)
   const [customSpamGuidelines, setCustomSpamGuidelines] = useState<string>("")
+  const [temperature, setTemperature] = useState<number>(0.1)
+  const [topP, setTopP] = useState<number>(0.9)
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -95,6 +97,8 @@ function SettingsContent() {
         setEnableVectorDB(await window.aiAPI.getEnableVectorDB())
         setCustomizeSpamGuidelines(await window.aiAPI.getCustomizeSpamGuidelines())
         setCustomSpamGuidelines(await window.aiAPI.getCustomSpamGuidelines())
+        setTemperature(await window.aiAPI.getTemperature())
+        setTopP(await window.aiAPI.getTopP())
 
         const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
@@ -551,6 +555,20 @@ function SettingsContent() {
     }
   }
 
+  const handleTemperatureChange = async (value: number) => {
+    setTemperature(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setTemperature(value)
+    }
+  }
+
+  const handleTopPChange = async (value: number) => {
+    setTopP(value)
+    if (typeof window !== "undefined" && window.aiAPI) {
+      await window.aiAPI.setTopP(value)
+    }
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -628,6 +646,12 @@ function SettingsContent() {
               customSpamGuidelines={customSpamGuidelines}
               setCustomSpamGuidelines={setCustomSpamGuidelines}
               handleCustomSpamGuidelinesChange={handleCustomSpamGuidelinesChange}
+              temperature={temperature}
+              setTemperature={setTemperature}
+              handleTemperatureChange={handleTemperatureChange}
+              topP={topP}
+              setTopP={setTopP}
+              handleTopPChange={handleTopPChange}
             />
           </TabsContent>
           <TabsContent value="mail">

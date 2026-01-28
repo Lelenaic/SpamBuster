@@ -87,6 +87,10 @@ contextBridge.exposeInMainWorld("aiAPI", {
     setCustomizeSpamGuidelines: (value) => ipcRenderer.invoke('ai:setCustomizeSpamGuidelines', value),
     getCustomSpamGuidelines: () => ipcRenderer.invoke('ai:getCustomSpamGuidelines'),
     setCustomSpamGuidelines: (value) => ipcRenderer.invoke('ai:setCustomSpamGuidelines', value),
+    getTemperature: () => ipcRenderer.invoke('ai:getTemperature'),
+    setTemperature: (value) => ipcRenderer.invoke('ai:setTemperature', value),
+    getTopP: () => ipcRenderer.invoke('ai:getTopP'),
+    setTopP: (value) => ipcRenderer.invoke('ai:setTopP', value),
 });
 
 contextBridge.exposeInMainWorld("vectorDBAPI", {

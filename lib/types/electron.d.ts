@@ -79,6 +79,10 @@ declare global {
       setCustomizeSpamGuidelines: (value: boolean) => Promise<void>
       getCustomSpamGuidelines: () => Promise<string>
       setCustomSpamGuidelines: (value: string) => Promise<void>
+      getTemperature: () => Promise<number>
+      setTemperature: (value: number) => Promise<void>
+      getTopP: () => Promise<number>
+      setTopP: (value: number) => Promise<void>
     }
     vectorDBAPI: {
       findSimilarEmails: (queryText: string, limit?: number, accountId?: string) => Promise<Array<{

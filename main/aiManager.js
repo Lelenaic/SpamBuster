@@ -181,6 +181,22 @@ class AIManager {
     this.store.set('customSpamGuidelines', value);
   }
 
+  getTemperature() {
+    return this.store.get('temperature', 0.1);
+  }
+
+  setTemperature(value) {
+    this.store.set('temperature', value);
+  }
+
+  getTopP() {
+    return this.store.get('topP', 0.9);
+  }
+
+  setTopP(value) {
+    this.store.set('topP', value);
+  }
+
   validateCronExpression(expression) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -336,6 +352,22 @@ class AIManager {
 
     ipcMain.handle('ai:setCustomSpamGuidelines', async (event, value) => {
       return this.setCustomSpamGuidelines(value);
+    });
+
+    ipcMain.handle('ai:getTemperature', async () => {
+      return this.getTemperature();
+    });
+
+    ipcMain.handle('ai:setTemperature', async (event, value) => {
+      return this.setTemperature(value);
+    });
+
+    ipcMain.handle('ai:getTopP', async () => {
+      return this.getTopP();
+    });
+
+    ipcMain.handle('ai:setTopP', async (event, value) => {
+      return this.setTopP(value);
     });
   }
 }
