@@ -243,9 +243,7 @@ export function GoogleWorkspaceAuthStep({ onBack, onComplete }: GoogleWorkspaceA
                             <li>.../auth/userinfo.email</li>
                           </ul>
                         </li>
-                        <li className="text-red-500 font-bold">
-                          Add test users for development!
-                        </li>
+                        <li>Add your email in the test users</li>
                       </ol>
                     </AccordionContent>
                   </AccordionItem>
