@@ -144,9 +144,14 @@ export class Microsoft365Provider implements MailProvider {
       if (!response.ok) {
         // Try refreshing token if expired
         if (response.status === 401 && oauthConfig.refreshToken) {
+          // Check if this is a Microsoft365Config with tenantId
+          const tenantId = 'tenantId' in oauthConfig ? oauthConfig.tenantId : undefined;
+          if (!tenantId) {
+            throw new Error('Tenant ID not found in OAuth config');
+          }
           const tokenResponse = await this.refreshAccessToken(
             oauthConfig.clientId,
-            oauthConfig.tenantId,
+            tenantId,
             oauthConfig.refreshToken
           );
           
