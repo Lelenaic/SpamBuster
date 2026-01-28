@@ -24,9 +24,9 @@ export function AccountSelectionStep({ onBack, onAccountSelect }: AccountSelecti
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button className="w-full" variant="outline" disabled>
+          <Button className="w-full" variant="outline" onClick={() => onAccountSelect?.('gmail')}>
             <IconBrandGoogle className="mr-2 h-4 w-4" />
-            Add Google Workspace/Gmail account (COMING SOON)
+            Add Google Workspace account
           </Button>
           <Button className="w-full" variant="outline" onClick={() => onAccountSelect?.('outlook')}>
             <IconBrandWindows className="mr-2 h-4 w-4" />

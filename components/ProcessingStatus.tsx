@@ -116,24 +116,14 @@ export default function ProcessingStatus({
     }
   }
 
-  // Get all accounts to display - show all configured accounts even if no emails processed
-  const displayAccounts = accounts.length > 0 
-    ? accounts.map(account => ({
-        accountId: account.id,
-        email: account.name || account.config.username || account.id,
-        stats: accountStats[account.id] || {
-          totalEmails: 0,
-          spamEmails: 0,
-          processedEmails: 0,
-          skippedEmails: 0,
-          errors: 0
-        }
-      }))
-    : Object.entries(accountStats).map(([accountId, stats]) => ({
-        accountId,
-        email: getAccountEmail(accountId),
-        stats
-      }))
+  // Get all accounts to display
+  // Only show accounts that have stats in accountStats (added during processing)
+  // If accountStats is empty, show nothing (not even the accounts from accounts prop)
+  const displayAccounts = Object.entries(accountStats).map(([accountId, stats]) => ({
+    accountId,
+    email: getAccountEmail(accountId),
+    stats
+  }))
 
   return (
     <Card className="mb-6">

@@ -612,6 +612,111 @@ class AccountsManager {
         return { success: false, error: error.message };
       }
     });
+
+    // Google OAuth server for handling redirect callback
+    let googleOAuthServer = null;
+    let googleOAuthCallbackResolve = null;
+
+    ipcMain.handle('oauth:startGoogleOAuthServer', /* eslint-disable */ async (event, redirectUri) => {
+      try {
+        // Close existing server if any
+        if (googleOAuthServer) {
+          console.log('[Google OAuth] Closing existing server...');
+          googleOAuthServer.close();
+          googleOAuthServer = null;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const http = require('http');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const url = require('url');
+        
+        // Parse the redirect URI to get the port
+        const parsedUrl = new URL(redirectUri);
+        const port = parseInt(parsedUrl.port, 10) || 80;
+        console.log('[Google OAuth] Starting server on port:', port);
+
+        // Create a promise that resolves when the callback is received
+        const serverPromise = new Promise((resolve, reject) => {
+          // Create HTTP server
+          googleOAuthServer = http.createServer((req, res) => {
+            const parsedUrl = url.parse(req.url, true);
+            const query = parsedUrl.query;
+            console.log('[Google OAuth] Received request:', req.url);
+            
+            // Send success response to browser
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>Authorization Complete</title>
+                  <meta charset="utf-8">
+                  <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                           display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; 
+                           background: #f5f5f5; }
+                    .container { text-align: center; padding: 40px; background: white; border-radius: 8px; 
+                                 box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .success { color: #22c55e; font-size: 48px; margin-bottom: 20px; }
+                    h1 { margin: 0 0 10px; color: #333; }
+                    p { color: #666; }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="success">&checkmark;</div>
+                    <h1>Authorization Complete</h1>
+                    <p>You can close this window and return to the app.</p>
+                  </div>
+                </body>
+              </html>
+            `);
+            
+            // Handle the OAuth callback
+            if (query.code) {
+              console.log('[Google OAuth] Received authorization code');
+              // Notify the renderer process
+              event.sender.send('oauth:googleCallback', { code: query.code });
+              googleOAuthCallbackResolve?.({ code: query.code });
+            } else if (query.error) {
+              const errorMsg = query.error_description || query.error;
+              console.log('[Google OAuth] Received error:', errorMsg);
+              event.sender.send('oauth:googleCallback', { error: errorMsg });
+              googleOAuthCallbackResolve?.({ error: errorMsg });
+            }
+            
+            // Close the server after handling the request
+            setTimeout(() => {
+              if (googleOAuthServer) {
+                console.log('[Google OAuth] Closing server after callback');
+                googleOAuthServer.close();
+                googleOAuthServer = null;
+              }
+            }, 1000);
+          });
+
+          // Error handler - must call reject
+          googleOAuthServer.on('error', (err) => {
+            console.error('[Google OAuth] Server error:', err.code, err.message);
+            reject({ success: false, error: err.message });
+          });
+
+          // Start listening - must call resolve
+          googleOAuthServer.listen(port, '127.0.0.1', () => {
+            console.log(`[Google OAuth] Server listening on port ${port}`);
+            resolve({ success: true, port });
+          });
+        });
+        
+        return await serverPromise;
+      } catch (error) {
+        console.error('[Google OAuth] Failed to start server:', error);
+        return { success: false, error: error.message };
+      }
+    });
   }
 }
 

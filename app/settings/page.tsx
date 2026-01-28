@@ -413,7 +413,7 @@ function SettingsContent() {
     
     // If enabling the account, delete all alerts for this account
     if (newStatus === 'working') {
-      const userEmail = account.type === 'outlook' 
+      const userEmail = account.type === 'gmail' || account.type === 'outlook' 
         ? account.config.oauth2Config?.userEmail 
         : account.config.username
       await AlertsManager.deleteByAccount(userEmail || account.name || 'account')

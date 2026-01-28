@@ -30,6 +30,7 @@ import {
 import { Account, AccountStatus } from "@/lib/mail"
 import { ImapForm } from "@/components/ImapForm"
 import { Microsoft365EditForm } from "./Microsoft365EditForm"
+import { GoogleWorkspaceEditForm } from "./GoogleWorkspaceEditForm"
 
 const getStatusColor = (status: AccountStatus) => {
   switch (status) {
@@ -185,7 +186,13 @@ export default function MailAccountsTab({
             <DialogTitle>Modify Account</DialogTitle>
             <DialogDescription>Update your account settings.</DialogDescription>
           </DialogHeader>
-          {accountToModify?.type === 'outlook' ? (
+          {accountToModify?.type === 'gmail' ? (
+            <GoogleWorkspaceEditForm
+              account={accountToModify!}
+              onSave={handleSaveModify}
+              onCancel={() => setModifyDialogOpen(false)}
+            />
+          ) : accountToModify?.type === 'outlook' ? (
             <Microsoft365EditForm
               account={accountToModify!}
               onSave={handleSaveModify}

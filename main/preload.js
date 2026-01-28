@@ -105,6 +105,11 @@ contextBridge.exposeInMainWorld("oauthAPI", {
     getDeviceCode: (clientId, tenantId) => ipcRenderer.invoke('oauth:getDeviceCode', clientId, tenantId),
     exchangeCode: (clientId, tenantId, deviceCode) => ipcRenderer.invoke('oauth:exchangeCode', clientId, tenantId, deviceCode),
     refreshToken: (clientId, tenantId, refreshToken) => ipcRenderer.invoke('oauth:refreshToken', clientId, tenantId, refreshToken),
+    startGoogleOAuthServer: (redirectUri) => ipcRenderer.invoke('oauth:startGoogleOAuthServer', redirectUri),
+    onGoogleOAuthCallback: (callback) => {
+        ipcRenderer.on('oauth:googleCallback', (event, ...args) => callback(...args));
+        return () => ipcRenderer.removeListener('oauth:googleCallback', callback);
+    },
 });
 
 // Processing events API for real-time status updates

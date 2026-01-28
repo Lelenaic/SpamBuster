@@ -296,7 +296,6 @@ export class EmailProcessorService {
       for (const email of emails) {
         // Check if processing should stop
         if (this.shouldStop) {
-          console.log('Processing stopped by user')
           break
         }
         

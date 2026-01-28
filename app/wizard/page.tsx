@@ -7,12 +7,15 @@ import { ImapSettingsStep } from "./steps/ImapSettingsStep";
 import { AIConfigurationStep } from "./steps/AIConfigurationStep";
 import { Microsoft365AuthStep } from "./steps/Microsoft365AuthStep";
 import { Microsoft365FolderStep } from "./steps/Microsoft365FolderStep";
+import { GoogleWorkspaceAuthStep } from "./steps/GoogleWorkspaceAuthStep";
+import { GoogleWorkspaceFolderStep } from "./steps/GoogleWorkspaceFolderStep";
 import { Account } from "@/lib/mail";
 
 export default function WizardPage() {
   const [step, setStep] = useState(0);
   const [accountType, setAccountType] = useState<string | null>(null);
   const [pendingOutlookAccount, setPendingOutlookAccount] = useState<Account | null>(null);
+  const [pendingGmailAccount, setPendingGmailAccount] = useState<Account | null>(null);
 
   const handleNext = () => {
     setStep((prevStep) => prevStep + 1);
@@ -44,6 +47,16 @@ export default function WizardPage() {
     handleNext();
   };
 
+  const handleGmailAuthComplete = (account: Account) => {
+    setPendingGmailAccount(account);
+    handleNext();
+  };
+
+  const handleGmailFolderComplete = (account: Account) => {
+    setPendingGmailAccount(account);
+    handleNext();
+  };
+
   switch (step) {
     case 0:
       return <WelcomeStep onNext={handleNext} />;
@@ -56,10 +69,16 @@ export default function WizardPage() {
       if (accountType === 'outlook') {
         return <Microsoft365AuthStep onBack={handleBack} onComplete={handleOutlookAuthComplete} />;
       }
+      if (accountType === 'gmail') {
+        return <GoogleWorkspaceAuthStep onBack={handleBack} onComplete={handleGmailAuthComplete} />;
+      }
       return null;
     case 3:
       if (accountType === 'outlook' && pendingOutlookAccount) {
         return <Microsoft365FolderStep account={pendingOutlookAccount} onBack={handleBack} onComplete={handleOutlookFolderComplete} />;
+      }
+      if (accountType === 'gmail' && pendingGmailAccount) {
+        return <GoogleWorkspaceFolderStep account={pendingGmailAccount} onBack={handleBack} onComplete={handleGmailFolderComplete} />;
       }
       return <AIConfigurationStep onClose={handleCloseWizard} />;
     case 4:

@@ -13,7 +13,7 @@ Uses OpenRouter or Ollama to classify emails based on your custom anti-spam rule
 ## ✨ Features
 
 - **AI-Driven Spam Detection**: Leverage powerful LLMs via OpenRouter or local Ollama.
-- **IMAP Integration**: Connect to Gmail, Outlook, or any IMAP server.
+- **Multiple Integrations**: Connect to Gmail (using Google API), Outlook (using Microsoft API), or any IMAP server.
 - **Custom Rules**: Configure rules sent to AI for intelligent spam filtering.
 - **Cross-Platform**: Electron builds for macOS (DMG), Windows (NSIS), Linux (AppImage, Snap).
 - **Modern UI**: Shadcn UI components, Tailwind CSS, Lucide React icons, Sonner toasts.
@@ -31,7 +31,6 @@ You start by configuring a mail account and an AI provider. Then every x minutes
 
 
 ## 📋 TODO
-- Google Workspace support
 - Auto update
 - Publish rules to community marketplace
 - Create a full web dockerized version

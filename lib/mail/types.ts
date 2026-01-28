@@ -10,12 +10,23 @@ export interface MailConnectionConfig {
   spamFolderId?: string;
   // OAuth2 fields
   authType?: 'password' | 'oauth2';
-  oauth2Config?: Microsoft365Config;
+  oauth2Config?: Microsoft365Config | GoogleWorkspaceConfig;
 }
 
 export interface Microsoft365Config {
   clientId: string;
   tenantId: string;
+  userEmail: string;
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiry?: Date;
+  spamFolder?: string;
+  spamFolderId?: string;
+}
+
+export interface GoogleWorkspaceConfig {
+  clientId: string;
+  clientSecret: string;
   userEmail: string;
   accessToken: string;
   refreshToken?: string;

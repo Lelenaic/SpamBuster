@@ -89,16 +89,8 @@ export function useEmailProcessing(
           return
         }
         
-        // Always check for completed processing state - if there are stats, restore them
-        // regardless of isProcessing flag (in case of race conditions)
-        const currentState = processor.getCurrentProcessingState()
-        
-        if (currentState && Object.keys(currentState.accountStats).length > 0) {
-          setAccountStats(currentState.accountStats)
-          setOverallStats(currentState.overallStats)
-          setCurrentAccount(undefined)
-          setStatus('completed')
-        }
+        // Do NOT restore completed processing state on app restart
+        // Stats are only shown during active processing or when manually started
       } catch (error) {
         console.error('Error checking processing state:', error)
       }
@@ -160,7 +152,16 @@ export function useEmailProcessing(
       accountStats: Record<string, ProcessingStats>
       overallStats: ProcessingStats
     }) => {
-      setAccountStats(data.accountStats)
+      // Filter out disabled accounts from the final stats
+      const enabledAccountStats: AccountProcessingStats = {}
+      const currentAccounts = accountsRef.current
+      for (const [accountId, stats] of Object.entries(data.accountStats)) {
+        const account = currentAccounts.find(a => a.id === accountId)
+        if (account && account.status !== 'disabled') {
+          enabledAccountStats[accountId] = stats
+        }
+      }
+      setAccountStats(enabledAccountStats)
       setOverallStats(data.overallStats)
       setCurrentAccount(undefined)
       processingRef.current = false
@@ -226,6 +227,15 @@ export function useEmailProcessing(
       return
     }
 
+    // Filter out disabled accounts
+    const enabledAccounts = currentAccounts.filter(account => account.status !== 'disabled')
+    
+    if (enabledAccounts.length === 0) {
+      // No enabled accounts to process
+      processingRef.current = false
+      return
+    }
+
     processingRef.current = true
     setStatus('processing')
     abortControllerRef.current = new AbortController()
@@ -238,6 +248,7 @@ export function useEmailProcessing(
       skippedEmails: 0,
       errors: 0
     })
+    // Empty accountStats so accounts are added one by one as processing progresses
     setAccountStats({})
     setCurrentAccount(undefined)
     
@@ -246,9 +257,17 @@ export function useEmailProcessing(
       const emailAgeDays = await window.aiAPI.getEmailAgeDays()
       
       const { accountStats: newAccountStats, overallStats: newOverallStats } = 
-        await currentProcessor.processAllAccounts(currentAccounts || [], currentRules || [], emailAgeDays)
+        await currentProcessor.processAllAccounts(enabledAccounts, currentRules || [], emailAgeDays)
 
-      setAccountStats(newAccountStats)
+      // Filter out disabled accounts from the final stats (extra safety)
+      const filteredAccountStats: AccountProcessingStats = {}
+      for (const [accountId, stats] of Object.entries(newAccountStats)) {
+        const account = enabledAccounts.find(a => a.id === accountId)
+        if (account) {
+          filteredAccountStats[accountId] = stats
+        }
+      }
+      setAccountStats(filteredAccountStats)
       setOverallStats(newOverallStats)
       setStatus('completed')
       // Note: We don't call stopProcessing() here because processing completed normally
