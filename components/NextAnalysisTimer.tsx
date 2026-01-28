@@ -111,6 +111,7 @@ export default function NextAnalysisTimer({ isProcessing }: NextAnalysisTimerPro
   const [config, setConfig] = useState<SchedulerConfig | null>(null)
   const nextRunTimeRef = useRef<Date | null>(null)
   const animationRef = useRef<number | null>(null)
+  const isProcessingRef = useRef<boolean>(false)
 
   const calculateNextRun = useCallback((cfg: SchedulerConfig): Date => {
     const now = new Date()
@@ -140,13 +141,19 @@ export default function NextAnalysisTimer({ isProcessing }: NextAnalysisTimerPro
     return nextRun
   }, [])
 
+  // Sync processing state to ref for animation loop
+  useEffect(() => {
+    isProcessingRef.current = isProcessing
+  }, [isProcessing])
+
   const startAnimation = useCallback(() => {
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current)
     }
 
     const updateDisplay = () => {
-      if (nextRunTimeRef.current && config) {
+      // Only update display if not processing
+      if (!isProcessingRef.current && nextRunTimeRef.current && config) {
         const remaining = calculateTimeRemaining(nextRunTimeRef.current)
         setDisplayTime(remaining)
         
@@ -187,7 +194,10 @@ export default function NextAnalysisTimer({ isProcessing }: NextAnalysisTimerPro
           const nextRun = calculateNextRun(newConfig)
           nextRunTimeRef.current = nextRun
           setDisplayTime(calculateTimeRemaining(nextRun))
-          startAnimation()
+          // Only start animation if not processing
+          if (!isProcessingRef.current) {
+            startAnimation()
+          }
         }
       }
     }
@@ -211,11 +221,34 @@ export default function NextAnalysisTimer({ isProcessing }: NextAnalysisTimerPro
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
+    } else if (!isProcessing && config?.enableCron && nextRunTimeRef.current) {
+      // When processing stops, recalculate next run and restart animation
+      const nextRun = calculateNextRun(config)
+      nextRunTimeRef.current = nextRun
+      setTimeout(() => {
+        setDisplayTime(calculateTimeRemaining(nextRun))
+        startAnimation()
+      }, 0)
     }
-  }, [isProcessing, config])
+  }, [isProcessing, config, calculateNextRun, startAnimation])
 
   if (!config?.enableCron) {
-    return null
+    return (
+      <div className="flex justify-center items-center gap-2 text-sm text-muted-foreground">
+        <CalendarClock className="h-4 w-4" />
+        <span>Scheduled analysis is disabled. You can enable it in the settings.</span>
+      </div>
+    )
+  }
+
+  // When processing, don't show the timer at all
+  if (isProcessing) {
+    return (
+      <div className="flex justify-center items-center gap-2 text-sm text-muted-foreground">
+        <CalendarClock className="h-4 w-4 animate-pulse" />
+        <span>Processing...</span>
+      </div>
+    )
   }
 
   return (

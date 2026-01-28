@@ -48,7 +48,21 @@ interface GmailMessageDetail {
     body?: {
       data?: string;
     };
+    parts?: GmailPart[];
   };
+}
+
+/**
+ * Type for MIME parts in email payload - defined outside class
+ */
+interface GmailPart {
+  mimeType: string;
+  headers?: Array<{ name: string; value: string }>;
+  body?: {
+    data?: string;
+    size?: number;
+  };
+  parts?: GmailPart[];
 }
 
 export class GoogleWorkspaceProvider implements MailProvider {
@@ -151,6 +165,71 @@ export class GoogleWorkspaceProvider implements MailProvider {
     }
   }
 
+  /**
+   * Helper method to decode body data with proper encoding handling
+   */
+  private decodeBodyData(data: string, encoding?: string): string {
+    if (!data) return '';
+    
+    try {
+      // Gmail uses base64url encoding (replace -_ with +/)
+      const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
+      const decoded = Buffer.from(base64, 'base64');
+      
+      if (encoding === 'quoted-printable') {
+        // Decode quoted-printable
+        return decoded.toString('utf-8')
+          .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+          .replace(/=\r?\n/g, '');
+      }
+      
+      return decoded.toString('utf-8');
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Helper method to extract body content from deeply nested MIME parts
+   * Traverses nested parts to find the actual email body (preferring HTML over plain text)
+   */
+  private extractBodyFromParts(parts: GmailPart[], depth: number = 0): string | null {
+    if (!parts || depth > 10) return null; // Prevent infinite recursion
+    
+    let plainTextFallback = '';
+    
+    for (const part of parts) {
+      const mimeType = part.mimeType?.toLowerCase() || '';
+      
+      // Check if this part has direct body data
+      if (part.body?.data && (part.body.size ?? 0) > 0) {
+        const encoding = part.headers?.find(h => h.name?.toLowerCase() === 'content-transfer-encoding')?.value;
+        const decoded = this.decodeBodyData(part.body.data, encoding);
+        if (decoded) {
+          // Prefer HTML over plain text
+          if (mimeType === 'text/html') {
+            return decoded;
+          }
+          // Store plain text as fallback, continue looking for HTML
+          if (mimeType === 'text/plain') {
+            plainTextFallback = decoded;
+          }
+        }
+      }
+      
+      // Recursively check nested parts
+      if (part.parts && part.parts.length > 0) {
+        const nestedBody = this.extractBodyFromParts(part.parts, depth + 1);
+        if (nestedBody) {
+          return nestedBody;
+        }
+      }
+    }
+    
+    // Return plain text if no HTML found
+    return plainTextFallback || null;
+  }
+
   async fetchEmails(config: MailConnectionConfig, maxAgeDays: number): Promise<FetchEmailsResult> {
     const oauthConfig = config.oauth2Config as GoogleWorkspaceConfig | undefined;
     if (!oauthConfig?.accessToken) {
@@ -230,13 +309,23 @@ export class GoogleWorkspaceProvider implements MailProvider {
             const subject = headers.find(h => h.name === 'Subject')?.value || '(No subject)';
             const fromHeader = headers.find(h => h.name === 'From')?.value || 'Unknown';
             
-            // Decode body if available
+            // Decode body - prefer full body over snippet
             let body = detail.snippet || '';
+            
+            // First, try to get body from payload.body.data
             if (detail.payload?.body?.data) {
               try {
                 body = Buffer.from(detail.payload.body.data, 'base64').toString('utf-8');
               } catch {
                 // Keep snippet if body decode fails
+              }
+            }
+            
+            // Second, try to get body from parts (multipart messages)
+            if (detail.payload?.parts && detail.payload.parts.length > 0 && body === detail.snippet) {
+              const fullBodyFromParts = this.extractBodyFromParts(detail.payload.parts);
+              if (fullBodyFromParts && fullBodyFromParts.length > body.length) {
+                body = fullBodyFromParts;
               }
             }
 
