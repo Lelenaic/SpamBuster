@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
+import NextAnalysisTimer from './NextAnalysisTimer'
 import { 
   Play, 
   Square, 
@@ -251,6 +252,9 @@ export default function ProcessingStatus({
             </Button>
           )}
         </div>
+        
+        {/* Scheduled Analysis Timer */}
+        <NextAnalysisTimer isProcessing={isProcessing} />
       </CardContent>
     </Card>
   )

@@ -193,6 +193,7 @@ declare global {
         manualOverride?: boolean;
         manualIsSpam?: boolean;
       }) => void) => () => void;
+      onSchedulerSettingsChanged: (callback: () => void) => () => void;
       removeAllListeners: (channel: string) => void;
     }
   }

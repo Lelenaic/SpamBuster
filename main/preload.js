@@ -138,6 +138,10 @@ contextBridge.exposeInMainWorld("processingEvents", {
         ipcRenderer.on('analyzed-email-created', (event, ...args) => callback(...args));
         return () => ipcRenderer.removeListener('analyzed-email-created', callback);
     },
+    onSchedulerSettingsChanged: (callback) => {
+        ipcRenderer.on('scheduler-settings-changed', (event, ...args) => callback(...args));
+        return () => ipcRenderer.removeListener('scheduler-settings-changed', callback);
+    },
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);
     }

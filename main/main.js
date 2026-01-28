@@ -96,6 +96,40 @@ async function initializeApp() {
   aiManager.setCronExpression = async (value) => {
     originalSetCronExpression(value);
     await setupCronJob();
+    // Notify renderer about scheduler settings change
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('scheduler-settings-changed');
+    }
+  };
+
+  const originalSetSchedulerSimpleValue = aiManager.setSchedulerSimpleValue.bind(aiManager);
+  aiManager.setSchedulerSimpleValue = async (value) => {
+    originalSetSchedulerSimpleValue(value);
+    await setupCronJob();
+    // Notify renderer about scheduler settings change
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('scheduler-settings-changed');
+    }
+  };
+
+  const originalSetSchedulerSimpleUnit = aiManager.setSchedulerSimpleUnit.bind(aiManager);
+  aiManager.setSchedulerSimpleUnit = async (value) => {
+    originalSetSchedulerSimpleUnit(value);
+    await setupCronJob();
+    // Notify renderer about scheduler settings change
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('scheduler-settings-changed');
+    }
+  };
+
+  const originalSetSchedulerMode = aiManager.setSchedulerMode.bind(aiManager);
+  aiManager.setSchedulerMode = async (value) => {
+    originalSetSchedulerMode(value);
+    await setupCronJob();
+    // Notify renderer about scheduler settings change
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('scheduler-settings-changed');
+    }
   };
 
   // Override setSelectedEmbedModel to also update vector DB dimension
@@ -206,6 +240,11 @@ ipcMain.on('processing:error', (event, error) => {
 
 ipcMain.on('processing:status-change', (event, status) => {
   event.sender.send('processing:status-change', status);
+});
+
+// Forward scheduler settings change events to renderer
+ipcMain.on('scheduler-settings-changed', (event) => {
+  event.sender.send('scheduler-settings-changed');
 });
 
 const appServe = app.isPackaged ? serve({
