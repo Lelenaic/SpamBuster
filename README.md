@@ -2,7 +2,7 @@
 ![SpamBuster](/spambuster.jpg)
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.1.0-black?style=flat&logo=next.js)](https://nextjs.org)
-[![Electron](https://img.shields.io/badge/Electron-39.2.7-blue?style=flat&logo=electron)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-39.3.0-blue?style=flat&logo=electron)](https://www.electronjs.org/)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GitHub Releases](https://img.shields.io/github/downloads/lelenaic/spambuster/latest/total.svg)](https://github.com/lelenaic/spambuster/releases/latest)
 
