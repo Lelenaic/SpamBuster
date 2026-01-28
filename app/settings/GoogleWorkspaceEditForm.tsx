@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, RefreshCw, Check, ChevronDown } from 'lucide-react';
@@ -35,8 +35,12 @@ export function GoogleWorkspaceEditForm({ account, onSave, onCancel }: GoogleWor
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [folderOpen, setFolderOpen] = useState(false);
+  const fetchInProgress = useRef(false);
 
   const fetchFolders = async () => {
+    if (fetchInProgress.current) return;
+    fetchInProgress.current = true;
+    
     setRefreshing(true);
     try {
       const provider = new GoogleWorkspaceProvider();
@@ -69,6 +73,7 @@ export function GoogleWorkspaceEditForm({ account, onSave, onCancel }: GoogleWor
     } finally {
       setLoading(false);
       setRefreshing(false);
+      fetchInProgress.current = false;
     }
   };
 
@@ -104,15 +109,6 @@ export function GoogleWorkspaceEditForm({ account, onSave, onCancel }: GoogleWor
 
   return (
     <div className="space-y-4">
-      {/* Display user email (read-only) */}
-      <div className="space-y-2">
-        <Label>Account</Label>
-        <div className="p-3 bg-muted rounded-md">
-          <p className="text-sm font-medium">{account.config.oauth2Config?.userEmail}</p>
-          <p className="text-xs text-muted-foreground">Google Workspace account</p>
-        </div>
-      </div>
-
       <div className="space-y-2">
         <Label>Spam/Junk Label</Label>
         <div className="flex gap-2">

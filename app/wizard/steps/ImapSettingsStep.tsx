@@ -11,7 +11,7 @@ import { ImapForm } from "@/components/ImapForm";
 
 interface ImapSettingsStepProps {
   onBack?: () => void;
-  onNext?: () => void;
+  onNext?: (account: Account) => void;
 }
 
 export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
@@ -22,12 +22,9 @@ export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
     port: 993,
     secure: "true", // Default to TLS
     allowUnsignedCertificate: false,
-    spamFolder: "",
   });
   const [isTesting, setIsTesting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [folders, setFolders] = useState<{ name: string; path: string }[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(false);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -36,40 +33,6 @@ export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
     }));
     // Clear error message when user changes any field
     setErrorMessage(null);
-  };
-
-  const handleFetchFolders = async () => {
-    setLoadingFolders(true);
-    try {
-      const config: MailConnectionConfig = {
-        host: formData.host,
-        port: parseInt(formData.port.toString()),
-        secure: formData.secure === "true",
-        username: formData.username,
-        password: formData.password,
-        allowUnsignedCertificate: formData.allowUnsignedCertificate,
-      };
-
-      if (typeof window !== "undefined" && window.accountsAPI) {
-        const result = await window.accountsAPI.listMailboxFolders(config);
-        if (result.success && result.folders) {
-          setFolders(result.folders);
-          // Auto-select a default if available
-          const defaultFolders = ['Spam', 'Junk', 'Spam Folder', 'Junk E-mail'];
-          const matchingFolder = result.folders.find(f => defaultFolders.includes(f.name));
-          if (matchingFolder && !formData.spamFolder) {
-            setFormData(prev => ({ ...prev, spamFolder: matchingFolder.name }));
-          }
-        } else {
-          setErrorMessage(result.error || "Failed to fetch folders");
-        }
-      }
-    } catch (error) {
-      setErrorMessage("Failed to fetch folders");
-      console.error(error);
-    } finally {
-      setLoadingFolders(false);
-    }
   };
 
   const handleTestConnection = async () => {
@@ -84,7 +47,6 @@ export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
         username: formData.username,
         password: formData.password,
         allowUnsignedCertificate: formData.allowUnsignedCertificate,
-        spamFolder: formData.spamFolder,
       };
 
       const provider = MailProviderFactory.createProvider('imap');
@@ -92,21 +54,15 @@ export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
 
       if (result.success) {
         toast.success("Connection successful!");
-        // Store the account in the accounts array
-        if (typeof window !== "undefined" && window.storeAPI) {
-          const existingAccounts = (await window.storeAPI.get("accounts")) as Account[] || [];
-          const newAccount: Account = {
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            type: 'imap',
-            config,
-            name: formData.username, // Use username as display name
-            status: 'working',
-          };
-          const updatedAccounts = [...existingAccounts, newAccount];
-          await window.storeAPI.set("accounts", updatedAccounts);
-          window.electronAPI?.send('accounts-updated');
-        }
-        if (onNext) onNext();
+        // Create the account object to pass to the next step
+        const newAccount: Account = {
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'imap',
+          config,
+          name: formData.username, // Use username as display name
+          status: 'working',
+        };
+        if (onNext) onNext(newAccount);
       } else {
         setErrorMessage(result.error || "Connection failed. Please check your settings.");
       }
@@ -134,9 +90,7 @@ export function ImapSettingsStep({ onBack, onNext }: ImapSettingsStepProps) {
           <ImapForm
             formData={formData}
             onChange={handleInputChange}
-            folders={folders}
-            onFetchFolders={handleFetchFolders}
-            loadingFolders={loadingFolders}
+            showSpamFolder={false}
           />
           {errorMessage && (
             <Alert variant="destructive">

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { AccountSelectionStep } from "./steps/AccountSelectionStep";
 import { ImapSettingsStep } from "./steps/ImapSettingsStep";
+import { ImapFolderStep } from "./steps/ImapFolderStep";
 import { AIConfigurationStep } from "./steps/AIConfigurationStep";
 import { Microsoft365AuthStep } from "./steps/Microsoft365AuthStep";
 import { Microsoft365FolderStep } from "./steps/Microsoft365FolderStep";
@@ -16,6 +17,7 @@ export default function WizardPage() {
   const [accountType, setAccountType] = useState<string | null>(null);
   const [pendingOutlookAccount, setPendingOutlookAccount] = useState<Account | null>(null);
   const [pendingGmailAccount, setPendingGmailAccount] = useState<Account | null>(null);
+  const [pendingImapAccount, setPendingImapAccount] = useState<Account | null>(null);
 
   const handleNext = () => {
     setStep((prevStep) => prevStep + 1);
@@ -57,6 +59,16 @@ export default function WizardPage() {
     handleNext();
   };
 
+  const handleImapSettingsComplete = (account: Account) => {
+    setPendingImapAccount(account);
+    handleNext();
+  };
+
+  const handleImapFolderComplete = (account: Account) => {
+    setPendingImapAccount(account);
+    handleNext();
+  };
+
   switch (step) {
     case 0:
       return <WelcomeStep onNext={handleNext} />;
@@ -64,7 +76,7 @@ export default function WizardPage() {
       return <AccountSelectionStep onBack={handleBack} onAccountSelect={handleAccountSelect} />;
     case 2:
       if (accountType === 'imap') {
-        return <ImapSettingsStep onBack={handleBack} onNext={handleNext} />;
+        return <ImapSettingsStep onBack={handleBack} onNext={handleImapSettingsComplete} />;
       }
       if (accountType === 'outlook') {
         return <Microsoft365AuthStep onBack={handleBack} onComplete={handleOutlookAuthComplete} />;
@@ -74,6 +86,9 @@ export default function WizardPage() {
       }
       return null;
     case 3:
+      if (accountType === 'imap' && pendingImapAccount) {
+        return <ImapFolderStep account={pendingImapAccount} onBack={handleBack} onComplete={handleImapFolderComplete} />;
+      }
       if (accountType === 'outlook' && pendingOutlookAccount) {
         return <Microsoft365FolderStep account={pendingOutlookAccount} onBack={handleBack} onComplete={handleOutlookFolderComplete} />;
       }

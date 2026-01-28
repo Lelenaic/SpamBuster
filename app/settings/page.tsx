@@ -575,7 +575,7 @@ function SettingsContent() {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="ai">AI Account</TabsTrigger>
+          <TabsTrigger value="ai">AI</TabsTrigger>
           <TabsTrigger value="mail">Mail Accounts</TabsTrigger>
         </TabsList>
         <div className="bg-card rounded-xl border shadow-sm p-8">

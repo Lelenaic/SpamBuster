@@ -426,6 +426,26 @@ export class GoogleWorkspaceProvider implements MailProvider {
       throw new Error('Not authenticated');
     }
 
+    // Pre-emptively refresh token if expired or expiring soon
+    const accessToken = oauthConfig.accessToken;
+    const tokenExpiry = oauthConfig.tokenExpiry ? new Date(oauthConfig.tokenExpiry).getTime() : 0;
+    const now = Date.now();
+    
+    if (oauthConfig.refreshToken && (tokenExpiry === 0 || now >= tokenExpiry - 60000)) {
+      // Token is expired or expires within 1 minute, refresh it
+      const tokenResponse = await this.refreshAccessToken(
+        oauthConfig.clientId,
+        oauthConfig.clientSecret,
+        oauthConfig.refreshToken
+      );
+      
+      if (tokenResponse.access_token) {
+        oauthConfig.accessToken = tokenResponse.access_token;
+        oauthConfig.refreshToken = tokenResponse.refresh_token || oauthConfig.refreshToken;
+        oauthConfig.tokenExpiry = new Date(now + tokenResponse.expires_in * 1000);
+      }
+    }
+
     const response = await fetch(`${GMAIL_API}/labels`, {
       headers: { Authorization: `Bearer ${oauthConfig.accessToken}` },
     });

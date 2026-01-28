@@ -250,6 +250,28 @@ export class Microsoft365Provider implements MailProvider {
       throw new Error('Not authenticated');
     }
 
+    const tenantId = 'tenantId' in oauthConfig ? oauthConfig.tenantId : undefined;
+
+    // Pre-emptively refresh token if expired or expiring soon
+    const accessToken = oauthConfig.accessToken;
+    const tokenExpiry = oauthConfig.tokenExpiry ? new Date(oauthConfig.tokenExpiry).getTime() : 0;
+    const now = Date.now();
+    
+    if (oauthConfig.refreshToken && tenantId && (tokenExpiry === 0 || now >= tokenExpiry - 60000)) {
+      // Token is expired or expires within 1 minute, refresh it
+      const tokenResponse = await this.refreshAccessToken(
+        oauthConfig.clientId,
+        tenantId,
+        oauthConfig.refreshToken
+      );
+      
+      if (tokenResponse.access_token) {
+        oauthConfig.accessToken = tokenResponse.access_token;
+        oauthConfig.refreshToken = tokenResponse.refresh_token || oauthConfig.refreshToken;
+        oauthConfig.tokenExpiry = new Date(now + tokenResponse.expires_in * 1000);
+      }
+    }
+
     const allFolders: { name: string; id: string }[] = [];
     let nextLink: string | undefined = `${GRAPH_API}/me/mailFolders?$top=100`;
 

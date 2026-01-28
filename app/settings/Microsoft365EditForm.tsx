@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, RefreshCw, Check, ChevronDown } from 'lucide-react';
@@ -35,8 +35,12 @@ export function Microsoft365EditForm({ account, onSave, onCancel }: Microsoft365
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [folderOpen, setFolderOpen] = useState(false);
+  const fetchInProgress = useRef(false);
 
   const fetchFolders = async () => {
+    if (fetchInProgress.current) return;
+    fetchInProgress.current = true;
+    
     setRefreshing(true);
     try {
       const provider = new Microsoft365Provider();
@@ -69,6 +73,7 @@ export function Microsoft365EditForm({ account, onSave, onCancel }: Microsoft365
     } finally {
       setLoading(false);
       setRefreshing(false);
+      fetchInProgress.current = false;
     }
   };
 
