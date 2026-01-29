@@ -19,7 +19,7 @@ export class OllamaService implements AIService {
     return this.listModels()
   }
 
-  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number): Promise<string> {
+  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number): Promise<{ content: string; cost: number }> {
     const body: Record<string, unknown> = {
       model,
       prompt: message,
@@ -42,7 +42,12 @@ export class OllamaService implements AIService {
     })
     if (!response.ok) throw new Error('Failed to send message')
     const data = await response.json()
-    return data.response
+    
+    // Ollama is local, so cost is always $0.00
+    return {
+      content: data.response,
+      cost: 0
+    }
   }
 
   async testConnection(): Promise<boolean> {

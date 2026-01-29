@@ -11,6 +11,8 @@ const { AccountsManager } = require("./accountsManager");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { AIManager } = require("./aiManager");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+const { GeneralSettingsManager } = require("./generalSettingsManager");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { VectorDBManager } = require("./vectorDBManager");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getPackageInfo } = require("./packageJson");
@@ -19,6 +21,7 @@ let store;
 let rulesManager;
 let accountsManager;
 let aiManager;
+let generalSettingsManager;
 let vectorDBManager;
 let mainWindow;
 let wizardWindow;  // Add reference to wizard window
@@ -32,12 +35,14 @@ async function initStore() {
   rulesManager = new RulesManager(store);
   accountsManager = new AccountsManager(store);
   aiManager = new AIManager(store);
+  generalSettingsManager = new GeneralSettingsManager(store);
   vectorDBManager = new VectorDBManager(store);
 
   // Register IPC handlers
   rulesManager.registerHandlers(ipcMain);
   accountsManager.registerHandlers(ipcMain);
   aiManager.registerHandlers(ipcMain);
+  generalSettingsManager.registerHandlers(ipcMain);
 }
 
 async function setupCronJob() {
@@ -54,12 +59,12 @@ async function setupCronJob() {
       cronJob = null;
     }
 
-    if (!aiManager) {
+    if (!aiManager || !generalSettingsManager) {
       return;
     }
 
-    const enableCron = aiManager.getEnableCron();
-    const cronExpression = aiManager.getCronExpression();
+    const enableCron = generalSettingsManager.getEnableCron();
+    const cronExpression = generalSettingsManager.getCronExpression();
     
     if (enableCron && cronExpression) {
       try {
@@ -85,15 +90,15 @@ async function initializeApp() {
   await initStore();
   await setupCronJob();
 
-  // Override the ai manager handlers to also update cron job
-  const originalSetEnableCron = aiManager.setEnableCron.bind(aiManager);
-  aiManager.setEnableCron = async (value) => {
+  // Override the general settings manager handlers to also update cron job
+  const originalSetEnableCron = generalSettingsManager.setEnableCron.bind(generalSettingsManager);
+  generalSettingsManager.setEnableCron = async (value) => {
     originalSetEnableCron(value);
     await setupCronJob();
   };
 
-  const originalSetCronExpression = aiManager.setCronExpression.bind(aiManager);
-  aiManager.setCronExpression = async (value) => {
+  const originalSetCronExpression = generalSettingsManager.setCronExpression.bind(generalSettingsManager);
+  generalSettingsManager.setCronExpression = async (value) => {
     originalSetCronExpression(value);
     await setupCronJob();
     // Notify renderer about scheduler settings change
@@ -102,8 +107,8 @@ async function initializeApp() {
     }
   };
 
-  const originalSetSchedulerSimpleValue = aiManager.setSchedulerSimpleValue.bind(aiManager);
-  aiManager.setSchedulerSimpleValue = async (value) => {
+  const originalSetSchedulerSimpleValue = generalSettingsManager.setSchedulerSimpleValue.bind(generalSettingsManager);
+  generalSettingsManager.setSchedulerSimpleValue = async (value) => {
     originalSetSchedulerSimpleValue(value);
     await setupCronJob();
     // Notify renderer about scheduler settings change
@@ -112,8 +117,8 @@ async function initializeApp() {
     }
   };
 
-  const originalSetSchedulerSimpleUnit = aiManager.setSchedulerSimpleUnit.bind(aiManager);
-  aiManager.setSchedulerSimpleUnit = async (value) => {
+  const originalSetSchedulerSimpleUnit = generalSettingsManager.setSchedulerSimpleUnit.bind(generalSettingsManager);
+  generalSettingsManager.setSchedulerSimpleUnit = async (value) => {
     originalSetSchedulerSimpleUnit(value);
     await setupCronJob();
     // Notify renderer about scheduler settings change
@@ -122,8 +127,8 @@ async function initializeApp() {
     }
   };
 
-  const originalSetSchedulerMode = aiManager.setSchedulerMode.bind(aiManager);
-  aiManager.setSchedulerMode = async (value) => {
+  const originalSetSchedulerMode = generalSettingsManager.setSchedulerMode.bind(generalSettingsManager);
+  generalSettingsManager.setSchedulerMode = async (value) => {
     originalSetSchedulerMode(value);
     await setupCronJob();
     // Notify renderer about scheduler settings change

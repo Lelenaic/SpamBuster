@@ -166,6 +166,8 @@ class AccountsManager {
 
   createAnalyzedEmail(emailData) {
     const emails = this.getAllAnalyzedEmails();
+    
+    // Always create a new entry for accurate cost tracking
     const newEmail = {
       id: uuidv4(),
       ...emailData,
@@ -173,11 +175,7 @@ class AccountsManager {
     };
     emails.push(newEmail);
 
-    // Keep only the last 50 emails
-    if (emails.length > 50) {
-      emails.splice(0, emails.length - 50);
-    }
-
+    // Store all analyzed emails (no limit)
     this.store.set('analyzedEmails', emails);
     return newEmail;
   }

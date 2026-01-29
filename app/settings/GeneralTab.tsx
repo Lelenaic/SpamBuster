@@ -32,6 +32,12 @@ interface GeneralTabProps {
   setSchedulerSimpleValue: (value: number) => void
   schedulerSimpleUnit: string
   setSchedulerSimpleUnit: (value: string) => void
+  dateFormat: string
+  setDateFormat: (value: string) => void
+  customDateFormat: string
+  setCustomDateFormat: (value: string) => void
+  timeFormat: '12h' | '24h'
+  setTimeFormat: (value: '12h' | '24h') => void
 }
 
 export default function GeneralTab({
@@ -53,9 +59,16 @@ export default function GeneralTab({
   setSchedulerSimpleValue,
   schedulerSimpleUnit,
   setSchedulerSimpleUnit,
+  dateFormat,
+  setDateFormat,
+  customDateFormat,
+  setCustomDateFormat,
+  timeFormat,
+  setTimeFormat,
 }: GeneralTabProps) {
   const [cronValidationError, setCronValidationError] = useState<string>("")
   const [cronInputValue, setCronInputValue] = useState<string>(cronExpression)
+  const [customFormatValidationError, setCustomFormatValidationError] = useState<string>("")
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false)
   const [clearVectorDB, setClearVectorDB] = useState(false)
 
@@ -71,14 +84,14 @@ export default function GeneralTab({
   // Effect to update cron when simple schedule values change
   useEffect(() => {
     const updateCronFromSimple = async () => {
-      if (schedulerMode === 'simple' && enableCron && typeof window !== 'undefined' && window.aiAPI) {
-        // Use the existing IPC handler from aiManager.js to generate cron from simple values
-        const cronExpr = await window.aiAPI.generateCronFromSimple(schedulerSimpleValue, schedulerSimpleUnit)
+      if (schedulerMode === 'simple' && enableCron && typeof window !== 'undefined' && window.generalAPI) {
+        // Use the existing IPC handler from generalSettingsManager.js to generate cron from simple values
+        const cronExpr = await window.generalAPI.generateCronFromSimple(schedulerSimpleValue, schedulerSimpleUnit)
         
         // Only update if the expression has changed to avoid redundant calls
         if (lastCronExprRef.current !== cronExpr) {
           lastCronExprRef.current = cronExpr
-          window.aiAPI.setCronExpression(cronExpr)
+          window.generalAPI.setCronExpression(cronExpr)
           // Also update the cronExpression state to keep it in sync
           setCronExpression(cronExpr)
         }
@@ -89,7 +102,7 @@ export default function GeneralTab({
 
   // Effect to sync cron expression when switching from simple to advanced mode
   useEffect(() => {
-    if (schedulerMode === 'advanced' && enableCron && typeof window !== 'undefined' && window.aiAPI) {
+    if (schedulerMode === 'advanced' && enableCron && typeof window !== 'undefined' && window.generalAPI) {
       // Sync the input with the current cron expression
       setCronInputValue(cronExpression)
     }
@@ -111,17 +124,66 @@ export default function GeneralTab({
 
   const handleCronExpressionChange = async (value: string) => {
     setCronInputValue(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
+    if (typeof window !== "undefined" && window.generalAPI) {
       // Validate the cron expression
-      const validation = await window.aiAPI.validateCronExpression(value)
+      const validation = await window.generalAPI.validateCronExpression(value)
       if (!validation.valid) {
         const errorMessage = validation.error instanceof Error ? validation.error.message : (validation.error || "Invalid cron expression")
         setCronValidationError(errorMessage)
       } else {
         setCronValidationError("")
         setCronExpression(value)
-        await window.aiAPI.setCronExpression(value)
+        await window.generalAPI.setCronExpression(value)
       }
+    }
+  }
+
+  // Valid placeholders for custom date format
+  const VALID_PLACEHOLDERS = ['{YYYY}', '{YY}', '{MMMM}', '{MM}', '{M}', '{DD}', '{D}', '{HH}', '{H}', '{hh}', '{h}', '{mm}', '{m}', '{ss}', '{s}', '{A}']
+  
+  const validateCustomDateFormat = (format: string): boolean => {
+    if (!format.trim()) {
+      setCustomFormatValidationError("Custom format cannot be empty")
+      return false
+    }
+    
+    // Check if format contains at least one valid placeholder
+    const hasValidPlaceholder = VALID_PLACEHOLDERS.some(placeholder => format.includes(placeholder))
+    
+    if (!hasValidPlaceholder) {
+      setCustomFormatValidationError(`Format must contain at least one valid placeholder: ${VALID_PLACEHOLDERS.join(', ')}`)
+      return false
+    }
+    
+    setCustomFormatValidationError("")
+    return true
+  }
+
+  const handleDateFormatChange = (value: string) => {
+    setDateFormat(value)
+    if (value === 'custom') {
+      // Re-validate when switching to custom
+      validateCustomDateFormat(customDateFormat)
+    } else {
+      setCustomFormatValidationError("")
+    }
+    if (typeof window !== "undefined" && window.generalAPI) {
+      window.generalAPI.setDateFormat(value)
+    }
+  }
+
+  const handleCustomDateFormatChange = (value: string) => {
+    setCustomDateFormat(value)
+    const isValid = validateCustomDateFormat(value)
+    if (isValid && typeof window !== "undefined" && window.generalAPI) {
+      window.generalAPI.setCustomDateFormat(value)
+    }
+  }
+
+  const handleTimeFormatChange = (value: '12h' | '24h') => {
+    setTimeFormat(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      window.generalAPI.setTimeFormat(value)
     }
   }
 
@@ -246,6 +308,63 @@ export default function GeneralTab({
               </p>
             </div>
           )}
+        </div>
+
+        <div className="space-y-4 mt-10">
+          <h3 className="text-lg font-semibold">Date Display</h3>
+          <div className="space-y-2">
+            <Label htmlFor="date-format">Date Format</Label>
+            <Select value={dateFormat} onValueChange={handleDateFormatChange}>
+              <SelectTrigger id="date-format" className="w-60">
+                <SelectValue placeholder="Select format" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="iso">ISO (YYYY-MM-DD)</SelectItem>
+                <SelectItem value="american">American (MM/DD/YYYY)</SelectItem>
+                <SelectItem value="european">European (DD/MM/YYYY)</SelectItem>
+                <SelectItem value="short">Short (MM/DD/YY)</SelectItem>
+                <SelectItem value="verbose">Verbose (Month DD, YYYY)</SelectItem>
+                <SelectItem value="custom">Custom...</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Choose how dates are displayed throughout the application.
+            </p>
+          </div>
+          {dateFormat === 'custom' && (
+            <div className="space-y-2 ml-6">
+              <Label htmlFor="custom-date-format">Custom Date Format</Label>
+              <Input
+                id="custom-date-format"
+                type="text"
+                value={customDateFormat}
+                onChange={(e) => handleCustomDateFormatChange(e.target.value)}
+                placeholder="{YYYY}-{MM}-{DD}"
+                className={customFormatValidationError ? "border-red-500" : ""}
+              />
+              <p className="text-sm text-muted-foreground">
+                Use placeholders: {VALID_PLACEHOLDERS.join(', ')}
+              </p>
+              {customFormatValidationError && (
+                <p className="text-sm text-red-500">{customFormatValidationError}</p>
+              )}
+            </div>
+          )}
+          <div className="space-y-2 mt-4">
+            <Label htmlFor="time-format">Time Format</Label>
+            <Select value={timeFormat} onValueChange={(value) => handleTimeFormatChange(value as '12h' | '24h')}>
+              <SelectTrigger id="time-format" className="w-40">
+                <SelectValue placeholder="Select format" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="12h">12-hour (AM/PM)</SelectItem>
+                <SelectItem value="24h">24-hour</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Choose how time is displayed throughout the application.
+            </p>
+          </div>
         </div>
 
         <div className="space-y-4 mt-10">

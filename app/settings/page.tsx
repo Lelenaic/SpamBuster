@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -41,6 +41,10 @@ function SettingsContent() {
 
   const [testingEmbedConnection, setTestingEmbedConnection] = useState(false)
 
+  // Refs to prevent double-fetching in React Strict Mode
+  const modelsFetched = useRef(false)
+  const embedModelsFetched = useRef(false)
+
   const [mailAccounts, setMailAccounts] = useState<Account[]>([])
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null)
@@ -76,29 +80,35 @@ function SettingsContent() {
   const [customSpamGuidelines, setCustomSpamGuidelines] = useState<string>("")
   const [temperature, setTemperature] = useState<number>(0.1)
   const [topP, setTopP] = useState<number>(0.9)
+  const [dateFormat, setDateFormat] = useState<string>("iso")
+  const [customDateFormat, setCustomDateFormat] = useState<string>("{YYYY}-{MM}-{DD}")
+  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>("12h")
 
   useEffect(() => {
     const loadSettings = async () => {
-      if (typeof window !== "undefined" && window.aiAPI) {
+      if (typeof window !== "undefined" && window.aiAPI && window.generalAPI) {
         setAiSource(await window.aiAPI.getAISource())
         setOllamaBaseUrl(await window.aiAPI.getOllamaBaseUrl())
         setOpenRouterApiKey(await window.aiAPI.getOpenRouterApiKey())
         setSelectedModel(await window.aiAPI.getSelectedModel())
         setSelectedEmbedModel(await window.aiAPI.getSelectedEmbedModel())
-        setAiSensitivity(await window.aiAPI.getAISensitivity())
-        setEmailAgeDays(await window.aiAPI.getEmailAgeDays())
-        setSimplifyEmailContent(await window.aiAPI.getSimplifyEmailContent())
-        setSimplifyEmailContentMode(await window.aiAPI.getSimplifyEmailContentMode())
-        setEnableCron(await window.aiAPI.getEnableCron())
-        setCronExpression(await window.aiAPI.getCronExpression())
-        setSchedulerMode(await window.aiAPI.getSchedulerMode())
-        setSchedulerSimpleValue(await window.aiAPI.getSchedulerSimpleValue())
-        setSchedulerSimpleUnit(await window.aiAPI.getSchedulerSimpleUnit())
+        setAiSensitivity(await window.generalAPI.getAISensitivity())
+        setEmailAgeDays(await window.generalAPI.getEmailAgeDays())
+        setSimplifyEmailContent(await window.generalAPI.getSimplifyEmailContent())
+        setSimplifyEmailContentMode(await window.generalAPI.getSimplifyEmailContentMode())
+        setEnableCron(await window.generalAPI.getEnableCron())
+        setCronExpression(await window.generalAPI.getCronExpression())
+        setSchedulerMode(await window.generalAPI.getSchedulerMode())
+        setSchedulerSimpleValue(await window.generalAPI.getSchedulerSimpleValue())
+        setSchedulerSimpleUnit(await window.generalAPI.getSchedulerSimpleUnit())
         setEnableVectorDB(await window.aiAPI.getEnableVectorDB())
         setCustomizeSpamGuidelines(await window.aiAPI.getCustomizeSpamGuidelines())
         setCustomSpamGuidelines(await window.aiAPI.getCustomSpamGuidelines())
         setTemperature(await window.aiAPI.getTemperature())
         setTopP(await window.aiAPI.getTopP())
+        setDateFormat(await window.generalAPI.getDateFormat())
+        setCustomDateFormat(await window.generalAPI.getCustomDateFormat())
+        setTimeFormat(await window.generalAPI.getTimeFormat())
 
         const mailAccounts = await window.accountsAPI.getAll()
         setMailAccounts(mailAccounts)
@@ -170,11 +180,20 @@ function SettingsContent() {
 
   useEffect(() => {
     if ((aiSource === 'ollama' && ollamaBaseUrl) || (aiSource === 'openrouter' && openRouterApiKey)) {
+      // Skip if already fetched (prevents double-fetching in React Strict Mode)
+      if (modelsFetched.current) return;
+      
+      // Set flag synchronously BEFORE starting async operation
+      modelsFetched.current = true;
+      
       fetchModels()
     }
   }, [aiSource, ollamaBaseUrl, openRouterApiKey])
 
   const fetchModels = async () => {
+    // Reset flag when called manually (e.g., for refresh)
+    modelsFetched.current = true;
+    
     setLoadingModels(true)
     try {
       const service = await createAIService()
@@ -209,11 +228,20 @@ function SettingsContent() {
 
   useEffect(() => {
     if (ollamaBaseUrl) {
+      // Skip if already fetched (prevents double-fetching in React Strict Mode)
+      if (embedModelsFetched.current) return;
+      
+      // Set flag synchronously BEFORE starting async operation
+      embedModelsFetched.current = true;
+      
       fetchEmbedModels()
     }
   }, [ollamaBaseUrl])
 
   const fetchEmbedModels = async () => {
+    // Reset flag when called manually (e.g., for refresh)
+    embedModelsFetched.current = true;
+    
     setLoadingEmbedModels(true)
     try {
       // Always use Ollama for embeddings regardless of main AI provider
@@ -447,72 +475,72 @@ function SettingsContent() {
 
   const handleAiSensitivityChange = async (value: number) => {
     setAiSensitivity(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setAISensitivity(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setAISensitivity(value)
     }
   }
 
   const handleEmailAgeDaysChange = async (value: number) => {
     setEmailAgeDays(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setEmailAgeDays(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setEmailAgeDays(value)
     }
   }
 
   const handleSimplifyEmailContentChange = async (value: boolean) => {
     setSimplifyEmailContent(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setSimplifyEmailContent(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setSimplifyEmailContent(value)
     }
   }
 
   const handleSimplifyEmailContentModeChange = async (value: string) => {
     setSimplifyEmailContentMode(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setSimplifyEmailContentMode(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setSimplifyEmailContentMode(value)
     }
   }
 
   const handleEnableCronChange = async (value: boolean) => {
     setEnableCron(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setEnableCron(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setEnableCron(value)
     }
   }
 
   const handleCronExpressionChange = async (value: string) => {
     setCronExpression(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setCronExpression(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setCronExpression(value)
     }
   }
 
   const handleSchedulerModeChange = async (value: string) => {
     setSchedulerMode(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setSchedulerMode(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setSchedulerMode(value)
     }
   }
 
   const handleSchedulerSimpleValueChange = async (value: number) => {
     setSchedulerSimpleValue(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setSchedulerSimpleValue(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setSchedulerSimpleValue(value)
       // Generate and set the cron expression
-      const newCronExpression = await window.aiAPI.generateCronFromSimple(value, schedulerSimpleUnit)
+      const newCronExpression = await window.generalAPI.generateCronFromSimple(value, schedulerSimpleUnit)
       setCronExpression(newCronExpression)
-      await window.aiAPI.setCronExpression(newCronExpression)
+      await window.generalAPI.setCronExpression(newCronExpression)
     }
   }
 
   const handleSchedulerSimpleUnitChange = async (value: string) => {
     setSchedulerSimpleUnit(value)
-    if (typeof window !== "undefined" && window.aiAPI) {
-      await window.aiAPI.setSchedulerSimpleUnit(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setSchedulerSimpleUnit(value)
       // Generate and set the cron expression
-      const newCronExpression = await window.aiAPI.generateCronFromSimple(schedulerSimpleValue, value)
+      const newCronExpression = await window.generalAPI.generateCronFromSimple(schedulerSimpleValue, value)
       setCronExpression(newCronExpression)
-      await window.aiAPI.setCronExpression(newCronExpression)
+      await window.generalAPI.setCronExpression(newCronExpression)
     }
   }
 
@@ -569,6 +597,27 @@ function SettingsContent() {
     }
   }
 
+  const handleDateFormatChange = async (value: string) => {
+    setDateFormat(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setDateFormat(value)
+    }
+  }
+
+  const handleCustomDateFormatChange = async (value: string) => {
+    setCustomDateFormat(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setCustomDateFormat(value)
+    }
+  }
+
+  const handleTimeFormatChange = async (value: '12h' | '24h') => {
+    setTimeFormat(value)
+    if (typeof window !== "undefined" && window.generalAPI) {
+      await window.generalAPI.setTimeFormat(value)
+    }
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -599,6 +648,12 @@ function SettingsContent() {
               setSchedulerSimpleValue={handleSchedulerSimpleValueChange}
               schedulerSimpleUnit={schedulerSimpleUnit}
               setSchedulerSimpleUnit={handleSchedulerSimpleUnitChange}
+              dateFormat={dateFormat}
+              setDateFormat={handleDateFormatChange}
+              customDateFormat={customDateFormat}
+              setCustomDateFormat={handleCustomDateFormatChange}
+              timeFormat={timeFormat}
+              setTimeFormat={handleTimeFormatChange}
             />
           </TabsContent>
           <TabsContent value="ai">

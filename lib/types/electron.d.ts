@@ -42,17 +42,7 @@ declare global {
       update: (id: string, updates: unknown) => Promise<unknown>
       delete: (id: string) => Promise<void>
     }
-    aiAPI: {
-      getAISource: () => Promise<string>
-      setAISource: (value: string) => Promise<void>
-      getOllamaBaseUrl: () => Promise<string>
-      setOllamaBaseUrl: (value: string) => Promise<void>
-      getOpenRouterApiKey: () => Promise<string>
-      setOpenRouterApiKey: (value: string) => Promise<void>
-      getSelectedModel: () => Promise<string>
-      setSelectedModel: (value: string) => Promise<void>
-      getSelectedEmbedModel: () => Promise<string>
-      setSelectedEmbedModel: (value: string) => Promise<void>
+    generalAPI: {
       getAISensitivity: () => Promise<number>
       setAISensitivity: (value: number) => Promise<void>
       getEmailAgeDays: () => Promise<number>
@@ -73,6 +63,24 @@ declare global {
       getSchedulerSimpleUnit: () => Promise<string>
       setSchedulerSimpleUnit: (value: string) => Promise<void>
       generateCronFromSimple: (value: number, unit: string) => Promise<string>
+      getDateFormat: () => Promise<string>
+      setDateFormat: (value: string) => Promise<void>
+      getCustomDateFormat: () => Promise<string>
+      setCustomDateFormat: (value: string) => Promise<void>
+      getTimeFormat: () => Promise<'12h' | '24h'>
+      setTimeFormat: (value: '12h' | '24h') => Promise<void>
+    }
+    aiAPI: {
+      getAISource: () => Promise<string>
+      setAISource: (value: string) => Promise<void>
+      getOllamaBaseUrl: () => Promise<string>
+      setOllamaBaseUrl: (value: string) => Promise<void>
+      getOpenRouterApiKey: () => Promise<string>
+      setOpenRouterApiKey: (value: string) => Promise<void>
+      getSelectedModel: () => Promise<string>
+      setSelectedModel: (value: string) => Promise<void>
+      getSelectedEmbedModel: () => Promise<string>
+      setSelectedEmbedModel: (value: string) => Promise<void>
       getEnableVectorDB: () => Promise<boolean>
       setEnableVectorDB: (value: boolean) => Promise<void>
       getCustomizeSpamGuidelines: () => Promise<boolean>

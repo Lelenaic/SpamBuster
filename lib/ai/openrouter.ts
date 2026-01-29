@@ -1,5 +1,10 @@
 import { AIService } from './types'
 
+export interface OpenRouterResponse {
+  content: string
+  cost: number
+}
+
 export class OpenRouterService implements AIService {
   constructor(private apiKey: string, private baseUrl: string = 'https://openrouter.ai/api/v1') {}
 
@@ -31,7 +36,7 @@ export class OpenRouterService implements AIService {
     return data.data.map((m: { id: string }) => m.id)
   }
 
-  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number): Promise<string> {
+  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number): Promise<{ content: string; cost: number }> {
     const body: Record<string, unknown> = {
       model,
       messages: [{ role: 'user', content: message }]
@@ -55,7 +60,15 @@ export class OpenRouterService implements AIService {
     })
     if (!response.ok) throw new Error('Failed to send message')
     const data = await response.json()
-    return data.choices[0].message.content
+    
+    // Extract cost from OpenRouter response
+    // OpenRouter returns cost in data.usage.cost (in USD)
+    const cost = data.usage?.cost || data.usage?.total_cost || 0
+    
+    return {
+      content: data.choices[0].message.content,
+      cost: cost
+    }
   }
 
   async generateEmbedding(text: string, model?: string): Promise<number[]> {

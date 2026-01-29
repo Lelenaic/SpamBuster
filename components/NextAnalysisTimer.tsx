@@ -173,12 +173,12 @@ export default function NextAnalysisTimer({ isProcessing }: NextAnalysisTimerPro
   // Load scheduler configuration
   useEffect(() => {
     const loadConfig = async () => {
-      if (typeof window !== 'undefined' && window.aiAPI) {
-        const enableCron = await window.aiAPI.getEnableCron()
-        const schedulerMode = await window.aiAPI.getSchedulerMode()
-        const schedulerSimpleValue = await window.aiAPI.getSchedulerSimpleValue()
-        const schedulerSimpleUnit = await window.aiAPI.getSchedulerSimpleUnit()
-        const cronExpression = await window.aiAPI.getCronExpression()
+      if (typeof window !== 'undefined' && window.generalAPI) {
+        const enableCron = await window.generalAPI.getEnableCron()
+        const schedulerMode = await window.generalAPI.getSchedulerMode()
+        const schedulerSimpleValue = await window.generalAPI.getSchedulerSimpleValue()
+        const schedulerSimpleUnit = await window.generalAPI.getSchedulerSimpleUnit()
+        const cronExpression = await window.generalAPI.getCronExpression()
         
         const newConfig = {
           enableCron,

@@ -196,6 +196,7 @@ Reasoning: Generic urgency, suspicious shortened link, all caps, pressure tactic
 export interface SpamAnalysisResult {
   score: number // 0-10, where 0 = not spam, 10 = definitely spam
   reasoning?: string
+  cost?: number // Cost in USD from the AI provider
 }
 
 export class SpamDetectorService {
@@ -221,17 +222,17 @@ export class SpamDetectorService {
   }
 
   private async getSimplifyEmailContent(): Promise<boolean> {
-    if (typeof window === 'undefined' || !window.aiAPI) {
+    if (typeof window === 'undefined' || !window.generalAPI) {
       return false
     }
-    return await window.aiAPI.getSimplifyEmailContent()
+    return await window.generalAPI.getSimplifyEmailContent()
   }
 
   private async getSimplifyEmailContentMode(): Promise<string> {
-    if (typeof window === 'undefined' || !window.aiAPI) {
+    if (typeof window === 'undefined' || !window.generalAPI) {
       return 'aggressive'
     }
-    return await window.aiAPI.getSimplifyEmailContentMode()
+    return await window.generalAPI.getSimplifyEmailContentMode()
   }
 
   private createTurndownService(mode: string): TurndownService {
@@ -480,10 +481,10 @@ Do not include any other text or formatting.`
           temperature = await window.aiAPI.getTemperature()
           topP = await window.aiAPI.getTopP()
         }
-        const response = await aiService.sendMessage(prompt, selectedModel, temperature, topP)
+        const aiResponse = await aiService.sendMessage(prompt, selectedModel, temperature, topP)
 
         // Extract JSON from response using regex (handles AI models that add comments)
-        const jsonMatch = response.match(/\{[\s\S]*\}/)
+        const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/)
         if (!jsonMatch) {
           throw new Error('No valid JSON found in AI response')
         }
@@ -496,7 +497,8 @@ Do not include any other text or formatting.`
 
         return {
           score: Math.round(result.score), // Ensure it's an integer
-          reasoning: result.reasoning || 'No reasoning provided'
+          reasoning: result.reasoning || 'No reasoning provided',
+          cost: aiResponse.cost
         }
       } catch (error) {
         if (attempt === 3) {

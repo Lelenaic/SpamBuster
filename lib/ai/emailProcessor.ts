@@ -139,10 +139,10 @@ export class EmailProcessorService {
   }
 
   private async getSensitivity(): Promise<number> {
-    if (typeof window === 'undefined' || !window.aiAPI) {
+    if (typeof window === 'undefined' || !window.generalAPI) {
       return 7
     }
-    return await window.aiAPI.getAISensitivity()
+    return await window.generalAPI.getAISensitivity()
   }
 
   private generateChecksum(subject: string, body: string): string {
@@ -345,6 +345,13 @@ export class EmailProcessorService {
           // Save analysis result
           if (typeof window !== 'undefined' && window.analyzedEmailsAPI) {
             try {
+              // Get AI source to determine provider
+              let aiProvider: 'openrouter' | 'ollama' = 'ollama'
+              if (typeof window !== 'undefined' && window.aiAPI) {
+                const aiSource = await window.aiAPI.getAISource()
+                aiProvider = aiSource === 'openrouter' ? 'openrouter' : 'ollama'
+              }
+              
               const analyzedEmailData = {
                 emailId: email.id,
                 subject: email.subject,
@@ -352,7 +359,9 @@ export class EmailProcessorService {
                 score: result.score,
                 reasoning: result.reasoning,
                 accountId: account.id,
-                isSpam: isSpam
+                isSpam: isSpam,
+                cost: result.cost || 0,
+                aiProvider: aiProvider
               };
 
               const savedEmail = await window.analyzedEmailsAPI.create(analyzedEmailData) as { id: string };

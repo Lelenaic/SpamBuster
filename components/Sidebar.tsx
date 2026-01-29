@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Settings, Plus, Shield, RefreshCw } from "lucide-react";
+import { Mail, Settings, Plus, Shield, RefreshCw, BarChart3 } from "lucide-react";
 import { checkForNewerVersion } from "@/lib/versionChecker";
 import { toast } from "sonner";
 
@@ -85,7 +85,7 @@ export default function Sidebar() {
           <Link href="/rules">
             <Button
               variant="ghost"
-              className={`w-full justify-start cursor-pointer transition-colors ${
+              className={`w-full justify-start cursor-pointer transition-colors mb-2 ${
                 pathname === "/rules"
                   ? 'bg-white text-black hover:bg-white'
                   : 'text-white hover:bg-white/10'
@@ -93,6 +93,19 @@ export default function Sidebar() {
             >
               <Shield className="w-5 h-5 mr-2" />
               Rules
+            </Button>
+          </Link>
+          <Link href="/stats">
+            <Button
+              variant="ghost"
+              className={`w-full justify-start cursor-pointer transition-colors ${
+                pathname === "/stats"
+                  ? 'bg-white text-black hover:bg-white'
+                  : 'text-white hover:bg-white/10'
+              }`}
+            >
+              <BarChart3 className="w-5 h-5 mr-2" />
+              Stats
             </Button>
           </Link>
         </div>

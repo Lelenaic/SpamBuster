@@ -66,6 +66,9 @@ export default function RulesPage() {
   const [aiPromptDescription, setAiPromptDescription] = useState('');
   const [generatedRuleText, setGeneratedRuleText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Ref to track if community rules have been fetched to prevent double-fetching
+  const communityRulesFetched = useRef(false);
 
   const loadMoreRules = useCallback(async () => {
     if (isLoadingMore || currentPage >= totalPages) {
@@ -143,6 +146,13 @@ export default function RulesPage() {
   }, []);
 
   useEffect(() => {
+    // Skip if already fetched (prevents double-fetching in React Strict Mode)
+    if (communityRulesFetched.current) return;
+    
+    // Set flag synchronously BEFORE starting async operation
+    // This prevents race conditions with React Strict Mode's double-invocation
+    communityRulesFetched.current = true;
+    
     const fetchCommunityRules = async () => {
       setIsFilteringOfficial(true);
       try {
