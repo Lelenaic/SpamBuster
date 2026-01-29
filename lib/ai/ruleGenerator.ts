@@ -50,7 +50,7 @@ Do not include any other text or formatting.`;
         const response = await aiService.sendMessage(prompt, selectedModel, temperature, topP);
 
         // Extract JSON from response using regex (handles AI models that add comments)
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        const jsonMatch = response.content.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
           throw new Error('No valid JSON found in AI response');
         }

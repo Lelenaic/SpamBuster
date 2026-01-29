@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { X, AlertTriangle, CheckCircle, Undo, Bell, Mail, ChevronLeft, ChevronRight, DollarSign } from 'lucide-react'
+import { X, AlertTriangle, CheckCircle, Undo, Bell, Mail, DollarSign } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Alert as AlertType } from '@/lib/types'
 import { AlertsManager } from '@/lib/alerts'
@@ -42,11 +42,10 @@ export default function Home() {
   const [rules, setRules] = useState<Rule[]>([])
   const [analyzedEmails, setAnalyzedEmails] = useState<AnalyzedEmail[]>([])
   const [emailFilter, setEmailFilter] = useState<'ALL' | 'SPAM' | 'HAM'>('ALL')
-  const [currentPage, setCurrentPage] = useState(0)
   const [dateFormat, setDateFormat] = useState<string>('iso')
   const [customDateFormat, setCustomDateFormat] = useState<string>('')
   const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h')
-  const ITEMS_PER_PAGE = 50
+  const MAX_EMAILS = 50
 
   // Initialize email processor with store (using singleton pattern)
   const [processor, setProcessor] = useState<EmailProcessorService | null>(null)
@@ -277,26 +276,24 @@ export default function Home() {
     return email.isSpam
   }
 
-  // Filter emails based on selected filter
-  const filteredEmails = analyzedEmails.filter(email => {
-    if (emailFilter === 'ALL') return true
-    const effectiveIsSpam = getEffectiveIsSpam(email)
-    if (emailFilter === 'SPAM') return effectiveIsSpam
-    if (emailFilter === 'HAM') return !effectiveIsSpam
-    return true
-  })
-
-  // Pagination
-  const paginatedEmails = filteredEmails
+  // Calculate counts from last 50 emails (for filter buttons - these don't change when filter changes)
+  const last50Emails = analyzedEmails
     .slice()
     .sort((a, b) => new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime())
-    .slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE)
+    .slice(0, MAX_EMAILS)
 
-  const totalPages = Math.ceil(filteredEmails.length / ITEMS_PER_PAGE)
+  const spamCount = last50Emails.filter(e => getEffectiveIsSpam(e)).length
+  const hamCount = last50Emails.filter(e => !getEffectiveIsSpam(e)).length
 
-  const goToPage = (page: number) => {
-    setCurrentPage(Math.max(0, Math.min(page, totalPages - 1)))
-  }
+  // Filter emails based on selected filter and limit to last 50
+  const displayedEmails = last50Emails
+    .filter(email => {
+      if (emailFilter === 'ALL') return true
+      const effectiveIsSpam = getEffectiveIsSpam(email)
+      if (emailFilter === 'SPAM') return effectiveIsSpam
+      if (emailFilter === 'HAM') return !effectiveIsSpam
+      return true
+    })
 
 
   return (
@@ -357,7 +354,7 @@ export default function Home() {
                   }
                 }}
               >
-                All ({analyzedEmails.length})
+                All ({last50Emails.length})
               </Button>
               <Button
                 size="sm"
@@ -370,7 +367,7 @@ export default function Home() {
                   }
                 }}
               >
-                Spam ({analyzedEmails.filter(e => getEffectiveIsSpam(e)).length})
+                Spam ({spamCount})
               </Button>
               <Button
                 size="sm"
@@ -385,17 +382,17 @@ export default function Home() {
                   }
                 }}
               >
-                Ham ({analyzedEmails.filter(e => !getEffectiveIsSpam(e)).length})
+                Ham ({hamCount})
               </Button>
             </div>
           </div>
-          {filteredEmails.length === 0 ? (
+          {displayedEmails.length === 0 ? (
             <p className="text-muted-foreground">No emails match the current filter.</p>
           ) : (
             <>
               <TooltipProvider>
                 <Accordion type="single" collapsible className="w-full">
-                  {paginatedEmails.map((email) => (
+                  {displayedEmails.map((email) => (
                     <AccordionItem key={email.id} value={email.id}>
                       <AccordionTrigger className="hover:no-underline items-center !grid grid-cols-[1fr_auto_auto] gap-4 w-full min-w-0">
                         <span className="truncate text-left min-w-0">{email.subject}</span>
@@ -470,35 +467,6 @@ export default function Home() {
                   ))}
                 </Accordion>
               </TooltipProvider>
-
-              {/* Pagination controls */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    Page {currentPage + 1} of {totalPages} ({filteredEmails.length} emails)
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => goToPage(currentPage - 1)}
-                      disabled={currentPage === 0}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => goToPage(currentPage + 1)}
-                      disabled={currentPage >= totalPages - 1}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>

@@ -215,7 +215,7 @@ export function ProcessingProvider({ children, accounts, rules, processor }: Pro
     
     try {
       // Get the user's configured email age days setting
-      const emailAgeDays = await window.aiAPI.getEmailAgeDays()
+      const emailAgeDays = await window.generalAPI.getEmailAgeDays()
       
       const { accountStats: newAccountStats, overallStats: newOverallStats } = 
         await processor.processAllAccounts(accounts, rules, emailAgeDays)
