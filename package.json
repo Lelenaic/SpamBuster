@@ -1,6 +1,6 @@
 {
   "name": "spambuster",
-  "version": "0.17.1",
+  "version": "0.17.2",
   "private": true,
   "main": "main/main.js",
   "author": {
@@ -86,7 +86,7 @@
       "package.json"
     ],
     "win": {
-      "target": "nsis"
+      "target": ["nsis", "appx"]
     },
     "mac": {
       "target": "dmg"
