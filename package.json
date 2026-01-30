@@ -1,6 +1,6 @@
 {
   "name": "spambuster",
-  "version": "0.17.6",
+  "version": "0.17.7",
   "private": true,
   "main": "main/main.js",
   "author": {
@@ -86,7 +86,7 @@
       "package.json"
     ],
     "win": {
-      "target": ["nsis", "appx"]
+      "target": "nsis"
     },
     "appx": {
       "identityName": "LenaicGROLLEAU.SpamBuster",
