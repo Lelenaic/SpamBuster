@@ -330,9 +330,94 @@ export class EmailProcessorService {
             await AlertsManager.deleteAIAlerts()
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error)
-            console.error(`AI analysis error for email ${email.id}:`, error)
-            // Create alert for AI provider issue
-            await AlertsManager.createAIErrorAlert(errorMessage)
+            
+            // "No valid JSON found in AI response" is an expected error that's handled by the retry mechanism
+            // Don't log it to console or create an alert for it
+            const isExpectedJSONError = errorMessage === 'No valid JSON found in AI response'
+            if (!isExpectedJSONError) {
+              console.error(`AI analysis error for email ${email.id}:`, error)
+            }
+            
+            // Check if this error includes failedAttemptsCost (from spamDetector internal retry)
+            // This means the spamDetector already retried 3 times internally
+            let hasInternalRetries = false
+            let internalRetryCost = 0
+            if (error && typeof error === 'object' && 'failedAttemptsCost' in error) {
+              hasInternalRetries = true
+              internalRetryCost = (error as { failedAttemptsCost: number }).failedAttemptsCost || 0
+              console.log(`[FAILED-INTERNAL-RETRY] Email ${email.id} failed after 3 internal retries in spamDetector`)
+              console.log(`[FAILED-INTERNAL-RETRY] Internal retry cost: ${internalRetryCost}`)
+            }
+            
+            // If spamDetector already retried 3 times internally, treat this as 3 failures
+            // and immediately create analyzed email entry
+            if (hasInternalRetries) {
+              console.log(`[FAILED-3x-INTERNAL] Email ${email.id} failed after 3 internal retries, creating analyzed email entry`)
+              console.log(`[FAILED-3x-INTERNAL] Total failed cost: ${internalRetryCost}`)
+              console.log(`[FAILED-3x-INTERNAL] window.analyzedEmailsAPI available: ${typeof window !== 'undefined' && !!window.analyzedEmailsAPI}`)
+              
+              // Save the failed email to analyzedEmails so it persists across restarts
+              if (typeof window !== 'undefined' && window.analyzedEmailsAPI) {
+                try {
+                  // Get AI source to determine provider
+                  let aiProvider: 'openrouter' | 'ollama' = 'ollama'
+                  if (typeof window !== 'undefined' && window.aiAPI) {
+                    const aiSource = await window.aiAPI.getAISource()
+                    aiProvider = aiSource === 'openrouter' ? 'openrouter' : 'ollama'
+                  }
+                  
+                  const analyzedEmailData = {
+                    emailId: email.id,
+                    subject: email.subject,
+                    sender: email.from,
+                    score: 0,
+                    reasoning: `Analysis failed after 3 internal retries: ${errorMessage}`,
+                    accountId: account.id,
+                    isSpam: false,
+                    cost: internalRetryCost,
+                    aiProvider: aiProvider
+                  };
+
+                  console.log(`[FAILED-3x-INTERNAL] Calling analyzedEmailsAPI.create with data:`, analyzedEmailData)
+                  const result = await window.analyzedEmailsAPI.create(analyzedEmailData);
+                  console.log(`[FAILED-3x-INTERNAL] analyzedEmailsAPI.create result:`, result)
+                  
+                  // Also store in VectorDB for similarity search (if enabled)
+                  if (window.aiAPI && window.vectorDBAPI) {
+                    try {
+                      const enableVectorDB = await window.aiAPI.getEnableVectorDB();
+                      if (enableVectorDB) {
+                        await window.vectorDBAPI.storeAnalyzedEmail({
+                          id: `failed-${email.id}`,
+                          emailId: email.id,
+                          subject: email.subject,
+                          sender: email.from,
+                          body: email.body,
+                          score: 0,
+                          reasoning: `Analysis failed after 3 internal retries: ${errorMessage}`,
+                          accountId: account.id,
+                          isSpam: false
+                        });
+                      }
+                    } catch (vectorError) {
+                      console.error('Failed to store failed email in VectorDB:', vectorError);
+                    }
+                  }
+                } catch (saveError) {
+                }
+              }
+              
+              this.processedChecksums.push(checksum)
+              await this.saveProcessedChecksums()
+              stats.errors++
+              this.emitIncrementalStatsUpdate(account.id, stats)
+              continue
+            }
+            
+            // Create alert for AI provider issue (only for unexpected errors)
+            if (!isExpectedJSONError) {
+              await AlertsManager.createAIErrorAlert(errorMessage)
+            }
             stats.errors++
             // Emit update even on error
             this.emitIncrementalStatsUpdate(account.id, stats)
@@ -360,7 +445,7 @@ export class EmailProcessorService {
                 reasoning: result.reasoning,
                 accountId: account.id,
                 isSpam: isSpam,
-                cost: result.cost || 0,
+                cost: (result.cost || 0) + (result.failedAttemptsCost || 0),
                 aiProvider: aiProvider
               };
 
@@ -692,3 +777,4 @@ export class EmailProcessorService {
     emitProcessingEvent('processing:status-change', 'idle')
   }
 }
+

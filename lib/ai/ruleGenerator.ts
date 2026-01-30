@@ -83,3 +83,4 @@ export function getRuleGeneratorService(): RuleGeneratorService {
   }
   return ruleGeneratorService;
 }
+

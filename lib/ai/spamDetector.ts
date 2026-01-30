@@ -18,6 +18,101 @@ function decodeQuotedPrintable(input: string): string {
 }
 
 /**
+ * Check if a string looks like valid base64
+ */
+function isBase64(str: string): boolean {
+  // Remove any whitespace first
+  const cleanStr = str.replace(/\s+/g, '')
+  
+  // Base64 regex: A-Za-z0-9+/= with proper length (multiple of 4)
+  if (cleanStr.length % 4 !== 0) return false
+  
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
+  if (!base64Regex.test(cleanStr)) return false
+  
+  // Check it has at least some typical base64 characters (not just padding)
+  const base64Chars = cleanStr.replace(/=/g, '')
+  if (base64Chars.length < 4) return false
+  
+  // Check it contains a mix of letters (both cases), numbers
+  const hasUpper = /[A-Z]/.test(base64Chars)
+  const hasLower = /[a-z]/.test(base64Chars)
+  const hasNumber = /[0-9]/.test(base64Chars)
+  
+  return hasUpper && hasLower && hasNumber
+}
+
+/**
+ * Decode base64 content if detected
+ */
+function decodeBase64IfNeeded(content: string): string {
+  // Check if the entire content is base64
+  if (isBase64(content)) {
+    try {
+      const decoded = Buffer.from(content, 'base64').toString('utf-8')
+      // Only use decoded content if it produces readable text
+      if (decoded && decoded.length > 0 && !decoded.includes('�')) {
+        return decoded
+      }
+    } catch (e) {
+      // Not valid base64, return original
+    }
+  }
+  
+  return content
+}
+
+/**
+ * Find and decode all base64-encoded sections within the email body
+ * This handles emails with multiple base64 parts (common in MIME multipart emails)
+ */
+function decodeAllBase64Sections(content: string): string {
+  const lines = content.split('\n')
+  const resultLines: string[] = []
+  let i = 0
+  
+  while (i < lines.length) {
+    const line = lines[i].trim()
+    
+    // Check if this line is a boundary marker or header - keep these
+    if (line.startsWith('--') || line.startsWith('Content-') || line.startsWith('boundary=') ||
+        line.startsWith('creation-date=') || line.startsWith('modification-date=') || line === '') {
+      resultLines.push(lines[i])
+      i++
+      continue
+    }
+    
+    // Check if this line looks like base64
+    if (isBase64(line) && line.length >= 20) {
+      // This is a base64 line - try to decode it
+      try {
+        const decoded = Buffer.from(line, 'base64').toString('utf-8')
+        
+        // Check if decoded content is binary (image) or text
+        const hasReplacementChars = decoded.includes('�')
+        const hasMultipleNulls = (decoded.match(/\x00/g) || []).length > 0
+        const hasLetters = /[a-zA-Z]/.test(decoded)
+        
+        // If it has letters and doesn't look like binary, it's text - use decoded
+        if (hasLetters && !hasReplacementChars && !hasMultipleNulls) {
+          resultLines.push(decoded)
+        }
+        // Otherwise it's binary (like images) - skip it entirely (don't add to result)
+      } catch (e) {
+        // Could not decode, skip this line
+      }
+      i++
+    } else {
+      // Regular content, pass through
+      resultLines.push(lines[i])
+      i++
+    }
+  }
+  
+  return resultLines.join('\n')
+}
+
+/**
  * Extract plain text from HTML by removing all tags and CSS
  */
 function extractTextFromHTML(html: string): string {
@@ -197,6 +292,7 @@ export interface SpamAnalysisResult {
   score: number // 0-10, where 0 = not spam, 10 = definitely spam
   reasoning?: string
   cost?: number // Cost in USD from the AI provider
+  failedAttemptsCost?: number // Total cost of failed attempts
 }
 
 export class SpamDetectorService {
@@ -308,17 +404,22 @@ export class SpamDetectorService {
 
     // Simplify email content if enabled
     let simplifiedBody: string
+    
+    // First, decode all base64 sections in the email body
+    // This handles multipart emails with multiple base64-encoded parts
+    const processedBody = decodeAllBase64Sections(email.body)
+    
     if (shouldSimplify) {
       if (simplifyMode === 'aggressive') {
         // Use regex-based extraction for aggressive mode
-        simplifiedBody = extractTextFromHTML(email.body)
+        simplifiedBody = extractTextFromHTML(processedBody)
       } else {
         // Use turndown for simple mode
         const turndownService = this.createTurndownService(simplifyMode)
-        simplifiedBody = turndownService.turndown(email.body)
+        simplifiedBody = turndownService.turndown(processedBody)
       }
     } else {
-      simplifiedBody = email.body
+      simplifiedBody = processedBody
     }
 
     const basePromptStart = `You are a spam email detection expert. Analyze the following email content and determine if it's spam.
@@ -472,6 +573,7 @@ Do not include any other text or formatting.`
     const selectedModel = await this.getSelectedModel()
     
     // Retry logic: up to 3 attempts
+    let failedAttemptsCost = 0
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         // Get temperature and topP from settings
@@ -486,7 +588,10 @@ Do not include any other text or formatting.`
         // Extract JSON from response using regex (handles AI models that add comments)
         const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/)
         if (!jsonMatch) {
-          throw new Error('No valid JSON found in AI response')
+          // API call succeeded but response couldn't be parsed - capture the cost before throwing error
+          const parsingError = new Error('No valid JSON found in AI response')
+          ;(parsingError as Error & { cost: number }).cost = aiResponse.cost
+          throw parsingError
         }
         const result = JSON.parse(jsonMatch[0])
 
@@ -498,12 +603,20 @@ Do not include any other text or formatting.`
         return {
           score: Math.round(result.score), // Ensure it's an integer
           reasoning: result.reasoning || 'No reasoning provided',
-          cost: aiResponse.cost
+          cost: aiResponse.cost,
+          failedAttemptsCost: failedAttemptsCost
         }
       } catch (error) {
+        // Track the cost of this failed attempt if available
+        if (error && typeof error === 'object' && 'cost' in error) {
+          failedAttemptsCost += (error as { cost: number }).cost || 0
+        }
         if (attempt === 3) {
           // After 3 attempts, re-throw the error to skip the email
-          throw error
+          // Include the accumulated failed attempts cost in the error
+          const finalError = error instanceof Error ? error : new Error(String(error))
+          ;(finalError as Error & { failedAttemptsCost: number }).failedAttemptsCost = failedAttemptsCost
+          throw finalError
         }
         // Continue to next attempt
       }
@@ -513,3 +626,4 @@ Do not include any other text or formatting.`
     throw new Error('Unexpected error in analyzeEmail retry logic')
   }
 }
+

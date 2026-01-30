@@ -58,7 +58,20 @@ export class OpenRouterService implements AIService {
       },
       body: JSON.stringify(body)
     })
-    if (!response.ok) throw new Error('Failed to send message')
+    if (!response.ok) {
+      // Try to get error response to extract cost if available
+      let errorCost = 0
+      try {
+        const errorData = await response.json()
+        // OpenRouter may return cost even in error responses
+        errorCost = errorData.usage?.cost || errorData.usage?.total_cost || 0
+      } catch (e) {
+        // If we can't parse error response, cost remains 0
+      }
+      const error = new Error('Failed to send message')
+      ;(error as Error & { cost: number }).cost = errorCost
+      throw error
+    }
     const data = await response.json()
     
     // Extract cost from OpenRouter response
