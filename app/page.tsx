@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { X, AlertTriangle, CheckCircle, Undo, Bell, Mail, DollarSign } from 'lucide-react'
+import { X, AlertTriangle, CheckCircle, Undo, Bell, Mail } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { Alert as AlertType } from '@/lib/types'
 import { AlertsManager } from '@/lib/alerts'
@@ -295,6 +295,8 @@ export default function Home() {
       return true
     })
 
+  // Calculate total cost of displayed emails
+  const totalCost = displayedEmails.reduce((sum, email) => sum + (email.cost || 0), 0)
 
   return (
     <div>
@@ -342,7 +344,13 @@ export default function Home() {
         <hr className="mt-6" />
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2"><Mail className="h-5 w-5" />Analyzed Emails</h2>
+            <div>
+              <h2 className="text-xl font-semibold flex items-center gap-2"><Mail className="h-5 w-5" />Analyzed Emails</h2>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                <span>Total cost of the last 50 emails:</span>
+                <span className="font-medium text-foreground">${formatCostShort(totalCost)}</span>
+              </div>
+            </div>
             <div className="flex gap-1 bg-secondary rounded-lg p-1">
               <Button
                 size="sm"
@@ -401,7 +409,7 @@ export default function Home() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="text-xs text-muted-foreground flex items-center gap-1 cursor-help">
-                                <DollarSign className="h-3 w-3" />
+                                $
                                 {email.cost !== undefined && email.cost > 0 
                                   ? formatCostShort(email.cost)
                                   : '0'}
