@@ -1,6 +1,6 @@
 {
   "name": "spambuster",
-  "version": "0.17.4",
+  "version": "0.17.5",
   "private": true,
   "main": "main/main.js",
   "author": {
@@ -87,6 +87,12 @@
     ],
     "win": {
       "target": ["nsis", "appx"]
+    },
+    "appx": {
+      "identityName": "LenaicGROLLEAU.SpamBuster",
+      "publisher": "CN=6A6A6546-3585-4044-B2EF-1279C20ACF06",
+      "publisherDisplayName": "Lenaic GROLLEAU",
+      "applicationId": "SpamBuster"
     },
     "mac": {
       "target": "dmg"
