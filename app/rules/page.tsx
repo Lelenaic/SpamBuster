@@ -33,7 +33,6 @@ import { Rule } from '@/lib/types';
 import { Account } from '@/lib/mail/types';
 import { apiClient, CommunityRule, PaginatedResponse } from '@/lib/api';
 import { toast } from 'sonner';
-import { createAIService } from '@/lib/ai/factory';
 import { getRuleGeneratorService } from '@/lib/ai/ruleGenerator';
 
 export default function RulesPage() {

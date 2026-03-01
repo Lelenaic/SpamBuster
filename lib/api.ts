@@ -45,29 +45,46 @@ export interface PaginatedResponse<T> {
 
 class ApiClient {
   private token: string | null = null;
-
-  constructor() {
-    this.loadToken();
-  }
+  private tokenLoaded: boolean = false;
 
   private async loadToken() {
+    // Skip if not in browser environment or already loaded
+    if (typeof window === 'undefined' || this.tokenLoaded) {
+      return;
+    }
     try {
       this.token = await window.storeAPI.get('api_token') as string | null;
+      this.tokenLoaded = true;
     } catch (error) {
       console.error('Failed to load API token:', error);
     }
   }
 
+  private async ensureTokenLoaded() {
+    if (!this.tokenLoaded) {
+      await this.loadToken();
+    }
+  }
+
   private async saveToken(token: string) {
+    // Skip if not in browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
     try {
       await window.storeAPI.set('api_token', token);
       this.token = token;
+      this.tokenLoaded = true;
     } catch (error) {
       console.error('Failed to save API token:', error);
     }
   }
 
   private async clearToken() {
+    // Skip if not in browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
     try {
       await window.storeAPI.set('api_token', null);
       this.token = null;
@@ -76,7 +93,10 @@ class ApiClient {
     }
   }
 
-  private getAuthHeaders(): Record<string, string> {
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    // Ensure token is loaded before getting headers
+    await this.ensureTokenLoaded();
+    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -119,7 +139,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE_URL}/rules`, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -138,7 +158,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE_URL}/rules/search/${encodeURIComponent(query)}`, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -161,7 +181,7 @@ class ApiClient {
       }
       const response = await fetch(`${API_BASE_URL}/rules?${params.toString()}`, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -184,7 +204,7 @@ class ApiClient {
       }
       const response = await fetch(`${API_BASE_URL}/rules/search/${encodeURIComponent(query)}?${params.toString()}`, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       if (!response.ok) {
