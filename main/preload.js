@@ -121,40 +121,48 @@ contextBridge.exposeInMainWorld("oauthAPI", {
     refreshToken: (clientId, tenantId, refreshToken) => ipcRenderer.invoke('oauth:refreshToken', clientId, tenantId, refreshToken),
     startGoogleOAuthServer: (redirectUri) => ipcRenderer.invoke('oauth:startGoogleOAuthServer', redirectUri),
     onGoogleOAuthCallback: (callback) => {
-        ipcRenderer.on('oauth:googleCallback', (event, ...args) => callback(...args));
-        return () => ipcRenderer.removeListener('oauth:googleCallback', callback);
+        const wrappedCallback = (event, ...args) => callback(...args);
+        ipcRenderer.on('oauth:googleCallback', wrappedCallback);
+        return () => ipcRenderer.removeListener('oauth:googleCallback', wrappedCallback);
     },
 });
 
 // Processing events API for real-time status updates
 contextBridge.exposeInMainWorld("processingEvents", {
     onStatsUpdate: (callback) => {
-        ipcRenderer.on('processing:stats-update', (event, ...args) => callback(...args));
-        return () => ipcRenderer.removeListener('processing:stats-update', callback);
+        const wrappedCallback = (event, ...args) => callback(...args);
+        ipcRenderer.on('processing:stats-update', wrappedCallback);
+        return () => ipcRenderer.removeListener('processing:stats-update', wrappedCallback);
     },
     onProgress: (callback) => {
-        ipcRenderer.on('processing:progress', (event, ...args) => callback(...args));
-        return () => ipcRenderer.removeListener('processing:progress', callback);
+        const wrappedCallback = (event, ...args) => callback(...args);
+        ipcRenderer.on('processing:progress', wrappedCallback);
+        return () => ipcRenderer.removeListener('processing:progress', wrappedCallback);
     },
     onComplete: (callback) => {
-        ipcRenderer.on('processing:complete', (event, ...args) => callback(...args));
-        return () => ipcRenderer.removeListener('processing:complete', callback);
+        const wrappedCallback = (event, ...args) => callback(...args);
+        ipcRenderer.on('processing:complete', wrappedCallback);
+        return () => ipcRenderer.removeListener('processing:complete', wrappedCallback);
     },
     onError: (callback) => {
-        ipcRenderer.on('processing:error', (event, ...args) => callback(...args));
-        return () => ipcRenderer.removeListener('processing:error', callback);
+        const wrappedCallback = (event, ...args) => callback(...args);
+        ipcRenderer.on('processing:error', wrappedCallback);
+        return () => ipcRenderer.removeListener('processing:error', wrappedCallback);
     },
     onStatusChange: (callback) => {
-        ipcRenderer.on('processing:status-change', (event, ...args) => callback(...args));
-        return () => ipcRenderer.removeListener('processing:status-change', callback);
+        const wrappedCallback = (event, ...args) => callback(...args);
+        ipcRenderer.on('processing:status-change', wrappedCallback);
+        return () => ipcRenderer.removeListener('processing:status-change', wrappedCallback);
     },
     onAnalyzedEmailCreated: (callback) => {
-        ipcRenderer.on('analyzed-email-created', (event, ...args) => callback(...args));
-        return () => ipcRenderer.removeListener('analyzed-email-created', callback);
+        const wrappedCallback = (event, ...args) => callback(...args);
+        ipcRenderer.on('analyzed-email-created', wrappedCallback);
+        return () => ipcRenderer.removeListener('analyzed-email-created', wrappedCallback);
     },
     onSchedulerSettingsChanged: (callback) => {
-        ipcRenderer.on('scheduler-settings-changed', (event, ...args) => callback(...args));
-        return () => ipcRenderer.removeListener('scheduler-settings-changed', callback);
+        const wrappedCallback = (event, ...args) => callback(...args);
+        ipcRenderer.on('scheduler-settings-changed', wrappedCallback);
+        return () => ipcRenderer.removeListener('scheduler-settings-changed', wrappedCallback);
     },
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);

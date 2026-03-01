@@ -206,16 +206,67 @@ function extractTextFromHTML(html: string): string {
   return lines.join('\n').trim()
 }
 
-export const DEFAULT_SPAM_GUIDELINES = `SPAM SCORE GUIDELINES:
-- 0-2 = Definitely not spam (legitimate email, absolutely certain)
+export const DEFAULT_SPAM_GUIDELINES = `SPAM & PHISHING SCORE GUIDELINES:
+- 0-2 = Definitely not spam/phishing (legitimate email, absolutely certain)
 - 3-4 = Probably not spam (minor concerns but mostly legitimate)
 - 5-6 = Unsure, could be either (use this when uncertain!)
-- 7-8 = Probably spam (confident but not 100% certain)
-- 9-10 = Definitely spam (absolutely certain, no doubt)
+- 7-8 = Probably spam or phishing (confident but not 100% certain)
+- 9-10 = Definitely spam or phishing (absolutely certain, no doubt)
 
 ⚠️ CRITICAL: Use the full 0-10 scale! If you're uncertain, use 5-6. Reserve 0-2 and 9-10 ONLY for cases where you are absolutely certain.
 
-DEFAULT SPAM INDICATORS (only apply when NO user rules match):
+═══════════════════════════════════════════════════════════════════════════════════
+🚨 PHISHING DETECTION — ALWAYS APPLY THESE CHECKS FIRST, REGARDLESS OF USER RULES 🚨
+═══════════════════════════════════════════════════════════════════════════════════
+
+Phishing is a criminal attempt to deceive the recipient into clicking a malicious link or handing over sensitive information by impersonating a trusted entity. It is ALWAYS spam, regardless of any other consideration.
+
+⚠️ IMPORTANT: NO SINGLE INDICATOR ALONE IS SUFFICIENT TO CLASSIFY AS PHISHING.
+A phishing verdict requires a COMBINATION of at least 2 corroborating signals listed below. Collect all signals present before deciding.
+
+PHISHING SIGNAL INVENTORY — identify which signals are present in the email:
+
+Signal P1 — SENDER DOMAIN MISMATCH (impersonation):
+Compare the "Sender Name" vs "Sender Email" domain. P1 is present when:
+- The display name claims to be a government body, bank, court, postal service, or well-known institution BUT the actual email domain does NOT belong to that organisation.
+- Examples where P1 is present: display name "Antai.gouv.fr" but email "contact@chamsswitch.com"; display name "PayPal" but email "paypal@random-domain.xyz".
+- Examples where P1 is NOT present: "Amazon <orders@amazon.fr>" (same brand); "Stripe <receipts@stripe.com>" (matching official domain).
+
+Signal P2 — URL SHORTENER USED IN AN OFFICIAL/INSTITUTIONAL CONTEXT:
+P2 is present when a call-to-action or payment link uses a known URL shortener service AND the email is claiming to be from an official, governmental, or financial entity (not a regular commercial brand):
+- Known shorteners: bit.ly, tinyurl.com, miniurl.com, rb.gy, ow.ly, goo.gl, shorte.st, cutt.ly, is.gd, tiny.cc, buff.ly, shorturl.at, bl.ink, t.co, clck.ru
+- ⚠️ A URL shortener alone in a commercial email (e-commerce, newsletters, marketing, shipping confirmations) is NOT P2. Many legitimate companies use short links in their emails.
+- P2 only applies when the sender is claiming to be a government, court, law enforcement, bank, or official authority.
+
+Signal P3 — URGENCY WITH LEGAL OR FINANCIAL THREATS:
+P3 is present when the subject and/or body contains threats of legal seizure, prosecution, forced debt collection, account suspension with loss of funds, fines, or demands for immediate action within a short deadline (24h, 48h).
+- Examples: "RÉPONSE SOUS 24H", "saisie sur compte", "mise en demeure", "votre compte sera suspendu", "exécution forcée".
+- NOTE: Standard commercial urgency ("limited time offer!", "sale ends today!") is NOT P3. P3 requires genuine legal or financial threat language.
+
+Signal P4 — REQUEST FOR SENSITIVE ACTION UNDER PRESSURE:
+P4 is present when the email demands payment of a fine/debt, demands identity verification, login credentials, or sensitive personal/financial data — combined with a deadline or threat of consequences.
+
+Signal P5 — LINK DOMAIN MISMATCH:
+P5 is present when the visible anchor text of a link shows one domain but the actual href URL points to a completely different domain unrelated to the claimed sender.
+
+COMBINATION RULE — PHISHING VERDICT (score 9-10):
+→ P1 + any one of {P2, P3, P4, P5} simultaneously present → phishing → score 9-10
+→ P2 + P3 simultaneously present (even without P1) → phishing → score 9-10
+→ P3 + P4 simultaneously present (even without P1) → phishing → score 9-10
+→ P5 + any other signal → phishing → score 9-10
+→ Only ONE signal present → NOT automatically phishing; raise suspicion (score 5-7) but do not verdict phishing
+
+STEP D — SUPPORTING CONTEXT SIGNALS (weigh into combinations, never use alone for a phishing verdict):
+- Official-looking design (logos, seals, colour schemes) combined with suspicious sender domain
+- Grammatical or encoding errors in an otherwise "official" communication
+- No valid physical address or counterfeit administrative contact details
+- Generic recipient ("Dear customer", "Dear user") in what claims to be an official notice
+
+═══════════════════════════════════════════════════════════════════════════════════
+📧 GENERAL SPAM INDICATORS (apply when phishing combination threshold is not met)
+═══════════════════════════════════════════════════════════════════════════════════
+
+DEFAULT SPAM INDICATORS (only apply when NO user rules match AND phishing combination not triggered):
 - Unsolicited commercial promotions or marketing emails
 - High urgency/scarcity tactics (e.g., "act now or lose!")
 - Poor grammar, all caps, excessive punctuation (!!!)
@@ -223,30 +274,32 @@ DEFAULT SPAM INDICATORS (only apply when NO user rules match):
 - Generic greetings (e.g., "Dear User")
 - Requests for personal/financial info
 - Unrealistic offers (free money, prizes)
-- Phishing (fake login pages, urgent account issues)
 
-HAM SIGNALS (only apply when NO user rules match):
+HAM SIGNALS (only apply when phishing combination NOT triggered AND no user rules match):
 - Personalized greetings or references
 - Transactional emails: receipts, order confirmations, shipping notifications, invoices
 - Expected from known contacts
 - Normal grammar and professional tone
-- No suspicious links/attachments
+- Sender display name matches the sender email domain
+- URL shorteners present but from a known legitimate commercial brand with no other phishing signals
 
 CRITICAL EMAIL TYPE DISTINCTIONS (for matching user rules):
 - **Newsletter**: Periodic marketing/promotional content, typically with an unsubscribe link
 - **Transactional**: Order confirmations, receipts, invoices, shipping updates, password resets, account notifications
 - **Marketing**: Promotional content, sales, offers, advertisements
 - **Personal**: Direct communication from individuals
+- **Phishing**: Email impersonating a trusted entity with deceptive links — ALWAYS spam regardless of email type
 
 ⚠️ A user rule about "newsletters" does NOT apply to transactional emails (receipts, confirmations, invoices)
 ⚠️ A user rule about "marketing" does NOT apply to transactional emails or personal correspondence
 ⚠️ Only apply a user rule if the email actually matches the specific type mentioned in the rule
+⚠️ Phishing combination verdict overrides ALL other classifications — phishing is ALWAYS spam (score 9-10)
 
 ADDITIONAL GUIDELINES FOR DEFAULT BEHAVIOR:
-- When in doubt and no rules match, classify as legitimate (ham) with score 3-5
+- When in doubt and no rules match AND phishing combination not triggered, classify as legitimate (ham) with score 3-5
 - Single weak indicators alone should not raise spam score above 3/10
-- Transactional emails (receipts, confirmations, invoices) are NEVER spam by default unless explicitly matching a user rule
-- Large brands sending legitimate communications are not spam UNLESS user rules say otherwise
+- Transactional emails (receipts, confirmations, invoices) are NEVER spam by default unless explicitly matching a user rule OR phishing combination is triggered
+- Large brands sending legitimate communications are not spam UNLESS user rules say otherwise OR phishing combination is triggered
 - Encoding issues alone are not a reason to mark as spam
 - Marketing newsletters from legitimate companies are spam-like (score 4-6) but not definitive spam unless user rules say so
 
@@ -282,11 +335,40 @@ User Rules: None or none that apply
 Score: 5/10 (uncertain)
 Reasoning: It's marketing content, but from a legitimate company with proper unsubscribe. No user rule applies. Could go either way depending on user preference.
 
-Example 6 - No Rules, Clear Spam:
-Email: "URGENT! Your account expires! Click here NOW to verify: bit.ly/fake!!!"
+Example 6 - No Rules, Clear Phishing:
+Email: "URGENT! Your account expires! Click here NOW to verify your identity: bit.ly/fake!!!"
+Sender Name: "PayPal Security"
+Sender Email: "no-reply@paypal-secure-login.ru"
 User Rules: None match
-Score: 10/10 (spam)
-Reasoning: Generic urgency, suspicious shortened link, all caps, pressure tactics. Clearly phishing.`
+Score: 10/10 (phishing/spam)
+Reasoning: P1 present (sender impersonation: "PayPal Security" from "paypal-secure-login.ru"), P2 present (URL shortener bit.ly for a claimed financial service), P3 present (urgent account expiration threat), P4 present (identity verification requested). Multiple phishing signals confirmed — combination rule triggered. Score: 10/10.
+
+Example 7 - Phishing (Government Impersonation + URL Shortener + Urgency):
+Sender Name: Antai.gouv.fr
+Sender Email: contact@chamsswitch.com
+Subject: AVIS DE RECOUVREMENT FORCÉ - RÉPONSE SOUS 24H
+Body: Contains a call-to-action button linking to https://miniurl.com/94olhk5o, threatens forced debt collection
+User Rules: None match
+Score: 10/10 (phishing/spam)
+Reasoning: P1 present (sender claims "Antai.gouv.fr" — French government traffic agency — but actual email is "contact@chamsswitch.com", unrelated domain). P2 present (call-to-action goes to miniurl.com, a URL shortener, in the context of a claimed government authority). P3 present (subject and body threaten forced collection within 24h). P4 present (demands payment). Combination rule: P1 + P2 + P3 + P4 all confirmed. Score: 10/10.
+
+Example 8 - Phishing (Bank Impersonation):
+Sender Name: Crédit Agricole Sécurité
+Sender Email: securite@ca-verification-compte.net
+Subject: Votre compte a été suspendu - Action requise
+Body: "Veuillez vérifier votre identité immédiatement" with a link to a non-official domain
+User Rules: None match
+Score: 10/10 (phishing/spam)
+Reasoning: P1 present (claims Crédit Agricole but uses "ca-verification-compte.net" instead of official "credit-agricole.fr"). P3 present (account suspension threat). P4 present (identity verification under urgency). Combination rule: P1 + P3 + P4. Score: 10/10.
+
+Example 9 - Transactional with URL Shortener (NOT phishing):
+Sender Name: Amazon
+Sender Email: shipment-tracking@amazon.fr
+Subject: Your order has shipped
+Body: Contains a short tracking link amzn.to/xxxx pointing to Amazon tracking page
+User Rules: None match
+Score: 1/10 (ham)
+Reasoning: P2 is NOT triggered — while a short link is present, this is a commercial transactional email from a known brand (Amazon), not a government/court/bank authority. P1 is absent (sender domain matches the brand). P3, P4, P5 absent. No phishing combination. This is a legitimate shipping notification. Score: 1/10.`
 
 export interface SpamAnalysisResult {
   score: number // 0-10, where 0 = not spam, 10 = definitely spam
@@ -422,10 +504,47 @@ export class SpamDetectorService {
       simplifiedBody = processedBody
     }
 
-    const basePromptStart = `You are a spam email detection expert. Analyze the following email content and determine if it's spam.
+    const basePromptStart = `You are a spam and phishing email detection expert. Analyze the following email content and determine if it's spam or phishing.
 
     ═══════════════════════════════════════════════════════════════════════════════════
-    🚨 CRITICAL: RULE MATCHING LOGIC 🚨
+    🚨 MANDATORY FIRST CHECK: PHISHING SIGNAL INVENTORY 🚨
+    ═══════════════════════════════════════════════════════════════════════════════════
+    
+    BEFORE checking any user rules, collect which phishing signals are present.
+    ⚠️ A SINGLE SIGNAL ALONE IS NOT ENOUGH — phishing requires a COMBINATION of at least 2 signals.
+    
+    SIGNAL P1 — SENDER DOMAIN MISMATCH:
+    Is the "Sender Name" claiming to be a government agency, bank, court, or official institution, but the "Sender Email" domain does NOT belong to that organisation?
+    → P1 present: "Antai.gouv.fr" from "contact@chamsswitch.com"; "PayPal" from "paypal@random-domain.xyz"
+    → P1 absent: "Amazon" from "orders@amazon.fr"; "Stripe" from "receipts@stripe.com"
+    
+    SIGNAL P2 — URL SHORTENER IN OFFICIAL/AUTHORITY CONTEXT:
+    Is a call-to-action or payment link using a known URL shortener (bit.ly, tinyurl.com, miniurl.com, rb.gy, ow.ly, goo.gl, shorte.st, cutt.ly, is.gd, tiny.cc, buff.ly, shorturl.at, bl.ink, t.co, clck.ru) AND the sender claims to be a government, court, law enforcement, or financial authority?
+    → P2 present: government-impersonating email with a miniurl.com payment link
+    → P2 absent: a regular e-commerce or newsletter email using a short link (Amazon amzn.to, etc.) — commercial brands using short links is normal and NOT P2
+    
+    SIGNAL P3 — LEGAL/FINANCIAL URGENCY THREAT:
+    Does the subject or body contain threats of legal seizure, prosecution, forced debt collection, account suspension with financial loss, or demands for immediate action within a very short deadline?
+    → P3 present: "RÉPONSE SOUS 24H", "saisie sur compte", "exécution forcée", "votre compte sera suspendu"
+    → P3 absent: "limited time offer!", "sale ends today!" (commercial urgency is NOT P3)
+    
+    SIGNAL P4 — SENSITIVE ACTION DEMANDED UNDER PRESSURE:
+    Does the email demand payment of a fine/debt, identity verification, login credentials, or personal/financial data combined with a threat or deadline?
+    
+    SIGNAL P5 — LINK ANCHOR MISMATCH:
+    Does the visible text of a link show one domain but the actual href URL points to a completely different, unrelated domain?
+    
+    COMBINATION RULE — PHISHING VERDICT (score 9-10):
+    → P1 + any of {P2, P3, P4, P5} → phishing → score 9-10
+    → P2 + P3 (without P1) → phishing → score 9-10
+    → P3 + P4 (without P1) → phishing → score 9-10
+    → P5 + any other signal → phishing → score 9-10
+    → Only ONE signal present → NOT phishing; raise suspicion only (score 5-7)
+    
+    If phishing combination is confirmed → assign score 9-10 immediately. User rules and email type classification DO NOT override phishing verdicts.
+    
+    ═══════════════════════════════════════════════════════════════════════════════════
+    🚨 SECONDARY CHECK: RULE MATCHING LOGIC 🚨
     ═══════════════════════════════════════════════════════════════════════════════════
     
     STEP 1: DETERMINE IF ANY USER RULE ACTUALLY MATCHES THIS EMAIL
@@ -452,6 +571,7 @@ export class SpamDetectorService {
     
     ⚠️ CRITICAL: A transactional email (receipt, confirmation, invoice) is NOT a newsletter or marketing email.
     ⚠️ CRITICAL: Do not apply newsletter/marketing rules to transactional emails.
+    ⚠️ CRITICAL: A confirmed phishing combination ALWAYS overrides email type classification.
     
     ═══════════════════════════════════════════════════════════════════════════════════
     `
