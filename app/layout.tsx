@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import { Toaster } from "sonner";
 import MainContent from "@/components/MainContent";
 import { VersionUpdateNotification } from "@/components/VersionUpdateNotification";
+import { UpdateNotificationProvider } from "@/lib/contexts/UpdateNotificationContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,14 +32,16 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="flex h-screen">
-          <Sidebar />
-          <MainContent>
-            {children}
-          </MainContent>
-        </div>
-        <Toaster />
-        <VersionUpdateNotification />
+        <UpdateNotificationProvider>
+          <div className="flex h-screen">
+            <Sidebar />
+            <MainContent>
+              {children}
+            </MainContent>
+          </div>
+          <Toaster />
+          <VersionUpdateNotification />
+        </UpdateNotificationProvider>
       </body>
     </html>
   );

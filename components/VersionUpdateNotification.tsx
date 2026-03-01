@@ -1,39 +1,32 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
-import { checkForNewerVersion, type VersionCheckResult } from '@/lib/versionChecker';
+import { checkForNewerVersion } from '@/lib/versionChecker';
+import { useUpdateNotification } from '@/lib/contexts/UpdateNotificationContext';
 
 export function VersionUpdateNotification() {
-  const [updateInfo, setUpdateInfo] = useState<VersionCheckResult | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { updateInfo, isVisible, showNotification, hideNotification } = useUpdateNotification();
 
   const checkForUpdates = useCallback(async () => {
     try {
       const result = await checkForNewerVersion();
-      setUpdateInfo(result);
-
-      // Show notification only if there's an update and no error
-      if (result.hasUpdate && !result.error) {
-        setIsVisible(true);
-      }
+      showNotification(result);
     } catch (error) {
       console.error('Error checking for updates:', error);
     } finally {
-      setIsLoading(false);
       setTimeout(() => checkForUpdates(), 7200000); // Check every 2 hours
     }
-  }, []);
+  }, [showNotification]);
 
   useEffect(() => {
     checkForUpdates();
   }, [checkForUpdates]);
 
   const handleClose = () => {
-    setIsVisible(false);
+    hideNotification();
   };
 
   const handleUpdateClick = async () => {
@@ -43,7 +36,7 @@ export function VersionUpdateNotification() {
   };
 
   // Don't render anything if there's no update or it's not visible
-  if (isLoading || !isVisible || !updateInfo?.hasUpdate) {
+  if (!isVisible || !updateInfo?.hasUpdate) {
     return null;
   }
 

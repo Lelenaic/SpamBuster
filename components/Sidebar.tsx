@@ -8,13 +8,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Separator } from "@/components/ui/separator";
 import { Mail, Settings, Plus, Shield, RefreshCw, BarChart3 } from "lucide-react";
 import { checkForNewerVersion } from "@/lib/versionChecker";
-import { toast } from "sonner";
-
+import { useUpdateNotification } from "@/lib/contexts/UpdateNotificationContext";
 
 export default function Sidebar() {
   const [version, setVersion] = useState<string>('0.0.0');
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const pathname = usePathname();
+  const { showNotification } = useUpdateNotification();
 
   useEffect(() => {
     const loadVersion = async () => {
@@ -30,20 +30,9 @@ export default function Sidebar() {
     setIsCheckingUpdate(true);
     try {
       const result = await checkForNewerVersion();
-      if (result.hasUpdate) {
-        toast.success(`New version ${result.latestVersion} available!`, {
-          action: result.releaseUrl ? {
-            label: "Update",
-            onClick: () => window.shellAPI.openExternal(result.releaseUrl!),
-          } : undefined,
-        });
-      } else if (result.error) {
-        toast.error(`Failed to check for updates: ${result.error}`);
-      } else {
-        toast.success("You're running the latest version!");
-      }
+      showNotification(result);
     } catch (error) {
-      toast.error("Failed to check for updates");
+      // Error is handled in the notification
     } finally {
       setIsCheckingUpdate(false);
     }
