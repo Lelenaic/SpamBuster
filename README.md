@@ -19,6 +19,9 @@ Uses OpenRouter or Ollama to classify emails based on your custom anti-spam rule
 - **Modern UI**: Shadcn UI components, Tailwind CSS, Lucide React icons, Sonner toasts.
 - **Vector database**: LanceDB included to match with previous analyzed emails for a better analysis
 
+<img width="1150" height="730" alt="CleanShot 2026-03-01 at 20 08 03" src="https://github.com/user-attachments/assets/4159bc75-5c70-49ca-afcb-bdd4b6167416" />
+
+
 ## 🚀 Installation
 
 Download pre-built binaries from the [latest release](https://github.com/lelenaic/spambuster/releases/latest) for Linux, MacOS and Windows.
