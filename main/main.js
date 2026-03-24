@@ -29,6 +29,50 @@ let cronJob = null;
 let isQuitting = false;
 let isSetupCronJobRunning = false; // Mutex to prevent concurrent cron setup
 
+const NETWORK_ERROR_CODES = [
+  'ETIMEDOUT',
+  'ECONNRESET',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'EPIPE',
+  'socket hang up',
+  'Connection closed',
+  'read ETIMEDOUT',
+  'Socket timeout',
+  'ECONNABORTED',
+];
+
+// Global exception handler for uncaught exceptions
+process.on('uncaughtException', (error) => {
+  const errorMessage = String(error?.message || '');
+  const errorCode = error?.code || '';
+  const isNetworkError = NETWORK_ERROR_CODES.some(code => 
+    errorMessage.includes(code) || errorCode.includes(code)
+  );
+
+  if (isNetworkError) {
+    return;
+  }
+});
+
+// Global handler for unhandled promise rejections
+process.on('unhandledRejection', (reason) => {
+  const errorMessage = String(reason?.message || '');
+  const errorCode = reason?.code || '';
+  const isNetworkError = NETWORK_ERROR_CODES.some(code => 
+    errorMessage.includes(code) || errorCode.includes(code)
+  );
+
+  if (isNetworkError) {
+    return;
+  }
+
+  console.error('[Unhandled Rejection]', reason);
+});
+
 async function initStore() {
   const { default: Store } = await import('electron-store');
   store = new Store();

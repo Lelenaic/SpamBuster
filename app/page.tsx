@@ -402,9 +402,12 @@ export default function Home() {
                 <Accordion type="single" collapsible className="w-full">
                   {displayedEmails.map((email) => (
                     <AccordionItem key={email.id} value={email.id}>
-                      <AccordionTrigger className="hover:no-underline items-center !grid grid-cols-[1fr_auto_auto] gap-4 w-full min-w-0">
-                        <span className="truncate text-left min-w-0">{email.subject}</span>
-                        <div className="flex items-center gap-2">
+                      <AccordionTrigger className="hover:no-underline w-full min-w-0 items-center">
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground truncate">{email.sender}</p>
+                            <span className="truncate text-left">{email.subject}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
                           {/* Cost badge with tooltip */}
                           <Tooltip>
                             <TooltipTrigger asChild>
