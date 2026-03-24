@@ -456,7 +456,7 @@ export class SpamDetectorService {
     return turndownService
   }
 
-  private async buildPrompt(email: EmailData, rules: Rule[], shouldSimplify: boolean, simplifyMode: string, similarEmails: Array<{
+  private buildSystemPrompt(rules: Rule[], similarEmails: Array<{
     id: string;
     emailId: string;
     subject: string;
@@ -469,142 +469,103 @@ export class SpamDetectorService {
     analyzedAt: string;
     userValidated?: boolean | null;
     similarity: number;
-  }> = [], customizeSpamGuidelines: boolean = false, customSpamGuidelines: string = ''): Promise<string> {
-    // Parse sender name and email from the 'from' field
-    const nameEmailMatch = email.from.match(/^([^<]+)<([^>]+)>$/)
-    let senderName: string
-    let senderEmail: string
-    
-    if (nameEmailMatch) {
-      senderName = nameEmailMatch[1].trim()
-      senderEmail = nameEmailMatch[2].trim()
-    } else {
-      // Assume it's just an email address
-      senderName = 'Unknown'
-      senderEmail = email.from
-    }
+  }>, customizeSpamGuidelines: boolean, customSpamGuidelines: string): string {
+    const systemStart = `You are a spam and phishing email detection expert. Your job is to analyze emails provided by the user and classify them.
 
-    // Simplify email content if enabled
-    let simplifiedBody: string
-    
-    // First, decode all base64 sections in the email body
-    // This handles multipart emails with multiple base64-encoded parts
-    const processedBody = decodeAllBase64Sections(email.body)
-    
-    if (shouldSimplify) {
-      if (simplifyMode === 'aggressive') {
-        // Use regex-based extraction for aggressive mode
-        simplifiedBody = extractTextFromHTML(processedBody)
-      } else {
-        // Use turndown for simple mode
-        const turndownService = this.createTurndownService(simplifyMode)
-        simplifiedBody = turndownService.turndown(processedBody)
-      }
-    } else {
-      simplifiedBody = processedBody
-    }
+═══════════════════════════════════════════════════════════════════════════════════
+🚨 MANDATORY FIRST CHECK: PHISHING SIGNAL INVENTORY 🚨
+═══════════════════════════════════════════════════════════════════════════════════
 
-    const basePromptStart = `You are a spam and phishing email detection expert. Analyze the following email content and determine if it's spam or phishing.
+BEFORE checking any user rules, collect which phishing signals are present.
+⚠️ A SINGLE SIGNAL ALONE IS NOT ENOUGH — phishing requires a COMBINATION of at least 2 signals.
 
-    ═══════════════════════════════════════════════════════════════════════════════════
-    🚨 MANDATORY FIRST CHECK: PHISHING SIGNAL INVENTORY 🚨
-    ═══════════════════════════════════════════════════════════════════════════════════
-    
-    BEFORE checking any user rules, collect which phishing signals are present.
-    ⚠️ A SINGLE SIGNAL ALONE IS NOT ENOUGH — phishing requires a COMBINATION of at least 2 signals.
-    
-    SIGNAL P1 — SENDER DOMAIN MISMATCH:
-    Is the "Sender Name" claiming to be a government agency, bank, court, or official institution, but the "Sender Email" domain does NOT belong to that organisation?
-    → P1 present: "Antai.gouv.fr" from "contact@chamsswitch.com"; "PayPal" from "paypal@random-domain.xyz"
-    → P1 absent: "Amazon" from "orders@amazon.fr"; "Stripe" from "receipts@stripe.com"
-    
-    SIGNAL P2 — URL SHORTENER IN OFFICIAL/AUTHORITY CONTEXT:
-    Is a call-to-action or payment link using a known URL shortener (bit.ly, tinyurl.com, miniurl.com, rb.gy, ow.ly, goo.gl, shorte.st, cutt.ly, is.gd, tiny.cc, buff.ly, shorturl.at, bl.ink, t.co, clck.ru) AND the sender claims to be a government, court, law enforcement, or financial authority?
-    → P2 present: government-impersonating email with a miniurl.com payment link
-    → P2 absent: a regular e-commerce or newsletter email using a short link (Amazon amzn.to, etc.) — commercial brands using short links is normal and NOT P2
-    
-    SIGNAL P3 — LEGAL/FINANCIAL URGENCY THREAT:
-    Does the subject or body contain threats of legal seizure, prosecution, forced debt collection, account suspension with financial loss, or demands for immediate action within a very short deadline?
-    → P3 present: "RÉPONSE SOUS 24H", "saisie sur compte", "exécution forcée", "votre compte sera suspendu"
-    → P3 absent: "limited time offer!", "sale ends today!" (commercial urgency is NOT P3)
-    
-    SIGNAL P4 — SENSITIVE ACTION DEMANDED UNDER PRESSURE:
-    Does the email demand payment of a fine/debt, identity verification, login credentials, or personal/financial data combined with a threat or deadline?
-    
-    SIGNAL P5 — LINK ANCHOR MISMATCH:
-    Does the visible text of a link show one domain but the actual href URL points to a completely different, unrelated domain?
-    
-    COMBINATION RULE — PHISHING VERDICT (score 9-10):
-    → P1 + any of {P2, P3, P4, P5} → phishing → score 9-10
-    → P2 + P3 (without P1) → phishing → score 9-10
-    → P3 + P4 (without P1) → phishing → score 9-10
-    → P5 + any other signal → phishing → score 9-10
-    → Only ONE signal present → NOT phishing; raise suspicion only (score 5-7)
-    
-    If phishing combination is confirmed → assign score 9-10 immediately. User rules and email type classification DO NOT override phishing verdicts.
-    
-    ═══════════════════════════════════════════════════════════════════════════════════
-    🚨 SECONDARY CHECK: RULE MATCHING LOGIC 🚨
-    ═══════════════════════════════════════════════════════════════════════════════════
-    
-    STEP 1: DETERMINE IF ANY USER RULE ACTUALLY MATCHES THIS EMAIL
-    
-    Before applying any rule, you MUST determine if the email actually matches the rule's criteria:
-    
-    - A rule about "newsletters" ONLY matches emails that are newsletters (periodic marketing/promotional content)
-    - A rule about "newsletters" does NOT match: receipts, order confirmations, invoices, shipping notifications, account alerts
-    - A rule about "marketing" ONLY matches promotional/sales emails
-    - A rule about "marketing" does NOT match: transactional emails, receipts, personal correspondence
-    - A rule about specific keywords ONLY matches if those exact keywords appear in the email
-    - A rule about specific senders ONLY matches if the sender matches
-    
-    STEP 2: APPLY THE RULE ONLY IF IT MATCHES
-    
-    IF a user rule actually matches this email:
-       - Apply that rule with score 8-10/10 (depending on how strongly it matches)
-       - The rule overrides any other considerations (legitimacy, brand reputation, formatting)
-       - USER RULES = ABSOLUTE TRUTH when they match
-    
-    IF NO user rules match this email:
-       - Proceed to default spam detection using the guidelines below
-       - Do NOT try to force-apply rules that don't match the email type
-    
-    ⚠️ CRITICAL: A transactional email (receipt, confirmation, invoice) is NOT a newsletter or marketing email.
-    ⚠️ CRITICAL: Do not apply newsletter/marketing rules to transactional emails.
-    ⚠️ CRITICAL: A confirmed phishing combination ALWAYS overrides email type classification.
-    
-    ═══════════════════════════════════════════════════════════════════════════════════
-    `
+SIGNAL P1 — SENDER DOMAIN MISMATCH:
+Is the "Sender Name" claiming to be a government agency, bank, court, or official institution, but the "Sender Email" domain does NOT belong to that organisation?
+→ P1 present: "Antai.gouv.fr" from "contact@chamsswitch.com"; "PayPal" from "paypal@random-domain.xyz"
+→ P1 absent: "Amazon" from "orders@amazon.fr"; "Stripe" from "receipts@stripe.com"
 
-    const basePromptMiddle = customizeSpamGuidelines
+SIGNAL P2 — URL SHORTENER IN OFFICIAL/AUTHORITY CONTEXT:
+Is a call-to-action or payment link using a known URL shortener (bit.ly, tinyurl.com, miniurl.com, rb.gy, ow.ly, goo.gl, shorte.st, cutt.ly, is.gd, tiny.cc, buff.ly, shorturl.at, bl.ink, t.co, clck.ru) AND the sender claims to be a government, court, law enforcement, or financial authority?
+→ P2 present: government-impersonating email with a miniurl.com payment link
+→ P2 absent: a regular e-commerce or newsletter email using a short link (Amazon amzn.to, etc.) — commercial brands using short links is normal and NOT P2
+
+SIGNAL P3 — LEGAL/FINANCIAL URGENCY THREAT:
+Does the subject or body contain threats of legal seizure, prosecution, forced debt collection, account suspension with financial loss, or demands for immediate action within a very short deadline?
+→ P3 present: "RÉPONSE SOUS 24H", "saisie sur compte", "exécution forcée", "votre compte sera suspendu"
+→ P3 absent: "limited time offer!", "sale ends today!" (commercial urgency is NOT P3)
+
+SIGNAL P4 — SENSITIVE ACTION DEMANDED UNDER PRESSURE:
+Does the email demand payment of a fine/debt, identity verification, login credentials, or personal/financial data combined with a threat or deadline?
+
+SIGNAL P5 — LINK ANCHOR MISMATCH:
+Does the visible text of a link show one domain but the actual href URL points to a completely different, unrelated domain?
+
+COMBINATION RULE — PHISHING VERDICT (score 9-10):
+→ P1 + any of {P2, P3, P4, P5} → phishing → score 9-10
+→ P2 + P3 (without P1) → phishing → score 9-10
+→ P3 + P4 (without P1) → phishing → score 9-10
+→ P5 + any other signal → phishing → score 9-10
+→ Only ONE signal present → NOT phishing; raise suspicion only (score 5-7)
+
+If phishing combination is confirmed → assign score 9-10 immediately. User rules and email type classification DO NOT override phishing verdicts.
+
+═══════════════════════════════════════════════════════════════════════════════════
+🚨 SECONDARY CHECK: RULE MATCHING LOGIC 🚨
+═══════════════════════════════════════════════════════════════════════════════════
+
+STEP 1: DETERMINE IF ANY USER RULE ACTUALLY MATCHES THIS EMAIL
+
+Before applying any rule, you MUST determine if the email actually matches the rule's criteria:
+
+- A rule about "newsletters" ONLY matches emails that are newsletters (periodic marketing/promotional content)
+- A rule about "newsletters" does NOT match: receipts, order confirmations, invoices, shipping notifications, account alerts
+- A rule about "marketing" ONLY matches promotional/sales emails
+- A rule about "marketing" does NOT match: transactional emails, receipts, personal correspondence
+- A rule about specific keywords ONLY matches if those exact keywords appear in the email
+- A rule about specific senders ONLY matches if the sender matches
+
+STEP 2: APPLY THE RULE ONLY IF IT MATCHES
+
+IF a user rule actually matches this email:
+   - Apply that rule with score 8-10/10 (depending on how strongly it matches)
+   - The rule overrides any other considerations (legitimacy, brand reputation, formatting)
+   - USER RULES = ABSOLUTE TRUTH when they match
+
+IF NO user rules match this email:
+   - Proceed to default spam detection using the guidelines below
+   - Do NOT try to force-apply rules that don't match the email type
+
+⚠️ CRITICAL: A transactional email (receipt, confirmation, invoice) is NOT a newsletter or marketing email.
+⚠️ CRITICAL: Do not apply newsletter/marketing rules to transactional emails.
+⚠️ CRITICAL: A confirmed phishing combination ALWAYS overrides email type classification.
+
+═══════════════════════════════════════════════════════════════════════════════════
+`
+
+    const guidelines = customizeSpamGuidelines
       ? customSpamGuidelines
       : DEFAULT_SPAM_GUIDELINES
 
-    const basePromptEnd = `
-    ═══════════════════════════════════════════════════════════════════════════════════
-    USER-DEFINED RULES (check if any ACTUALLY MATCH this email):`
-
-    const rulesText = rules.length > 0
-      ? rules.map(rule => `- ${rule.text}`).join('\n')
-      : 'No additional rules defined.'
+    const rulesSection = `
+═══════════════════════════════════════════════════════════════════════════════════
+USER-DEFINED RULES (check if any ACTUALLY MATCH this email):
+${rules.length > 0 ? rules.map(rule => `- ${rule.text}`).join('\n') : 'No additional rules defined.'}`
 
     const similarEmailsText = similarEmails.length > 0
-      ? `\n\nFor additional context, here are some similar emails that were previously analyzed. Pay attention to user corrections - they indicate the AI made a mistake:\n\n${similarEmails.map((similar, index) => {
-
-        // Determine if user confirmed or corrected the AI's classification
+      ? `\n\n═══════════════════════════════════════════════════════════════════════════════════
+SIMILAR EMAILS (previously analyzed — use for context only):
+${similarEmails.map((similar, index) => {
         let userValidationNote = '';
         let correctClassification = '';
-        
+
         if (similar.userValidated !== undefined && similar.userValidated !== null) {
           const aiClassification = similar.isSpam ? 'spam' : 'legitimate';
           const userClassification = similar.userValidated ? 'spam' : 'legitimate';
-          
+
           if (similar.isSpam === similar.userValidated) {
-            // User confirmed the AI's classification
             userValidationNote = `✓ User CONFIRMED this classification`;
             correctClassification = `Correct classification: ${userClassification}`;
           } else {
-            // User corrected the AI's classification
             userValidationNote = `✗ User CORRECTED - AI was WRONG!`;
             correctClassification = `AI said: ${aiClassification} (INCORRECT) | Actual: ${userClassification} (CORRECT)`;
           }
@@ -624,13 +585,46 @@ ${similar.userValidated !== undefined && similar.userValidated !== null && simil
       }).join('\n---\n\n')}`
       : ''
 
-    const emailSection = `\n\nEmail details:
+    return systemStart + guidelines + rulesSection + similarEmailsText
+  }
+
+  private async buildUserPrompt(email: EmailData, shouldSimplify: boolean, simplifyMode: string): Promise<string> {
+    // Parse sender name and email from the 'from' field
+    const nameEmailMatch = email.from.match(/^([^<]+)<([^>]+)>$/)
+    let senderName: string
+    let senderEmail: string
+
+    if (nameEmailMatch) {
+      senderName = nameEmailMatch[1].trim()
+      senderEmail = nameEmailMatch[2].trim()
+    } else {
+      senderName = 'Unknown'
+      senderEmail = email.from
+    }
+
+    // Decode and optionally simplify body
+    const processedBody = decodeAllBase64Sections(email.body)
+    let simplifiedBody: string
+
+    if (shouldSimplify) {
+      if (simplifyMode === 'aggressive') {
+        simplifiedBody = extractTextFromHTML(processedBody)
+      } else {
+        const turndownService = this.createTurndownService(simplifyMode)
+        simplifiedBody = turndownService.turndown(processedBody)
+      }
+    } else {
+      simplifiedBody = processedBody
+    }
+
+    return `Analyze this email and respond ONLY with a valid JSON object.
+
 Sender Name: ${senderName}
 Sender Email: ${senderEmail}
 Subject: ${email.subject}
 Date: ${email.date.toISOString()}
 
-Email content to analyze:
+Email body:
 ---
 ${simplifiedBody}
 ---
@@ -642,8 +636,6 @@ Respond ONLY with a valid JSON object in this exact format:
 }
 
 Do not include any other text or formatting.`
-
-    return basePromptStart + basePromptMiddle + basePromptEnd + '\n' + rulesText + similarEmailsText + emailSection
   }
 
   async analyzeEmail(email: EmailData, rules: Rule[] = []): Promise<SpamAnalysisResult> {
@@ -688,7 +680,8 @@ Do not include any other text or formatting.`
       }
     }
 
-    const prompt = await this.buildPrompt(email, rules, simplifyEmailContent, simplifyEmailContentMode, similarEmails, customizeSpamGuidelines, customSpamGuidelines)
+    const systemPrompt = this.buildSystemPrompt(rules, similarEmails, customizeSpamGuidelines, customSpamGuidelines)
+    const userPrompt = await this.buildUserPrompt(email, simplifyEmailContent, simplifyEmailContentMode)
 
     const selectedModel = await this.getSelectedModel()
     
@@ -703,7 +696,7 @@ Do not include any other text or formatting.`
           temperature = await window.aiAPI.getTemperature()
           topP = await window.aiAPI.getTopP()
         }
-        const aiResponse = await aiService.sendMessage(prompt, selectedModel, temperature, topP)
+        const aiResponse = await aiService.sendMessage(userPrompt, selectedModel, temperature, topP, systemPrompt)
 
         // Extract JSON from response using regex (handles AI models that add comments)
         const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/)

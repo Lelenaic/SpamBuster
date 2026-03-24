@@ -36,10 +36,16 @@ export class OpenRouterService implements AIService {
     return data.data.map((m: { id: string }) => m.id)
   }
 
-  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number): Promise<{ content: string; cost: number }> {
+  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number, systemMessage?: string): Promise<{ content: string; cost: number }> {
+    const messages: Array<{ role: string; content: string }> = []
+    if (systemMessage) {
+      messages.push({ role: 'system', content: systemMessage })
+    }
+    messages.push({ role: 'user', content: message })
+
     const body: Record<string, unknown> = {
       model,
-      messages: [{ role: 'user', content: message }]
+      messages
     }
     
     // Add temperature and top_p if provided (low temperature = more focused responses)

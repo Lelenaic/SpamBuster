@@ -19,12 +19,15 @@ export class OllamaService implements AIService {
     return this.listModels()
   }
 
-  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number): Promise<{ content: string; cost: number }> {
+  async sendMessage(message: string, model?: string, temperature?: number, top_p?: number, systemMessage?: string): Promise<{ content: string; cost: number }> {
     const body: Record<string, unknown> = {
       model,
       prompt: message,
       stream: false,
       format: 'json'
+    }
+    if (systemMessage) {
+      body.system = systemMessage
     }
     
     // Add temperature and top_p if provided (low temperature = more focused responses)
