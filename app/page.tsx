@@ -441,9 +441,6 @@ export default function Home() {
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="space-y-2 pt-2">
-                          <p className="text-sm text-muted-foreground">
-                            <strong>From:</strong> {email.sender}
-                          </p>
                           <p className="text-sm">
                             <strong>AI Reasoning:</strong> {email.reasoning}
                           </p>
