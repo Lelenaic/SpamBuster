@@ -22,6 +22,16 @@ interface CommunityRule {
   is_official: boolean;
 }
 
+interface CuratedModel {
+  id: number;
+  model_name: string;
+  description: string;
+  platform: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PaginatedResponse<T> {
   current_page: number;
   data: T[];
@@ -220,8 +230,27 @@ class ApiClient {
   }
 
   // Add more API methods here as needed
+
+  async getCuratedModels(): Promise<CuratedModel[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/curated-models`, {
+        method: 'GET',
+        headers: await this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch curated models: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data : data.models || data.data || [];
+    } catch (error) {
+      console.error('Get curated models error:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiClient = new ApiClient();
 
-export type { CommunityRule };
+export type { CommunityRule, CuratedModel };

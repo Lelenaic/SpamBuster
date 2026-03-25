@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { createAIService } from "@/lib/ai"
+import { apiClient, CuratedModel } from "@/lib/api"
 import { Account, AccountStatus, MailProviderFactory } from "@/lib/mail"
 import { AlertsManager } from "@/lib/alerts"
 import { toast } from "sonner"
@@ -40,6 +41,8 @@ function SettingsContent() {
   const [embedModelComboboxOpen, setEmbedModelComboboxOpen] = useState(false)
 
   const [testingEmbedConnection, setTestingEmbedConnection] = useState(false)
+
+  const [curatedModels, setCuratedModels] = useState<CuratedModel[]>([])
 
   // Refs to prevent double-fetching in React Strict Mode
   const modelsFetched = useRef(false)
@@ -115,6 +118,19 @@ function SettingsContent() {
       }
     }
     loadSettings()
+  }, [])
+
+  useEffect(() => {
+    const fetchCuratedModels = async () => {
+      try {
+        const models = await apiClient.getCuratedModels()
+        const topThree = models.slice(0, 3)
+        setCuratedModels(topThree)
+      } catch (error) {
+        console.error('Failed to fetch curated models:', error)
+      }
+    }
+    fetchCuratedModels()
   }, [])
 
   // Listen for accounts-refresh-needed event from wizard
@@ -707,6 +723,7 @@ function SettingsContent() {
               topP={topP}
               setTopP={setTopP}
               handleTopPChange={handleTopPChange}
+              curatedModels={curatedModels}
             />
           </TabsContent>
           <TabsContent value="mail">

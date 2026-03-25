@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { cn } from "@/lib/utils"
 import { DEFAULT_SPAM_GUIDELINES } from "@/lib/ai/spamDetector"
+import { CuratedModel } from "@/lib/api"
 import {
   Command,
   CommandEmpty,
@@ -77,6 +78,7 @@ interface AIAccountTabProps {
   topP: number
   setTopP: (value: number) => void
   handleTopPChange: (value: number) => Promise<void>
+  curatedModels: CuratedModel[]
 }
 
 export default function AIAccountTab({
@@ -118,6 +120,7 @@ export default function AIAccountTab({
   topP,
   setTopP,
   handleTopPChange,
+  curatedModels,
 }: AIAccountTabProps) {
   const handleCustomizeSpamGuidelinesChange = async (checked: boolean) => {
     setCustomizeSpamGuidelines(checked)
@@ -170,6 +173,49 @@ export default function AIAccountTab({
             />
           </div>
         </div>
+      )}
+      {(aiSource === 'ollama' || aiSource === 'openrouter') && curatedModels.length > 0 && (
+        (() => {
+          const filteredModels = curatedModels.filter(m => m.platform === aiSource)
+          if (filteredModels.length === 0) return null
+          return (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">Recommended Models</Label>
+                <span className="text-xs text-muted-foreground">(click to select)</span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {filteredModels.map((model, index) => (
+                  <button
+                    key={model.id}
+                    onClick={() => handleModelChange(model.model_name)}
+                    className={cn(
+                      "flex-1 flex flex-col items-start p-4 rounded-lg border text-left transition-all hover:shadow-md min-w-[200px]",
+                      selectedModel === model.model_name
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border hover:border-primary/50 hover:bg-muted/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        #{index + 1}
+                      </span>
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {model.platform}
+                      </span>
+                    </div>
+                    <span className="font-medium text-sm mt-2 truncate w-full" title={model.model_name}>
+                      {model.model_name}
+                    </span>
+                    <span className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      {model.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })()
       )}
       {(aiSource === 'ollama' || aiSource === 'openrouter') && (
         <div className="space-y-2">
