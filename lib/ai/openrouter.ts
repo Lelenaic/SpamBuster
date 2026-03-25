@@ -5,6 +5,15 @@ export interface OpenRouterResponse {
   cost: number
 }
 
+export interface OpenRouterModelInfo {
+  id: string
+  name: string
+  pricing?: {
+    prompt: string
+    completion: string
+  }
+}
+
 export class OpenRouterService implements AIService {
   constructor(private apiKey: string, private baseUrl: string = 'https://openrouter.ai/api/v1') {}
 
@@ -22,6 +31,27 @@ export class OpenRouterService implements AIService {
     if (!response.ok) throw new Error('Failed to fetch models')
     const data = await response.json()
     return data.data.map((m: { id: string }) => m.id)
+  }
+
+  async listModelsWithPricing(): Promise<OpenRouterModelInfo[]> {
+    const response = await fetch(`${this.baseUrl}/models`, {
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    if (!response.ok) throw new Error('Failed to fetch models')
+    const data = await response.json()
+    return data.data.map((m: { id: string; name: string; pricing?: { prompt: string; completion: string } }) => ({
+      id: m.id,
+      name: m.name,
+      pricing: m.pricing
+    }))
+  }
+
+  getModelPricing(modelId: string, modelsWithPricing: OpenRouterModelInfo[]): { prompt: string; completion: string } | undefined {
+    const model = modelsWithPricing.find(m => m.id === modelId)
+    return model?.pricing
   }
 
   async listEmbeddingModels(): Promise<string[]> {

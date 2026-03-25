@@ -79,6 +79,7 @@ interface AIAccountTabProps {
   setTopP: (value: number) => void
   handleTopPChange: (value: number) => Promise<void>
   curatedModels: CuratedModel[]
+  modelsPricing: Map<string, { prompt: string; completion: string }>
 }
 
 export default function AIAccountTab({
@@ -121,6 +122,7 @@ export default function AIAccountTab({
   setTopP,
   handleTopPChange,
   curatedModels,
+  modelsPricing,
 }: AIAccountTabProps) {
   const handleCustomizeSpamGuidelinesChange = async (checked: boolean) => {
     setCustomizeSpamGuidelines(checked)
@@ -274,6 +276,31 @@ export default function AIAccountTab({
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
+          {aiSource === 'openrouter' && selectedModel && modelsPricing.has(selectedModel) && (
+            (() => {
+              const pricing = modelsPricing.get(selectedModel)
+              if (!pricing) return null
+              const inputPrice = (parseFloat(pricing.prompt) * 1000000).toFixed(2)
+              const outputPrice = (parseFloat(pricing.completion) * 1000000).toFixed(2)
+              return (
+                <div className="bg-muted/50 rounded-lg p-4 border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium">Pricing (per 1M tokens)</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Input (prompt):</span>
+                      <span className="ml-2 font-medium">${inputPrice}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Output (completion):</span>
+                      <span className="ml-2 font-medium">${outputPrice}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()
+          )}
         </div>
       )}
       {(aiSource === 'ollama' || aiSource === 'openrouter') && (

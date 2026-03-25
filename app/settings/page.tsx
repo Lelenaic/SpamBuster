@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { createAIService } from "@/lib/ai"
+import { createAIService, OpenRouterModelInfo } from "@/lib/ai"
 import { apiClient, CuratedModel } from "@/lib/api"
 import { Account, AccountStatus, MailProviderFactory } from "@/lib/mail"
 import { AlertsManager } from "@/lib/alerts"
@@ -25,6 +25,7 @@ function SettingsContent() {
   const [selectedModel, setSelectedModel] = useState<string>("")
 
   const [models, setModels] = useState<string[]>([])
+  const [modelsPricing, setModelsPricing] = useState<Map<string, { prompt: string; completion: string }>>(new Map())
 
   const [loadingModels, setLoadingModels] = useState(false)
 
@@ -43,10 +44,6 @@ function SettingsContent() {
   const [testingEmbedConnection, setTestingEmbedConnection] = useState(false)
 
   const [curatedModels, setCuratedModels] = useState<CuratedModel[]>([])
-
-  // Refs to prevent double-fetching in React Strict Mode
-  const modelsFetched = useRef(false)
-  const embedModelsFetched = useRef(false)
 
   const [mailAccounts, setMailAccounts] = useState<Account[]>([])
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -171,6 +168,7 @@ function SettingsContent() {
     setAiSource(value)
     setSelectedModel("")
     setModels([])
+    setModelsPricing(new Map())
     setSelectedEmbedModel("")
     setEmbedModels([])
     if (typeof window !== "undefined" && window.aiAPI) {
@@ -196,25 +194,31 @@ function SettingsContent() {
 
   useEffect(() => {
     if ((aiSource === 'ollama' && ollamaBaseUrl) || (aiSource === 'openrouter' && openRouterApiKey)) {
-      // Skip if already fetched (prevents double-fetching in React Strict Mode)
-      if (modelsFetched.current) return;
-      
-      // Set flag synchronously BEFORE starting async operation
-      modelsFetched.current = true;
-      
-      fetchModels()
+      // Fetch if: models are empty OR (OpenRouter with selected model but no pricing)
+      if (models.length === 0 || (aiSource === 'openrouter' && selectedModel && modelsPricing.size === 0)) {
+        fetchModels()
+      }
     }
-  }, [aiSource, ollamaBaseUrl, openRouterApiKey])
+  }, [aiSource, ollamaBaseUrl, openRouterApiKey, selectedModel, models.length, modelsPricing.size])
 
   const fetchModels = async () => {
-    // Reset flag when called manually (e.g., for refresh)
-    modelsFetched.current = true;
-    
     setLoadingModels(true)
     try {
       const service = await createAIService()
       const modelNames = await service.listModels()
       setModels(modelNames.sort((a: string, b: string) => a.localeCompare(b)))
+      
+      // Fetch pricing info for OpenRouter models
+      if (aiSource === 'openrouter' && 'listModelsWithPricing' in service) {
+        const modelsWithPricing = await (service as { listModelsWithPricing: () => Promise<OpenRouterModelInfo[]> }).listModelsWithPricing()
+        const pricingMap = new Map<string, { prompt: string; completion: string }>()
+        modelsWithPricing.forEach(m => {
+          if (m.pricing) {
+            pricingMap.set(m.id, m.pricing)
+          }
+        })
+        setModelsPricing(pricingMap)
+      }
     } catch {
       setModels([])
     } finally {
@@ -243,21 +247,12 @@ function SettingsContent() {
   }
 
   useEffect(() => {
-    if (ollamaBaseUrl) {
-      // Skip if already fetched (prevents double-fetching in React Strict Mode)
-      if (embedModelsFetched.current) return;
-      
-      // Set flag synchronously BEFORE starting async operation
-      embedModelsFetched.current = true;
-      
+    if (ollamaBaseUrl && embedModels.length === 0) {
       fetchEmbedModels()
     }
-  }, [ollamaBaseUrl])
+  }, [ollamaBaseUrl, embedModels.length])
 
   const fetchEmbedModels = async () => {
-    // Reset flag when called manually (e.g., for refresh)
-    embedModelsFetched.current = true;
-    
     setLoadingEmbedModels(true)
     try {
       // Always use Ollama for embeddings regardless of main AI provider
@@ -724,6 +719,7 @@ function SettingsContent() {
               setTopP={setTopP}
               handleTopPChange={handleTopPChange}
               curatedModels={curatedModels}
+              modelsPricing={modelsPricing}
             />
           </TabsContent>
           <TabsContent value="mail">
