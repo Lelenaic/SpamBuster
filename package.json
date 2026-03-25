@@ -1,6 +1,6 @@
 {
   "name": "spambuster",
-  "version": "0.17.12",
+  "version": "0.18.0",
   "private": true,
   "main": "main/main.js",
   "author": {
