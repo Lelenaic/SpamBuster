@@ -300,7 +300,7 @@ export default function StatsPage() {
 
       groups[key].cost += email.cost || 0
       groups[key].total++
-      if (email.isSpam) {
+      if (getEffectiveIsSpam(email)) {
         groups[key].spam++
       } else {
         groups[key].ham++
@@ -320,8 +320,8 @@ export default function StatsPage() {
   const totals = useMemo(() => {
     return filteredEmails.reduce((acc, email) => ({
       cost: acc.cost + (email.cost || 0),
-      spam: acc.spam + (email.isSpam ? 1 : 0),
-      ham: acc.ham + (email.isSpam ? 0 : 1),
+      spam: acc.spam + (getEffectiveIsSpam(email) ? 1 : 0),
+      ham: acc.ham + (getEffectiveIsSpam(email) ? 0 : 1),
       total: acc.total + 1
     }), { cost: 0, spam: 0, ham: 0, total: 0 })
   }, [filteredEmails])
@@ -627,8 +627,8 @@ export default function StatsPage() {
                         </TableCell>
                         <TableCell className="text-center">{email.score}/10</TableCell>
                         <TableCell className="text-center">
-                          <Badge variant={email.isSpam ? "destructive" : "default"} className={email.isSpam ? "bg-red-500" : "bg-green-500"}>
-                            {email.isSpam ? "SPAM" : "HAM"}
+                          <Badge variant={getEffectiveIsSpam(email) ? "destructive" : "default"} className={getEffectiveIsSpam(email) ? "bg-red-500" : "bg-green-500"}>
+                            {getEffectiveIsSpam(email) ? "SPAM" : "HAM"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
