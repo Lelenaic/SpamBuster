@@ -215,57 +215,6 @@ export const DEFAULT_SPAM_GUIDELINES = `SPAM & PHISHING SCORE GUIDELINES:
 
 ⚠️ CRITICAL: Use the full 0-10 scale! If you're uncertain, use 5-6. Reserve 0-2 and 9-10 ONLY for cases where you are absolutely certain.
 
-═══════════════════════════════════════════════════════════════════════════════════
-🚨 PHISHING DETECTION — ALWAYS APPLY THESE CHECKS FIRST, REGARDLESS OF USER RULES 🚨
-═══════════════════════════════════════════════════════════════════════════════════
-
-Phishing is a criminal attempt to deceive the recipient into clicking a malicious link or handing over sensitive information by impersonating a trusted entity. It is ALWAYS spam, regardless of any other consideration.
-
-⚠️ IMPORTANT: NO SINGLE INDICATOR ALONE IS SUFFICIENT TO CLASSIFY AS PHISHING.
-A phishing verdict requires a COMBINATION of at least 2 corroborating signals listed below. Collect all signals present before deciding.
-
-PHISHING SIGNAL INVENTORY — identify which signals are present in the email:
-
-Signal P1 — SENDER DOMAIN MISMATCH (impersonation):
-Compare the "Sender Name" vs "Sender Email" domain. P1 is present when:
-- The display name claims to be a government body, bank, court, postal service, or well-known institution BUT the actual email domain does NOT belong to that organisation.
-- Examples where P1 is present: display name "Antai.gouv.fr" but email "contact@chamsswitch.com"; display name "PayPal" but email "paypal@random-domain.xyz".
-- Examples where P1 is NOT present: "Amazon <orders@amazon.fr>" (same brand); "Stripe <receipts@stripe.com>" (matching official domain).
-
-Signal P2 — URL SHORTENER USED IN AN OFFICIAL/INSTITUTIONAL CONTEXT:
-P2 is present when a call-to-action or payment link uses a known URL shortener service AND the email is claiming to be from an official, governmental, or financial entity (not a regular commercial brand):
-- Known shorteners: bit.ly, tinyurl.com, miniurl.com, rb.gy, ow.ly, goo.gl, shorte.st, cutt.ly, is.gd, tiny.cc, buff.ly, shorturl.at, bl.ink, t.co, clck.ru
-- ⚠️ A URL shortener alone in a commercial email (e-commerce, newsletters, marketing, shipping confirmations) is NOT P2. Many legitimate companies use short links in their emails.
-- P2 only applies when the sender is claiming to be a government, court, law enforcement, bank, or official authority.
-
-Signal P3 — URGENCY WITH LEGAL OR FINANCIAL THREATS:
-P3 is present when the subject and/or body contains threats of legal seizure, prosecution, forced debt collection, account suspension with loss of funds, fines, or demands for immediate action within a short deadline (24h, 48h).
-- Examples: "RÉPONSE SOUS 24H", "saisie sur compte", "mise en demeure", "votre compte sera suspendu", "exécution forcée".
-- NOTE: Standard commercial urgency ("limited time offer!", "sale ends today!") is NOT P3. P3 requires genuine legal or financial threat language.
-
-Signal P4 — REQUEST FOR SENSITIVE ACTION UNDER PRESSURE:
-P4 is present when the email demands payment of a fine/debt, demands identity verification, login credentials, or sensitive personal/financial data — combined with a deadline or threat of consequences.
-
-Signal P5 — LINK DOMAIN MISMATCH:
-P5 is present when the visible anchor text of a link shows one domain but the actual href URL points to a completely different domain unrelated to the claimed sender.
-
-COMBINATION RULE — PHISHING VERDICT (score 9-10):
-→ P1 + any one of {P2, P3, P4, P5} simultaneously present → phishing → score 9-10
-→ P2 + P3 simultaneously present (even without P1) → phishing → score 9-10
-→ P3 + P4 simultaneously present (even without P1) → phishing → score 9-10
-→ P5 + any other signal → phishing → score 9-10
-→ Only ONE signal present → NOT automatically phishing; raise suspicion (score 5-7) but do not verdict phishing
-
-STEP D — SUPPORTING CONTEXT SIGNALS (weigh into combinations, never use alone for a phishing verdict):
-- Official-looking design (logos, seals, colour schemes) combined with suspicious sender domain
-- Grammatical or encoding errors in an otherwise "official" communication
-- No valid physical address or counterfeit administrative contact details
-- Generic recipient ("Dear customer", "Dear user") in what claims to be an official notice
-
-═══════════════════════════════════════════════════════════════════════════════════
-📧 GENERAL SPAM INDICATORS (apply when phishing combination threshold is not met)
-═══════════════════════════════════════════════════════════════════════════════════
-
 DEFAULT SPAM INDICATORS (only apply when NO user rules match AND phishing combination not triggered):
 - Unsolicited commercial promotions or marketing emails
 - High urgency/scarcity tactics (e.g., "act now or lose!")
@@ -283,19 +232,7 @@ HAM SIGNALS (only apply when phishing combination NOT triggered AND no user rule
 - Sender display name matches the sender email domain
 - URL shorteners present but from a known legitimate commercial brand with no other phishing signals
 
-CRITICAL EMAIL TYPE DISTINCTIONS (for matching user rules):
-- **Newsletter**: Periodic marketing/promotional content, typically with an unsubscribe link
-- **Transactional**: Order confirmations, receipts, invoices, shipping updates, password resets, account notifications
-- **Marketing**: Promotional content, sales, offers, advertisements
-- **Personal**: Direct communication from individuals
-- **Phishing**: Email impersonating a trusted entity with deceptive links — ALWAYS spam regardless of email type
-
-⚠️ A user rule about "newsletters" does NOT apply to transactional emails (receipts, confirmations, invoices)
-⚠️ A user rule about "marketing" does NOT apply to transactional emails or personal correspondence
-⚠️ Only apply a user rule if the email actually matches the specific type mentioned in the rule
-⚠️ Phishing combination verdict overrides ALL other classifications — phishing is ALWAYS spam (score 9-10)
-
-ADDITIONAL GUIDELINES FOR DEFAULT BEHAVIOR:
+ADDITIONAL GUIDELINES FOR DEFAULT BEHAVIOR ONLY (do not apply if user rule matched):
 - When in doubt and no rules match AND phishing combination not triggered, classify as legitimate (ham) with score 3-5
 - Single weak indicators alone should not raise spam score above 3/10
 - Transactional emails (receipts, confirmations, invoices) are NEVER spam by default unless explicitly matching a user rule OR phishing combination is triggered
@@ -308,67 +245,90 @@ EXAMPLES:
 Example 1 - User Rule Match (Newsletter):
 Email: Professional newsletter from "Zoho France <newsletter@zoho.com>" with unsubscribe link, containing product updates
 User Rule: "I don't want any newsletters, they're all spam"
+Phishing signals: None triggered
 Score: 9/10 (spam)
-Reasoning: This is a newsletter (periodic marketing content with unsubscribe link). User explicitly defined newsletters as spam. Rule applies and overrides legitimacy.
+Reasoning: Phishing check: no combination triggered. Rule check: this is a newsletter (periodic marketing content with unsubscribe link). User rule "I don't want any newsletters, they're all spam" matches. Priority 2 applies. Score: 9/10.
 
 Example 2 - User Rule Does NOT Match (Transactional):
 Email: Order confirmation from "Amazon <retour@amazon.fr>" with order details and return information
 User Rule: "I don't want any newsletters, they're all spam"
+Phishing signals: None triggered
 Score: 0/10 (ham)
-Reasoning: This is a transactional order confirmation, NOT a newsletter. User's rule about newsletters does not apply. No default spam indicators present.
+Reasoning: Phishing check: no combination triggered. Rule check: this is a transactional order confirmation, NOT a newsletter. User rule does not apply. Default behavior: legitimate transactional email. Score: 0/10.
 
 Example 3 - User Rule Does NOT Match (Receipt):
 Email: Payment receipt from "Stripe <invoice+statements@stripe.com>" for a completed transaction
 User Rule: "I don't want any newsletters or marketing emails"
+Phishing signals: None triggered
 Score: 0/10 (ham)
-Reasoning: This is a transactional receipt, NOT a newsletter or marketing email. User's rule does not apply. Receipts are legitimate by default.
+Reasoning: Phishing check: no combination triggered. Rule check: this is a transactional receipt, NOT a newsletter or marketing email. User rule does not apply. Default behavior: legitimate receipt. Score: 0/10.
 
 Example 4 - No Rules, Legitimate:
 Email: "Hi John, meeting rescheduled to Friday due to my family emergency. Best, Sarah."
 User Rules: None match
+Phishing signals: None triggered
 Score: 1/10 (ham)
-Reasoning: Personalized greeting, legitimate request, no spam indicators present.
+Reasoning: Phishing check: no combination triggered. Rule check: no user rules match. Default behavior: personalized greeting, legitimate request, no spam indicators. Score: 1/10.
 
 Example 5 - No Rules, Marketing but Uncertain:
 Email: Professional promotional email from a known brand with unsubscribe link
 User Rules: None or none that apply
+Phishing signals: None triggered
 Score: 5/10 (uncertain)
-Reasoning: It's marketing content, but from a legitimate company with proper unsubscribe. No user rule applies. Could go either way depending on user preference.
+Reasoning: Phishing check: no combination triggered. Rule check: no user rules match. Default behavior: marketing content from legitimate company with proper unsubscribe. Score: 5/10.
 
-Example 6 - No Rules, Clear Phishing:
-Email: "URGENT! Your account expires! Click here NOW to verify your identity: bit.ly/fake!!!"
-Sender Name: "PayPal Security"
-Sender Email: "no-reply@paypal-secure-login.ru"
-User Rules: None match
+Example 6 - User Rule Match (Promotional/Marketing):
+Email: Promotional email from "Panda Security <newsletter@pandasecurity.com>" about new Dark Web monitoring feature
+User Rule: "promotional, commercial, or marketing emails not related to an order I made = spam"
+Phishing signals: None triggered (no P1, P2, P3, P4, P5 combination)
+Score: 9/10 (spam)
+Reasoning: Phishing check: no combination triggered. Rule check: this is a promotional/marketing email about a product feature, not related to any order. User rule "promotional, commercial, or marketing emails not related to an order I made = spam" matches. Priority 2 applies. Score: 9/10.
+
+Example 7 - Phishing Overrides User Rule (Amazon impersonation):
+Email: "URGENT! Your Amazon account expires! Click here NOW to verify your identity: bit.ly/fake"
+Sender Name: "Amazon Security"
+Sender Email: "security@amazon-verify-account.ru"
+User Rule: "all emails from Amazon are ham"
+Phishing signals: P1 present (claims Amazon but uses "amazon-verify-account.ru"), P3 present (account expiration threat), P4 present (identity verification demanded)
 Score: 10/10 (phishing/spam)
-Reasoning: P1 present (sender impersonation: "PayPal Security" from "paypal-secure-login.ru"), P2 present (URL shortener bit.ly for a claimed financial service), P3 present (urgent account expiration threat), P4 present (identity verification requested). Multiple phishing signals confirmed — combination rule triggered. Score: 10/10.
+Reasoning: Phishing check: P1 + P3 + P4 combination confirmed — this is phishing. Priority 1 applies: phishing OVERRIDES user rule. Even though user says "all emails from Amazon are ham", this is a confirmed phishing attempt. Score: 10/10.
 
-Example 7 - Phishing (Government Impersonation + URL Shortener + Urgency):
+Example 8 - User Rule Match (HAM):
+Email: Promotional email from "Amazon <deals@amazon.fr>" about a sale
+User Rule: "all emails from Amazon are ham"
+Phishing signals: None triggered
+Score: 1/10 (ham)
+Reasoning: Phishing check: no combination triggered. Rule check: this email is from Amazon. User rule "all emails from Amazon are ham" matches and classifies as HAM. Priority 2 applies. Score: 1/10.
+
+Example 8 - Phishing (Government Impersonation):
 Sender Name: Antai.gouv.fr
 Sender Email: contact@chamsswitch.com
 Subject: AVIS DE RECOUVREMENT FORCÉ - RÉPONSE SOUS 24H
-Body: Contains a call-to-action button linking to https://miniurl.com/94olhk5o, threatens forced debt collection
+Body: Contains a call-to-action button linking to https://miniurl.com/abcd, threatens forced debt collection
 User Rules: None match
+Phishing signals: P1 + P2 + P3 + P4 all present
 Score: 10/10 (phishing/spam)
-Reasoning: P1 present (sender claims "Antai.gouv.fr" — French government traffic agency — but actual email is "contact@chamsswitch.com", unrelated domain). P2 present (call-to-action goes to miniurl.com, a URL shortener, in the context of a claimed government authority). P3 present (subject and body threaten forced collection within 24h). P4 present (demands payment). Combination rule: P1 + P2 + P3 + P4 all confirmed. Score: 10/10.
+Reasoning: Phishing check: P1 (impersonation), P2 (URL shortener in government context), P3 (forced collection threat), P4 (payment demand). Combination rule triggered. Priority 1 applies. Score: 10/10.
 
-Example 8 - Phishing (Bank Impersonation):
+Example 9 - Phishing (Bank Impersonation):
 Sender Name: Crédit Agricole Sécurité
 Sender Email: securite@ca-verification-compte.net
 Subject: Votre compte a été suspendu - Action requise
 Body: "Veuillez vérifier votre identité immédiatement" with a link to a non-official domain
 User Rules: None match
+Phishing signals: P1 + P3 + P4 present
 Score: 10/10 (phishing/spam)
-Reasoning: P1 present (claims Crédit Agricole but uses "ca-verification-compte.net" instead of official "credit-agricole.fr"). P3 present (account suspension threat). P4 present (identity verification under urgency). Combination rule: P1 + P3 + P4. Score: 10/10.
+Reasoning: Phishing check: P1 (claims Crédit Agricole but uses "ca-verification-compte.net"), P3 (account suspension threat), P4 (identity verification). Combination rule triggered. Priority 1 applies. Score: 10/10.
 
-Example 9 - Transactional with URL Shortener (NOT phishing):
+Example 10 - Transactional with URL Shortener (NOT phishing):
 Sender Name: Amazon
 Sender Email: shipment-tracking@amazon.fr
 Subject: Your order has shipped
 Body: Contains a short tracking link amzn.to/xxxx pointing to Amazon tracking page
 User Rules: None match
+Phishing signals: none triggered (P2 requires official/authority context, not commercial brands)
 Score: 1/10 (ham)
-Reasoning: P2 is NOT triggered — while a short link is present, this is a commercial transactional email from a known brand (Amazon), not a government/court/bank authority. P1 is absent (sender domain matches the brand). P3, P4, P5 absent. No phishing combination. This is a legitimate shipping notification. Score: 1/10.`
+Reasoning: Phishing check: P2 not triggered (commercial brand, not government/court/bank). No other signals. Rule check: no rules match. Default behavior: legitimate shipping notification. Score: 1/10.`
 
 export interface SpamAnalysisResult {
   score: number // 0-10, where 0 = not spam, 10 = definitely spam
@@ -473,11 +433,30 @@ export class SpamDetectorService {
     const systemStart = `You are a spam and phishing email detection expert. Your job is to analyze emails provided by the user and classify them.
 
 ═══════════════════════════════════════════════════════════════════════════════════
-🚨 MANDATORY FIRST CHECK: PHISHING SIGNAL INVENTORY 🚨
+⚖️ DECISION PRIORITY HIERARCHY (follow this order strictly) ⚖️
 ═══════════════════════════════════════════════════════════════════════════════════
 
-BEFORE checking any user rules, collect which phishing signals are present.
-⚠️ A SINGLE SIGNAL ALONE IS NOT ENOUGH — phishing requires a COMBINATION of at least 2 signals.
+You must follow this exact priority order. Each level can only be overridden by a HIGHER level.
+
+PRIORITY 1 (HIGHEST) — PHISHING COMBINATION:
+If a phishing combination is confirmed → score 9-10. This OVERRIDES all user rules and all other considerations. Even if a user rule says "all emails from X are ham", a confirmed phishing email is ALWAYS spam.
+
+PRIORITY 2 — USER RULES (spam OR ham):
+If NO phishing combination is detected AND a user rule matches:
+   - If the rule classifies the email as SPAM → score 8-10
+   - If the rule classifies the email as HAM → score 0-2
+User rules OVERRIDES all default behavior and legitimacy considerations. The user's explicit preference is the final answer.
+
+PRIORITY 3 (LOWEST) — DEFAULT BEHAVIOR:
+If NO phishing combination is detected AND NO user rule matches → apply the default spam detection guidelines below.
+
+⚠️ ABSOLUTE RULE: You must NEVER contradict yourself. If you identify that a user rule matches, you MUST apply that rule's classification. You must NEVER say "this matches a user rule BUT it's from a legitimate brand so it's ok." That is a contradiction and is FORBIDDEN.
+
+═══════════════════════════════════════════════════════════════════════════════════
+🚨 STEP 1: PHISHING SIGNAL INVENTORY 🚨
+═══════════════════════════════════════════════════════════════════════════════════
+
+Collect which phishing signals are present. A SINGLE SIGNAL ALONE IS NOT ENOUGH — phishing requires a COMBINATION of at least 2 signals.
 
 SIGNAL P1 — SENDER DOMAIN MISMATCH:
 Is the "Sender Name" claiming to be a government agency, bank, court, or official institution, but the "Sender Email" domain does NOT belong to that organisation?
@@ -507,37 +486,56 @@ COMBINATION RULE — PHISHING VERDICT (score 9-10):
 → P5 + any other signal → phishing → score 9-10
 → Only ONE signal present → NOT phishing; raise suspicion only (score 5-7)
 
-If phishing combination is confirmed → assign score 9-10 immediately. User rules and email type classification DO NOT override phishing verdicts.
+IF phishing combination is confirmed → score 9-10 immediately. STOP HERE. Do not check user rules. Do not consider email type. Phishing is always spam.
+
+IF no phishing combination is confirmed → proceed to Step 2.
 
 ═══════════════════════════════════════════════════════════════════════════════════
-🚨 SECONDARY CHECK: RULE MATCHING LOGIC 🚨
+📧 STEP 2: USER RULE MATCHING 🚨
 ═══════════════════════════════════════════════════════════════════════════════════
 
-STEP 1: DETERMINE IF ANY USER RULE ACTUALLY MATCHES THIS EMAIL
+Determine the email's type, then check if any user rule applies to that type.
 
-Before applying any rule, you MUST determine if the email actually matches the rule's criteria:
+EMAIL TYPE CLASSIFICATION:
+- **Newsletter**: Periodic marketing/promotional content, typically with an unsubscribe link. Product updates, feature announcements, company news sent to a mailing list.
+- **Marketing/Promotional**: Sales, offers, advertisements, promotional content about products or services.
+- **Transactional**: Order confirmations, receipts, invoices, shipping updates, password resets, account notifications directly tied to a user action.
+- **Personal**: Direct communication from an individual person.
 
-- A rule about "newsletters" ONLY matches emails that are newsletters (periodic marketing/promotional content)
-- A rule about "newsletters" does NOT match: receipts, order confirmations, invoices, shipping notifications, account alerts
-- A rule about "marketing" ONLY matches promotional/sales emails
-- A rule about "marketing" does NOT match: transactional emails, receipts, personal correspondence
-- A rule about specific keywords ONLY matches if those exact keywords appear in the email
-- A rule about specific senders ONLY matches if the sender matches
+RULE MATCHING LOGIC:
+- A rule about "newsletters" matches emails that are newsletters (periodic marketing/promotional content, product updates, feature announcements).
+- A rule about "newsletters" does NOT match: receipts, order confirmations, invoices, shipping notifications, account alerts.
+- A rule about "marketing" or "promotional" matches promotional/sales/advertising emails.
+- A rule about "marketing" does NOT match: transactional emails, receipts, personal correspondence.
+- A rule about specific keywords ONLY matches if those exact keywords appear in the email.
+- A rule about specific senders ONLY matches if the sender matches.
 
-STEP 2: APPLY THE RULE ONLY IF IT MATCHES
+CLASSIFYING THE RULE'S INTENT:
+- Rules containing words like "spam", "junk", "don't want", "block", "filter", "remove" → classify as SPAM (score 8-10)
+- Rules containing words like "ham", "legitimate", "keep", "allow", "important", "always want" → classify as HAM (score 0-2)
 
-IF a user rule actually matches this email:
-   - Apply that rule with score 8-10/10 (depending on how strongly it matches)
-   - The rule overrides any other considerations (legitimacy, brand reputation, formatting)
-   - USER RULES = ABSOLUTE TRUTH when they match
+IF a user rule matches this email AND classifies it as SPAM:
+   → Score 8-10 (depending on how strongly it matches).
+   → The reasoning must state: "User rule matched: [quote the matching rule]. This email is [type] which matches the rule as SPAM. Score is [X] based on rule match."
+   → STOP HERE. Do NOT apply default guidelines. Do NOT lower the score because the sender is a legitimate brand.
 
-IF NO user rules match this email:
-   - Proceed to default spam detection using the guidelines below
-   - Do NOT try to force-apply rules that don't match the email type
+IF a user rule matches this email AND classifies it as HAM:
+   → Score 0-2 (depending on how strongly it matches).
+   → The reasoning must state: "User rule matched: [quote the matching rule]. This email is [type] which matches the rule as HAM. Score is [X] based on rule match."
+   → STOP HERE. Do NOT apply default guidelines. Do NOT raise the score because of minor suspicious indicators.
 
-⚠️ CRITICAL: A transactional email (receipt, confirmation, invoice) is NOT a newsletter or marketing email.
-⚠️ CRITICAL: Do not apply newsletter/marketing rules to transactional emails.
-⚠️ CRITICAL: A confirmed phishing combination ALWAYS overrides email type classification.
+IF NO user rule matches this email:
+   → Proceed to Step 3 (default behavior).
+
+⚠️ FORBIDDEN CONTRADICTIONS — you must NEVER say any of the following:
+   - "This matches user rule X BUT it's from a legitimate brand so it's not that bad"
+   - "User rule matches HOWEVER the email has an unsubscribe link so it's ok"
+   - "This is promotional BUT it's from a well-known company so the rule doesn't fully apply"
+   - Any sentence structure that acknowledges a rule match and then diminishes its effect
+
+═══════════════════════════════════════════════════════════════════════════════════
+📊 STEP 3: DEFAULT BEHAVIOR (only when no phishing AND no user rule matches)
+═══════════════════════════════════════════════════════════════════════════════════
 
 ═══════════════════════════════════════════════════════════════════════════════════
 `
@@ -548,7 +546,7 @@ IF NO user rules match this email:
 
     const rulesSection = `
 ═══════════════════════════════════════════════════════════════════════════════════
-USER-DEFINED RULES (check if any ACTUALLY MATCH this email):
+USER-DEFINED RULES (Priority 2 — can classify as spam OR ham, override default behavior only):
 ${rules.length > 0 ? rules.map(rule => `- ${rule.text}`).join('\n') : 'No additional rules defined.'}`
 
     const similarEmailsText = similarEmails.length > 0
