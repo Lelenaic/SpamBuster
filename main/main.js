@@ -28,6 +28,7 @@ let wizardWindow;  // Add reference to wizard window
 let cronJob = null;
 let isQuitting = false;
 let isSetupCronJobRunning = false; // Mutex to prevent concurrent cron setup
+let isProcessingActive = false; // Track whether email processing is running
 
 const NETWORK_ERROR_CODES = [
   'ETIMEDOUT',
@@ -45,6 +46,10 @@ const NETWORK_ERROR_CODES = [
   'ECONNABORTED',
 ];
 
+// Track exception frequency to detect degraded state
+let recentExceptionCount = 0;
+let exceptionResetTimer = null;
+
 // Global exception handler for uncaught exceptions
 process.on('uncaughtException', (error) => {
   const errorMessage = String(error?.message || '');
@@ -53,8 +58,29 @@ process.on('uncaughtException', (error) => {
     errorMessage.includes(code) || errorCode.includes(code)
   );
 
+  // Track exception frequency
+  recentExceptionCount++;
+  if (!exceptionResetTimer) {
+    exceptionResetTimer = setTimeout(() => {
+      recentExceptionCount = 0;
+      exceptionResetTimer = null;
+    }, 60000); // Reset count every minute
+  }
+
   if (isNetworkError) {
+    // Log network errors at debug level instead of silently swallowing
+    if (recentExceptionCount <= 3) {
+      console.debug('[Network Error]', errorMessage || errorCode);
+    }
     return;
+  }
+
+  // Log non-network errors
+  console.error('[Uncaught Exception]', error);
+
+  // If too many exceptions in a short time, the app may be in a degraded state
+  if (recentExceptionCount > 10) {
+    console.error(`[Degraded State] ${recentExceptionCount} exceptions in the last minute. App may be unstable.`);
   }
 });
 
@@ -67,6 +93,8 @@ process.on('unhandledRejection', (reason) => {
   );
 
   if (isNetworkError) {
+    // Log network errors at debug level instead of silently swallowing
+    console.debug('[Network Error - Unhandled Rejection]', errorMessage || errorCode);
     return;
   }
 
@@ -115,7 +143,10 @@ async function setupCronJob() {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { CronJob } = require('cron');
         cronJob = new CronJob(cronExpression, () => {
-          // Trigger email processing
+          // Trigger email processing only if not already active
+          if (isProcessingActive) {
+            return;
+          }
           if (mainWindow && mainWindow.webContents) {
             mainWindow.webContents.send('trigger-email-processing');
           }
@@ -288,6 +319,8 @@ ipcMain.on('processing:error', (event, error) => {
 });
 
 ipcMain.on('processing:status-change', (event, status) => {
+  // Track processing state to prevent cron overlap
+  isProcessingActive = (status === 'processing');
   event.sender.send('processing:status-change', status);
 });
 

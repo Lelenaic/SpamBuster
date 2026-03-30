@@ -66,11 +66,17 @@ function emitProcessingEvent(channel: string, data: unknown): void {
 // Module-level singleton to survive page navigation
 let singletonInstance: EmailProcessorService | null = null
 
+// Maximum number of checksums to keep in memory and store
+const MAX_CHECKSUMS = 10000
+
 export class EmailProcessorService {
   private processedChecksums: string[] = []
+  private processedChecksumsSet: Set<string> = new Set()
   private initialized = false
   private isProcessing = false
   private shouldStop = false
+  private checksumsDirty = false
+  private saveTimer: ReturnType<typeof setInterval> | null = null
   private currentProcessingData: {
     accounts: Account[]
     rules: Rule[]
@@ -130,11 +136,18 @@ export class EmailProcessorService {
   private async loadProcessedChecksums(): Promise<void> {
     try {
       const savedChecksums = await this.store.get('processedEmailChecksums', [])
-      // Ensure it's always an array
-      this.processedChecksums = Array.isArray(savedChecksums) ? savedChecksums : []
+      // Ensure it's always an array and cap size on load
+      const rawArray = Array.isArray(savedChecksums) ? savedChecksums : []
+      // Keep only the most recent entries if over limit
+      this.processedChecksums = rawArray.length > MAX_CHECKSUMS
+        ? rawArray.slice(rawArray.length - MAX_CHECKSUMS)
+        : rawArray
+      // Populate the Set for O(1) lookups
+      this.processedChecksumsSet = new Set(this.processedChecksums)
     } catch (error) {
       console.error('❌ Error loading processed checksums:', error)
       this.processedChecksums = []
+      this.processedChecksumsSet = new Set()
     }
   }
 
@@ -225,9 +238,52 @@ export class EmailProcessorService {
 
   private async saveProcessedChecksums(): Promise<void> {
     try {
+      // Cap checksums array to prevent unbounded growth
+      if (this.processedChecksums.length > MAX_CHECKSUMS) {
+        const removed = this.processedChecksums.length - MAX_CHECKSUMS
+        this.processedChecksums = this.processedChecksums.slice(removed)
+        // Rebuild Set from trimmed array
+        this.processedChecksumsSet = new Set(this.processedChecksums)
+      }
       await this.store.set('processedEmailChecksums', this.processedChecksums)
+      this.checksumsDirty = false
     } catch (error) {
       console.error('Error saving processed checksums:', error)
+    }
+  }
+
+  /**
+   * Mark checksums as dirty for deferred batched save.
+   * Avoids synchronous store writes on every single email.
+   */
+  private markChecksumsDirty(): void {
+    this.checksumsDirty = true
+  }
+
+  /**
+   * Start periodic batched saves of checksums during processing.
+   * Saves every 10 seconds if dirty, reducing synchronous I/O pressure.
+   */
+  private startSaveTimer(): void {
+    if (this.saveTimer) return
+    this.saveTimer = setInterval(() => {
+      if (this.checksumsDirty) {
+        this.saveProcessedChecksums()
+      }
+    }, 10000)
+  }
+
+  /**
+   * Stop the periodic save timer and flush any pending writes.
+   */
+  private async stopSaveTimer(): Promise<void> {
+    if (this.saveTimer) {
+      clearInterval(this.saveTimer)
+      this.saveTimer = null
+    }
+    // Final flush
+    if (this.checksumsDirty) {
+      await this.saveProcessedChecksums()
     }
   }
 
@@ -278,7 +334,7 @@ export class EmailProcessorService {
         
         // Check if already processed
         const checksum = this.generateChecksum(email.subject, email.body)
-        if (this.processedChecksums.includes(checksum)) {
+        if (this.processedChecksumsSet.has(checksum)) {
           skippedCount++
         }
       }
@@ -311,9 +367,10 @@ export class EmailProcessorService {
           // Ensure processedChecksums is always an array
           if (!Array.isArray(this.processedChecksums)) {
             this.processedChecksums = []
+            this.processedChecksumsSet = new Set()
           }
           
-          if (this.processedChecksums.includes(checksum)) {
+          if (this.processedChecksumsSet.has(checksum)) {
             continue // Already counted as skipped
           }
           
@@ -408,7 +465,8 @@ export class EmailProcessorService {
               }
               
               this.processedChecksums.push(checksum)
-              await this.saveProcessedChecksums()
+              this.processedChecksumsSet.add(checksum)
+              this.markChecksumsDirty()
               stats.errors++
               this.emitIncrementalStatsUpdate(account.id, stats)
               continue
@@ -487,7 +545,8 @@ export class EmailProcessorService {
 
           // Mark as processed
           this.processedChecksums.push(checksum)
-          await this.saveProcessedChecksums() // Save immediately after adding
+          this.processedChecksumsSet.add(checksum)
+          this.markChecksumsDirty() // Batch save instead of immediate write
           stats.processedEmails++
 
           // Emit real-time progress update after each email
@@ -632,6 +691,9 @@ export class EmailProcessorService {
     // Emit status change to 'processing' via IPC
     emitProcessingEvent('processing:status-change', 'processing')
 
+    // Start batched save timer for checksums
+    this.startSaveTimer()
+
     const accountStats: Record<string, ProcessingStats> = {}
 
     try {
@@ -662,6 +724,8 @@ export class EmailProcessorService {
       this.isProcessing = false
       this.currentProcessingData = null
       this.currentAccountId = undefined
+      // Stop save timer and flush any pending checksum writes
+      await this.stopSaveTimer()
     }
 
     // Use the accumulated in-memory stats (they're already correctly aggregated)
@@ -677,6 +741,7 @@ export class EmailProcessorService {
 
   async clearProcessedCache(): Promise<void> {
     this.processedChecksums = []
+    this.processedChecksumsSet = new Set()
     try {
       await this.store.set('processedEmailChecksums', [])
     } catch (error) {
@@ -696,7 +761,7 @@ export class EmailProcessorService {
   async hasEmailBeenProcessed(subject: string, body: string): Promise<boolean> {
     await this.ensureInitialized()
     const checksum = this.generateChecksum(subject, body)
-    return this.processedChecksums.includes(checksum)
+    return this.processedChecksumsSet.has(checksum)
   }
 
   // Methods for processing state tracking
@@ -774,6 +839,8 @@ export class EmailProcessorService {
     this.isProcessing = false
     this.currentProcessingData = null
     this.currentAccountId = undefined
+    // Stop save timer and flush any pending checksum writes (fire-and-forget)
+    this.stopSaveTimer().catch(err => console.error('Error flushing checksums on stop:', err))
     emitProcessingEvent('processing:status-change', 'idle')
   }
 }

@@ -110,15 +110,17 @@ export default function Home() {
     }
   }, [])
 
-  // Refresh analyzed emails every 5 seconds
+  // Refresh analyzed emails when processing completes (replaces polling)
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (typeof window !== 'undefined' && window.analyzedEmailsAPI) {
-        window.analyzedEmailsAPI.getAll().then((emails) => setAnalyzedEmails(emails as AnalyzedEmail[]))
-      }
-    }, 5000)
-
-    return () => clearInterval(interval)
+    if (typeof window !== 'undefined' && window.processingEvents) {
+      const unsub = window.processingEvents.onComplete(() => {
+        // Full refresh after processing completes to catch any edge cases
+        if (typeof window !== 'undefined' && window.analyzedEmailsAPI) {
+          window.analyzedEmailsAPI.getAll().then((emails) => setAnalyzedEmails(emails as AnalyzedEmail[]))
+        }
+      })
+      return unsub
+    }
   }, [])
 
   // Listen for real-time analyzed email creation
